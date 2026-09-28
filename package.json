@@ -1,0 +1,22 @@
+{
+  "name": "moolresha-web",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MoolResha — Closer to the Root. Education-first textile knowledge site.",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "astro": "^7.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.8.2"
+  }
+}
