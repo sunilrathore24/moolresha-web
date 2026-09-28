@@ -5,41 +5,47 @@ visual style (adapted from the social skill's Brand Visual DNA §5.1).
 
 ## How to use
 
-1. Generate each image in **Gemini** using the full prompt below.
-2. **Crop off the bottom 50px white strip** (see next section) — that removes
-   Gemini's AI badge/icon cleanly. You're left with the exact target size.
-3. Save the cropped file with the **exact filename** given, as **`.webp`**
+1. Generate each image using a prompt below.
+2. Make sure there is **no visible AI watermark** — see the next section for how.
+3. Save the file with the **exact filename** given, as **`.webp`**
    (or `.jpg`/`.png` — but tell me if you don't use `.webp` and I'll update the refs).
 4. Drop the files into **`moolresha-web/public/images/`**.
 5. They appear on the site automatically at `/images/<filename>` — no code change.
 
-## The AI-badge crop strip (READ THIS)
+## Removing the Gemini AI watermark (IMPORTANT — read this)
 
-Gemini stamps an **AI icon/watermark in the bottom-right corner** of every image.
-To remove it without cutting into the photo, every prompt below asks Gemini to:
+Gemini stamps a small **"sparkle" AI badge in the bottom-right corner** of the
+image **after** it's generated. It is an overlay applied on top — so **no prompt
+instruction can move or remove it** (a white strip, aspect-ratio change, or
+"no watermark" negative prompt won't work; the badge just lands on top anyway).
 
-- **Extend the canvas height by 50px** and place a **solid white horizontal strip,
-  50px tall, across the full width of the very bottom edge**, kept empty.
-- The AI badge then lands on that white strip, so you **crop off the bottom 50px**
-  and get a clean image at the exact target dimensions.
+Use one of these instead, best first:
 
-So each image is **generated 50px taller** than its final size:
+1. **Generate in Google AI Studio** (aistudio.google.com) — its image output
+   does **not** carry the visible sparkle badge. This is Google's own tool and
+   the cleanest route. (An invisible provenance signal, SynthID, stays embedded
+   either way — that's expected and fine; it isn't visible on the page.)
+2. **Google AI Ultra** subscription — also returns images without the visible badge.
+3. **If you can only use the watermarked Gemini app — crop the bottom strip.**
+   The badge sits at the bottom-right, so every prompt below is sized **60px
+   taller** and asks Gemini to keep the **bottom edge low-detail** with the
+   **subject kept away from the bottom**. You then crop off the bottom ~60px,
+   which removes the badge while losing almost none of the real photo.
 
-| Final size (after crop) | Generate at | Crop off |
+| Final size (after any crop) | Generate at | If cropping, crop off |
 |---|---|---|
-| 1800 × 1200 (3:2 hero) | **1800 × 1250** | bottom 50px |
-| 1200 × 1200 (1:1 card) | **1200 × 1250** | bottom 50px |
+| 1800 × 1200 (3:2 hero) | 1800 × 1260 | bottom 60px |
+| 1200 × 1200 (1:1 card) | 1200 × 1260 | bottom 60px |
 
-> If Gemini still places the badge slightly above the strip, make the strip a
-> little taller (e.g. 70px) and crop that much off — the goal is: badge sits on
-> white, crop the white away.
+> If you use AI Studio (option 1) you don't need to crop at all — just export at
+> the final size. The extra 60px only matters if you're cropping a badge off.
 
 ## Key differences from the carousel prompts
 
 - **NO text is rendered into these images.** All headings/copy are real HTML.
-  So there is no `RENDER TEXT ON IMAGE` block — except the white crop strip.
+  So there is no `RENDER TEXT ON IMAGE` block.
 - **Leave generous negative space** in the heroes so the HTML headline stays legible.
-- **Web aspect ratios**, generated 50px taller for the crop strip (table above).
+- **Web aspect ratios**; keep the bottom edge low-detail so a badge crop is lossless.
 
 ## Image list
 
@@ -77,7 +83,7 @@ MOOD: quiet, curious, authentic, rooted. "Closer to the root."
 COMPOSITION: a neatly stacked pile of folded natural linen and cotton garments in beige/cream/oat tones resting on a pale oak surface, positioned to the RIGHT of frame; the LEFT third is calm empty background (soft-focus wall / open table) kept clear as negative space for a headline.
 CAMERA: full-frame look, 50mm, shallow depth of field, fine natural grain, no HDR, no plastic sheen.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no faces, no neon colours, no heavy vignette, no clutter, no plastic gradients.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty (no photo, no text) so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (plain surface or soft shadow) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -93,7 +99,7 @@ MOOD: quiet, authentic, rooted.
 COMPOSITION: a folded swatch of natural undyed linen fabric with a few dried blue-green flax stems resting on top, centred, top-down flat-lay on a warm oat surface.
 CAMERA: full-frame macro look, 85mm, shallow depth of field on the weave, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1200 x 1250 px. The photo fills the top 1200 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1200 x 1200 px (1:1).
+CANVAS: generate at 1200 x 1260 px. Keep the SUBJECT centred/upper and the BOTTOM edge calm and low-detail (plain surface) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1200 x 1200 px (1:1). If generating in Google AI Studio (no visible badge), simply export at 1200 x 1200 px.
 ```
 
 ---
@@ -109,7 +115,7 @@ MOOD: quiet, authentic, rooted.
 COMPOSITION: an open raw cotton boll on its dried branch resting beside a neatly folded cream cotton fabric swatch, centred, top-down flat-lay on a warm oat surface.
 CAMERA: full-frame macro look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1200 x 1250 px. The photo fills the top 1200 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1200 x 1200 px (1:1).
+CANVAS: generate at 1200 x 1260 px. Keep the SUBJECT centred/upper and the BOTTOM edge calm and low-detail (plain surface) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1200 x 1200 px (1:1). If generating in Google AI Studio (no visible badge), simply export at 1200 x 1200 px.
 ```
 
 ---
@@ -125,7 +131,7 @@ MOOD: quiet, curious, authentic.
 COMPOSITION: two folded fabric swatches partly overlapping — one textured natural linen, one smooth cream cotton — centred, top-down flat-lay on a warm oat surface, showing where they meet.
 CAMERA: full-frame macro look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1200 x 1250 px. The photo fills the top 1200 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1200 x 1200 px (1:1).
+CANVAS: generate at 1200 x 1260 px. Keep the SUBJECT centred/upper and the BOTTOM edge calm and low-detail (plain surface) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1200 x 1200 px (1:1). If generating in Google AI Studio (no visible badge), simply export at 1200 x 1200 px.
 ```
 
 ---
@@ -141,7 +147,7 @@ MOOD: quiet, curious, rooted. "Closer to the root."
 COMPOSITION: a field of flax plants in soft blue-green bloom stretching toward the horizon at dawn, with the sky occupying the top third as calm negative space for a headline; subject weighted to the lower-right.
 CAMERA: full-frame look, 50mm, wider depth of field for the landscape, fine natural grain, no HDR, no plastic sheen.
 NEGATIVE: no text, no lettering, no watermark, no logos, no people, no neon colours, no heavy vignette, no clutter.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (soft foreground/blur) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -157,7 +163,7 @@ MOOD: quiet, precise, curious.
 COMPOSITION: a macro close-up of natural linen fabric weave filling the right two-thirds of the frame, with a softly blurred calmer area on the LEFT kept as negative space for a headline; a wooden spool or loose thread resting at the edge.
 CAMERA: full-frame macro look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (soft blur) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -173,7 +179,7 @@ MOOD: quiet, curious, balanced.
 COMPOSITION: two folded fabric swatches laid side by side on a pale oak surface, top-down — textured linen on one side, smooth cotton on the other, meeting near centre; some calm empty table surface at the top as negative space for a headline.
 CAMERA: full-frame look, 50mm, medium depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (plain table surface) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -189,7 +195,7 @@ MOOD: quiet, attentive, curious.
 COMPOSITION: a pair of hands holding up a piece of natural linen fabric toward a soft-lit window to inspect the weave, positioned to the right; the LEFT side is softly blurred bright window light kept as negative space for a headline. Hands natural and relaxed, no distortion.
 CAMERA: full-frame look, 50mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no faces, no distorted hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (soft blur) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -205,7 +211,7 @@ MOOD: quiet, honest, rooted. "Closer to the root."
 COMPOSITION: two open hands gently cradling a loose bundle of raw undyed flax fibre, centred slightly right, with a calm softly-blurred earthy background on the left as negative space for a headline. Hands natural, no distortion.
 CAMERA: full-frame look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no faces, no distorted hands, no neon colours, no clutter.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (plain oak surface) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -221,7 +227,7 @@ MOOD: quiet, tactile, honest.
 COMPOSITION: a close detail of a folded or draped natural cream linen shirt showing the collar, a button, and the weave, resting on a pale oak surface; the upper area kept as calm negative space for a headline.
 CAMERA: full-frame look, 85mm, shallow depth of field on the weave and button, fine natural grain, no HDR, no plastic sheen.
 NEGATIVE: no text, no lettering, no watermark, no logos, no faces, no distorted hands, no neon colours, no heavy vignette, no clutter.
-CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
+CANVAS: generate at 1800 x 1260 px (very close to 3:2). Keep the SUBJECT in the upper/central area and the BOTTOM edge calm and low-detail (plain oak surface) so the final 60px can be cropped off cleanly if needed. Final target after an optional bottom-60px crop is 1800 x 1200 px (3:2). If generating in Google AI Studio (no visible badge), simply export at 1800 x 1200 px.
 ```
 
 ---
@@ -229,6 +235,9 @@ CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the t
 ## After you add the images
 
 Nothing else to do — the pages already point at these paths. If you use a different
-extension than `.webp`, tell me and I'll update the references. If the AI badge ever
-lands above the white strip, increase the strip height and crop that much off.
+extension than `.webp`, tell me and I'll update the references.
+
+Reminder on the watermark: the surest clean route is **Google AI Studio**
+(aistudio.google.com), whose image output has no visible sparkle badge — then no
+cropping is needed. Only crop the bottom strip if you used the watermarked Gemini app.
 ```
