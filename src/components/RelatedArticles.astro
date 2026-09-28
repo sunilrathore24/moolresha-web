@@ -1,0 +1,88 @@
+---
+import type { Article } from "../lib/articles";
+
+interface Props {
+  articles: Article[];
+  heading?: string;
+}
+
+const { articles, heading = "Continue the journey" } = Astro.props;
+---
+
+{
+  articles.length > 0 && (
+    <aside class="related" aria-label="Related articles">
+      <h2>{heading}</h2>
+      <ul>
+        {articles.map((a) => (
+          <li>
+            <a href={`/article/${a.id}`}>
+              <span class="related-level">{a.data.level}</span>
+              <span class="related-title">{a.data.title}</span>
+              <span class="related-desc">{a.data.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  )
+}
+
+<style>
+  .related {
+    margin-top: var(--space-10);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .related h2 {
+    font-size: var(--fs-h3);
+    margin-bottom: var(--space-5);
+  }
+
+  .related ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+
+  .related a {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    text-decoration: none;
+    color: var(--color-text);
+    transition:
+      transform var(--transition),
+      border-color var(--transition);
+  }
+
+  .related a:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-accent-soft);
+  }
+
+  .related-level {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+
+  .related-title {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+  }
+
+  .related-desc {
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+</style>

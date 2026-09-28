@@ -1,21 +1,40 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-// Pillar hub stub (Fabric School). Real articles arrive in increments 4–5.
+import ArticleCard from "../components/ArticleCard.astro";
+import { getArticlesByCategory } from "../lib/articles";
+
+const articles = await getArticlesByCategory("Fabric School");
 ---
 
 <BaseLayout
   title="Fabric School — MoolResha"
   description="What GSM, Lea, yarn count, weave and finish actually mean — and what they don't tell you."
 >
-  <section class="hub container prose">
-    <p class="eyebrow">Fabric School</p>
-    <h1>What the label really means.</h1>
-    <p class="lede">
-      100% Linen. 180 GSM. 60 Lea. Combed cotton. We break down what each spec
-      tells you — and, just as importantly, what it leaves out.
-    </p>
-    <p class="soon">Lessons are being written. Check back soon.</p>
-    <p><a href="/">&larr; Back home</a></p>
+  <section class="hub container">
+    <div class="prose">
+      <p class="eyebrow">Fabric School</p>
+      <h1>What the label really means.</h1>
+      <p class="lede">
+        100% Linen. 180 GSM. 60 Lea. Combed cotton. We break down what each spec
+        tells you — and, just as importantly, what it leaves out.
+      </p>
+    </div>
+
+    {
+      articles.length > 0 ? (
+        <ul class="hub-grid">
+          {articles.map((a) => (
+            <li>
+              <ArticleCard article={a} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="soon">Lessons are being written. Check back soon.</p>
+      )
+    }
+
+    <p class="back"><a href="/">&larr; Back home</a></p>
   </section>
 </BaseLayout>
 
@@ -35,9 +54,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: var(--color-text-muted);
     margin-top: var(--space-4);
   }
+  .hub-grid {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-8);
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
   .soon {
     margin-top: var(--space-6);
     color: var(--color-text-muted);
     font-size: var(--fs-small);
+  }
+  .back {
+    margin-top: var(--space-8);
   }
 </style>

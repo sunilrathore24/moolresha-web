@@ -1,22 +1,41 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-// Pillar hub stub (Comparisons). Real articles arrive in increments 4–5.
+import ArticleCard from "../components/ArticleCard.astro";
+import { getArticlesByCategory } from "../lib/articles";
+
+const articles = await getArticlesByCategory("Comparisons");
 ---
 
 <BaseLayout
   title="Comparisons — MoolResha"
   description="Linen vs cotton, pure vs blend, and more — trade-offs, not winners."
 >
-  <section class="hub container prose">
-    <p class="eyebrow">Comparisons</p>
-    <h1>Which is right — for you?</h1>
-    <p class="lede">
-      Linen vs cotton. 100% linen vs a cotton-linen blend. We never crown a
-      winner — we explain the trade-offs so you can match the fabric to your
-      use.
-    </p>
-    <p class="soon">Comparisons are being written. Check back soon.</p>
-    <p><a href="/">&larr; Back home</a></p>
+  <section class="hub container">
+    <div class="prose">
+      <p class="eyebrow">Comparisons</p>
+      <h1>Which is right — for you?</h1>
+      <p class="lede">
+        Linen vs cotton. 100% linen vs a cotton-linen blend. We never crown a
+        winner — we explain the trade-offs so you can match the fabric to your
+        use.
+      </p>
+    </div>
+
+    {
+      articles.length > 0 ? (
+        <ul class="hub-grid">
+          {articles.map((a) => (
+            <li>
+              <ArticleCard article={a} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="soon">Comparisons are being written. Check back soon.</p>
+      )
+    }
+
+    <p class="back"><a href="/">&larr; Back home</a></p>
   </section>
 </BaseLayout>
 
@@ -36,9 +55,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: var(--color-text-muted);
     margin-top: var(--space-4);
   }
+  .hub-grid {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-8);
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
   .soon {
     margin-top: var(--space-6);
     color: var(--color-text-muted);
     font-size: var(--fs-small);
+  }
+  .back {
+    margin-top: var(--space-8);
   }
 </style>

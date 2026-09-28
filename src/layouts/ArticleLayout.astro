@@ -1,0 +1,226 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "./BaseLayout.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import RelatedArticles from "../components/RelatedArticles.astro";
+import {
+  PILLAR_NAMES,
+  CATEGORY_PATH,
+  getRelatedArticles,
+  type Article,
+} from "../lib/articles";
+
+interface Props {
+  article: Article;
+}
+
+const { article } = Astro.props;
+const d = article.data;
+
+const related = await getRelatedArticles(article);
+const categoryPath = CATEGORY_PATH[d.category] ?? "/";
+
+const dateFmt = (date: Date) =>
+  date.toLocaleDateString("en-GB", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+---
+
+<BaseLayout title={`${d.title} — MoolResha`} description={d.description}>
+  <article class="article">
+    <div class="container">
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: d.category, href: categoryPath },
+          { label: d.title },
+        ]}
+      />
+    </div>
+
+    <header class="article-hero container">
+      <div class="prose">
+        <p class="eyebrow">
+          {PILLAR_NAMES[d.pillar]} · {d.level}
+        </p>
+        <h1>{d.title}</h1>
+        <p class="lede">{d.description}</p>
+        <p class="meta">
+          <time datetime={d.publishedDate.toISOString()}>
+            {dateFmt(d.publishedDate)}
+          </time>
+          {d.readingTime && <span> · {d.readingTime}</span>}
+        </p>
+      </div>
+    </header>
+
+    {
+      d.heroImage && (
+        <figure class="article-figure container">
+          <Image
+            src={d.heroImage}
+            alt={d.heroImageAlt ?? ""}
+            widths={[480, 800, 1200]}
+            sizes="(max-width: 72rem) 100vw, 72rem"
+            loading="eager"
+          />
+        </figure>
+      )
+    }
+
+    <div class="article-body container">
+      <div class="prose">
+        <slot />
+      </div>
+    </div>
+
+    {
+      d.faq.length > 0 && (
+        <section class="article-faq container">
+          <div class="prose">
+            <h2>Common questions</h2>
+            <dl>
+              {d.faq.map((item) => (
+                <div class="faq-item">
+                  <dt>{item.q}</dt>
+                  <dd>{item.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      )
+    }
+
+    <div class="article-takeaway container">
+      <div class="prose">
+        <p class="takeaway">Now you know what to look for.</p>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="prose">
+        <!-- Interaction widgets (like · comment · subscribe) are wired in
+             the interactions phase (increments 9–11). Placeholder anchor kept
+             so layout + analytics hooks have a home. -->
+        <RelatedArticles articles={related} />
+      </div>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .article {
+    padding-top: var(--space-5);
+  }
+
+  .article-hero {
+    padding-block: var(--space-5) var(--space-6);
+  }
+
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: var(--space-3);
+  }
+
+  .article-hero h1 {
+    font-size: var(--fs-h1);
+  }
+
+  .lede {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+  }
+
+  .meta {
+    margin-top: var(--space-4);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .article-figure {
+    margin-block: var(--space-6);
+  }
+
+  .article-figure :global(img) {
+    width: 100%;
+    border-radius: var(--radius-lg);
+  }
+
+  /* Article prose rhythm */
+  .article-body :global(h2) {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+
+  .article-body :global(h3) {
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-2);
+  }
+
+  .article-body :global(p),
+  .article-body :global(ul),
+  .article-body :global(ol) {
+    margin-top: var(--space-4);
+  }
+
+  .article-body :global(ul),
+  .article-body :global(ol) {
+    padding-left: var(--space-5);
+  }
+
+  .article-body :global(li) {
+    margin-top: var(--space-2);
+  }
+
+  .article-body :global(blockquote) {
+    border-left: 3px solid var(--color-accent);
+    padding-left: var(--space-5);
+    margin-block: var(--space-5);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    color: var(--color-text);
+  }
+
+  /* FAQ */
+  .article-faq {
+    margin-top: var(--space-8);
+  }
+
+  .faq-item {
+    padding-block: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .faq-item dt {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    margin-bottom: var(--space-2);
+  }
+
+  .faq-item dd {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  /* Takeaway */
+  .article-takeaway {
+    margin-top: var(--space-8);
+  }
+
+  .takeaway {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    color: var(--color-accent);
+    padding: var(--space-5);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    text-align: center;
+  }
+</style>

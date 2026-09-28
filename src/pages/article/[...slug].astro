@@ -1,0 +1,60 @@
+---
+import { render } from "astro:content";
+import ArticleLayout from "../../layouts/ArticleLayout.astro";
+import { getPublishedArticles } from "../../lib/articles";
+
+export async function getStaticPaths() {
+  const articles = await getPublishedArticles();
+  return articles.map((article) => ({
+    params: { slug: article.id },
+    props: { article },
+  }));
+}
+
+const { article } = Astro.props;
+const { Content } = await render(article);
+const d = article.data;
+
+// Article + FAQ structured data (AI-citable, SEO). Full SEO pass is increment 6.
+const articleUrl = new URL(`/article/${article.id}`, Astro.site).href;
+
+const jsonLd: Record<string, unknown>[] = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: d.title,
+    description: d.description,
+    datePublished: d.publishedDate.toISOString(),
+    ...(d.updatedDate && { dateModified: d.updatedDate.toISOString() }),
+    author: { "@type": "Organization", name: "MoolResha" },
+    publisher: { "@type": "Organization", name: "MoolResha" },
+    mainEntityOfPage: articleUrl,
+  },
+];
+
+if (d.faq.length > 0) {
+  jsonLd.push({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: d.faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  });
+}
+---
+
+<ArticleLayout article={article}>
+  <Content />
+</ArticleLayout>
+
+{
+  jsonLd.map((block) => (
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(block)}
+      is:inline
+    />
+  ))
+}

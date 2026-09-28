@@ -1,0 +1,64 @@
+---
+import type { Article } from "../lib/articles";
+
+interface Props {
+  article: Article;
+}
+
+const { article } = Astro.props;
+const d = article.data;
+---
+
+<a class="article-card" href={`/article/${article.id}`}>
+  <span class="ac-level">{d.level}</span>
+  <h3>{d.title}</h3>
+  <p>{d.description}</p>
+  <span class="ac-link">Read &rarr;</span>
+</a>
+
+<style>
+  .article-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    text-decoration: none;
+    color: var(--color-text);
+    transition:
+      transform var(--transition),
+      border-color var(--transition);
+  }
+
+  .article-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-accent-soft);
+  }
+
+  .ac-level {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: var(--space-2);
+  }
+
+  .article-card h3 {
+    font-size: var(--fs-h4);
+  }
+
+  .article-card p {
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    margin-top: var(--space-2);
+    flex: 1;
+  }
+
+  .ac-link {
+    margin-top: var(--space-4);
+    color: var(--color-accent);
+    font-size: 0.95rem;
+  }
+</style>

@@ -1,22 +1,40 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-// Pillar hub stub. The article system + real cluster listing arrive in
-// increments 4–5; this keeps the nav link live and on-brand until then.
+import ArticleCard from "../components/ArticleCard.astro";
+import { getArticlesByCategory } from "../lib/articles";
+
+const articles = await getArticlesByCategory("Fibre Stories");
 ---
 
 <BaseLayout
   title="Fibre Stories — MoolResha"
   description="Trace each fibre from its root to the garment: linen, cotton, and more."
 >
-  <section class="hub container prose">
-    <p class="eyebrow">Fibre Stories</p>
-    <h1>From the root to your wardrobe.</h1>
-    <p class="lede">
-      Every material has an origin — a plant, a field, a process. We follow each
-      one from source to fibre to yarn to fabric to the garment you wear.
-    </p>
-    <p class="soon">The first fibre stories are being written. Check back soon.</p>
-    <p><a href="/">&larr; Back home</a></p>
+  <section class="hub container">
+    <div class="prose">
+      <p class="eyebrow">Fibre Stories</p>
+      <h1>From the root to your wardrobe.</h1>
+      <p class="lede">
+        Every material has an origin — a plant, a field, a process. We follow
+        each one from source to fibre to yarn to fabric to the garment you wear.
+      </p>
+    </div>
+
+    {
+      articles.length > 0 ? (
+        <ul class="hub-grid">
+          {articles.map((a) => (
+            <li>
+              <ArticleCard article={a} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="soon">The first fibre stories are being written. Check back soon.</p>
+      )
+    }
+
+    <p class="back"><a href="/">&larr; Back home</a></p>
   </section>
 </BaseLayout>
 
@@ -36,9 +54,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: var(--color-text-muted);
     margin-top: var(--space-4);
   }
+  .hub-grid {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-8);
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
   .soon {
     margin-top: var(--space-6);
     color: var(--color-text-muted);
     font-size: var(--fs-small);
+  }
+  .back {
+    margin-top: var(--space-8);
   }
 </style>
