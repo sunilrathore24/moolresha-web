@@ -9,16 +9,19 @@ const fibres = [
     name: "Linen",
     blurb: "From a blue-flowered flax field to the shirt on your back.",
     href: "/fibre-stories",
+    image: "/images/fibre-linen.webp",
   },
   {
     name: "Cotton",
     blurb: "Why two shirts both labelled 100% cotton can feel worlds apart.",
     href: "/fibre-stories",
+    image: "/images/fibre-cotton.webp",
   },
   {
     name: "Blends",
     blurb: "A blend isn't 'less' — it's a different fabric. When to choose one.",
     href: "/comparisons",
+    image: "/images/fibre-blends.webp",
   },
 ];
 
@@ -60,9 +63,17 @@ const journey = [
         fibres.map((f) => (
           <li>
             <a class="card" href={f.href}>
-              <h3>{f.name}</h3>
-              <p>{f.blurb}</p>
-              <span class="card-link">Read the story &rarr;</span>
+              <span
+                class="card-thumb"
+                style={`background-image:url('${f.image}')`}
+                role="img"
+                aria-label={`${f.name} fibre`}
+              />
+              <span class="card-body">
+                <h3>{f.name}</h3>
+                <p>{f.blurb}</p>
+                <span class="card-link">Read the story &rarr;</span>
+              </span>
             </a>
           </li>
         ))
@@ -134,8 +145,32 @@ const journey = [
   /* HERO */
   .hero {
     padding-block: var(--space-12) var(--space-10);
+    /* Warm gradient fallback shows until home-hero.webp is added; the photo
+       then layers behind, with a light scrim on the left for headline contrast. */
     background:
+      linear-gradient(
+        90deg,
+        rgba(247, 242, 233, 0.92) 0%,
+        rgba(247, 242, 233, 0.75) 40%,
+        rgba(247, 242, 233, 0.15) 100%
+      ),
       linear-gradient(180deg, var(--c-warm-oat) 0%, var(--color-bg) 100%);
+    background-size: cover;
+    background-position: center right;
+  }
+
+  /* When the hero image exists, this rule stacks it under the scrim. Browsers
+     that 404 the image simply fall back to the gradients above. */
+  .hero {
+    background-image:
+      linear-gradient(
+        90deg,
+        rgba(247, 242, 233, 0.92) 0%,
+        rgba(247, 242, 233, 0.72) 42%,
+        rgba(247, 242, 233, 0.12) 100%
+      ),
+      url("/images/home-hero.webp");
+    background-color: var(--c-warm-oat);
   }
 
   .eyebrow {
@@ -220,12 +255,13 @@ const journey = [
   }
 
   .card {
-    display: block;
+    display: flex;
+    flex-direction: column;
     height: 100%;
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: var(--space-5);
+    overflow: hidden;
     text-decoration: none;
     color: var(--color-text);
     transition:
@@ -236,6 +272,20 @@ const journey = [
   .card:hover {
     transform: translateY(-2px);
     border-color: var(--color-accent-soft);
+  }
+
+  /* Square thumbnail. Warm-oat fallback shows until the image is added. */
+  .card-thumb {
+    display: block;
+    aspect-ratio: 1 / 1;
+    background-color: var(--c-warm-oat);
+    background-size: cover;
+    background-position: center;
+  }
+
+  .card-body {
+    display: block;
+    padding: var(--space-5);
   }
 
   .card p {

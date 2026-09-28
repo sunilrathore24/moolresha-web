@@ -44,6 +44,9 @@ const articles = defineCollection({
       consumerTakeaway: z.string(),
       description: z.string(),
       heroImage: image().optional(),
+      // Public-folder hero (path under /images) — used when the photo lives in
+      // public/images rather than as an imported collection asset.
+      heroImagePublic: z.string().optional(),
       heroImageAlt: z.string().optional(),
       heroVideo: z.string().optional(),
       publishedDate: z.coerce.date(),

@@ -70,6 +70,19 @@ const dateFmt = (date: Date) =>
       )
     }
 
+    {
+      !d.heroImage && d.heroImagePublic && (
+        <div class="article-figure container">
+          <div
+            class="article-hero-band"
+            style={`background-image:url('${d.heroImagePublic}')`}
+            role="img"
+            aria-label={d.heroImageAlt ?? ""}
+          />
+        </div>
+      )
+    }
+
     <div class="article-body container">
       <div class="prose">
         <slot />
@@ -150,6 +163,17 @@ const dateFmt = (date: Date) =>
 
   .article-figure :global(img) {
     width: 100%;
+    border-radius: var(--radius-lg);
+  }
+
+  /* Public-folder hero rendered as a background band so it degrades to a warm
+     colour (no broken-image icon) until the file is added to /images. */
+  .article-hero-band {
+    aspect-ratio: 3 / 2;
+    max-height: 26rem;
+    background-color: var(--c-warm-oat);
+    background-size: cover;
+    background-position: center;
     border-radius: var(--radius-lg);
   }
 

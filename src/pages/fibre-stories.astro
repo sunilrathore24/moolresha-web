@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import HubHero from "../components/HubHero.astro";
 import ArticleCard from "../components/ArticleCard.astro";
 import { getArticlesByCategory } from "../lib/articles";
 
@@ -10,16 +11,14 @@ const articles = await getArticlesByCategory("Fibre Stories");
   title="Fibre Stories — MoolResha"
   description="Trace each fibre from its root to the garment: linen, cotton, and more."
 >
-  <section class="hub container">
-    <div class="prose">
-      <p class="eyebrow">Fibre Stories</p>
-      <h1>From the root to your wardrobe.</h1>
-      <p class="lede">
-        Every material has an origin — a plant, a field, a process. We follow
-        each one from source to fibre to yarn to fabric to the garment you wear.
-      </p>
-    </div>
+  <HubHero
+    eyebrow="Fibre Stories"
+    title="From the root to your wardrobe."
+    lede="Every material has an origin — a plant, a field, a process. We follow each one from source to fibre to yarn to fabric to the garment you wear."
+    image="/images/hub-fibre-stories.webp"
+  />
 
+  <section class="hub container">
     {
       articles.length > 0 ? (
         <ul class="hub-grid">
@@ -40,30 +39,16 @@ const articles = await getArticlesByCategory("Fibre Stories");
 
 <style>
   .hub {
-    padding-block: var(--space-10);
-  }
-  .eyebrow {
-    font-size: var(--fs-small);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-    margin-bottom: var(--space-3);
-  }
-  .lede {
-    font-size: 1.2rem;
-    color: var(--color-text-muted);
-    margin-top: var(--space-4);
+    padding-block: var(--space-8) var(--space-10);
   }
   .hub-grid {
     list-style: none;
     padding: 0;
-    margin-top: var(--space-8);
     display: grid;
     gap: var(--space-5);
     grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   }
   .soon {
-    margin-top: var(--space-6);
     color: var(--color-text-muted);
     font-size: var(--fs-small);
   }

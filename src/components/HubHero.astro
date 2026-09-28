@@ -1,0 +1,56 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  lede: string;
+  image: string; // path under /images, e.g. "/images/hub-fibre-stories.webp"
+}
+
+const { eyebrow, title, lede, image } = Astro.props;
+---
+
+<section
+  class="hub-hero"
+  style={`--hero-image:url('${image}')`}
+>
+  <div class="container prose">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+    <p class="lede">{lede}</p>
+  </div>
+</section>
+
+<style>
+  .hub-hero {
+    padding-block: var(--space-10);
+    /* Left-side scrim over the photo keeps the headline legible. A warm-oat
+       colour shows until the image file is added (no broken-image icon). */
+    background-color: var(--c-warm-oat);
+    background-image:
+      linear-gradient(
+        90deg,
+        rgba(247, 242, 233, 0.94) 0%,
+        rgba(247, 242, 233, 0.78) 45%,
+        rgba(247, 242, 233, 0.2) 100%
+      ),
+      var(--hero-image);
+    background-size: cover;
+    background-position: center right;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+
+  .lede {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+    max-width: 40rem;
+  }
+</style>
