@@ -6,7 +6,29 @@ _The MoolResha site is static-first. Only three interactions are dynamic: **like
 
 ---
 
-## 0. Cost goal: stay on free tiers
+## 0. Authentication policy — no login, tiered by action (DECIDED)
+
+**Decision:** MoolResha does **not** require account login for like, subscribe, or comment. Auth is applied per action, matched to that action's value and abuse risk — because login is the single heaviest friction on the funnel, and the funnel's whole job in the discovery phase is to convert cold, anonymous visitors arriving from Instagram/Reels.
+
+| Action | Auth requirement | Rationale |
+|---|---|---|
+| **Like** | **Anonymous.** No login, no Turnstile. | Must feel instant. Its purpose is a frictionless topic-preference signal; gating it behind login would kill ~all of the volume and destroy the signal. Abuse value is near-zero (cosmetic count), and idempotency + rate limits (§3.1) are enough. |
+| **Subscribe** | **Email + double opt-in — this IS the identity step.** No separate login. | Newsletter signup via MailerLite's double opt-in already verifies an identity (the confirmed email). It's the owned-audience mechanic. Adding a login on top is redundant friction on the single most valuable conversion. |
+| **Comment** | **Guest (name + comment) + Turnstile + honeypot + moderation queue now.** Optional social login later. | Comments are the real abuse surface (spam/XSS/harassment) but the lowest-volume action, so friction hurts engagement least here. Full account creation is overkill at launch; a moderation queue handles low early volume. |
+| **Share** | **Not a server action.** | Sharing happens on the social platform / native share sheet — client-side only, nothing to authenticate or rate-limit. |
+
+**Why not "login for everything":**
+- It contradicts the funnel: the goal is an **owned email list**, not a pile of website accounts to store, secure, and run password resets for.
+- Auth is the biggest security liability we could take on (password storage, breach risk, data-protection obligations, reset flows) — spent to protect the *lowest-value* action (likes).
+- It delays the v1 launch bar (5–10 articles + working interactions) by a multi-week auth detour.
+
+**The real tradeoff (honest):** anonymous = more volume, noisier signal, more spam exposure; login = less volume, cleaner signal, near-zero spam. For a trust-and-reach brand in the discovery phase, **volume + a clean opt-in email list wins** — quality is captured where it matters (the verified email), without taxing reach.
+
+**Future option (documented, not built):** if comment spam outgrows the moderation queue, add **optional social login** (Google/GitHub via a managed provider such as Cloudflare Access, Auth.js, or Clerk's free tier) as a *convenience* — "comment as guest, or sign in to skip the name field" — never as a hard requirement. Re-evaluate only when spam volume justifies it. Likes and subscribe stay anonymous regardless.
+
+---
+
+## 0.1 Cost goal: stay on free tiers
 
 Everything here is designed to run at **$0/month** at MoolResha's early scale:
 
