@@ -1,0 +1,44 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+// Pillar hub stub. The article system + real cluster listing arrive in
+// increments 4–5; this keeps the nav link live and on-brand until then.
+---
+
+<BaseLayout
+  title="Fibre Stories — MoolResha"
+  description="Trace each fibre from its root to the garment: linen, cotton, and more."
+>
+  <section class="hub container prose">
+    <p class="eyebrow">Fibre Stories</p>
+    <h1>From the root to your wardrobe.</h1>
+    <p class="lede">
+      Every material has an origin — a plant, a field, a process. We follow each
+      one from source to fibre to yarn to fabric to the garment you wear.
+    </p>
+    <p class="soon">The first fibre stories are being written. Check back soon.</p>
+    <p><a href="/">&larr; Back home</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .hub {
+    padding-block: var(--space-10);
+  }
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+  .lede {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+  }
+  .soon {
+    margin-top: var(--space-6);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+</style>

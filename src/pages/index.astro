@@ -1,27 +1,141 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-// Increment 2 shows the base layout + design system in place.
-// Full homepage v1 (fibre cards, journey strip, philosophy, newsletter)
-// is increment 3.
+
+// Homepage v1 (increment 3). Static, no dead links.
+// Content is education-first — no product, no pricing, no "buy".
+
+const fibres = [
+  {
+    name: "Linen",
+    blurb: "From a blue-flowered flax field to the shirt on your back.",
+    href: "/fibre-stories",
+  },
+  {
+    name: "Cotton",
+    blurb: "Why two shirts both labelled 100% cotton can feel worlds apart.",
+    href: "/fibre-stories",
+  },
+  {
+    name: "Blends",
+    blurb: "A blend isn't 'less' — it's a different fabric. When to choose one.",
+    href: "/comparisons",
+  },
+];
+
+const journey = [
+  "Source",
+  "Fibre",
+  "Yarn",
+  "Fabric",
+  "Garment",
+  "You",
+];
 ---
 
 <BaseLayout title="MoolResha — Closer to the Root.">
-  <section class="hero container">
-    <div class="prose">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container prose">
       <p class="eyebrow">MoolResha — Closer to the Root.</p>
       <h1>Know What You Wear.</h1>
       <p class="lede">
         Learn to read any clothing label, judge any fabric, and choose for
         yourself — even if you never buy from us.
       </p>
-      <p class="note">The full site is being built one piece at a time.</p>
+      <div class="hero-actions">
+        <a class="btn" href="/fibre-stories">Start with fibres</a>
+        <a class="btn btn-ghost" href="/about">Why we do this</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPLORE FIBRES -->
+  <section class="section container">
+    <header class="section-head">
+      <h2>Explore fibres</h2>
+      <p>Trace a material from its root to the garment in your wardrobe.</p>
+    </header>
+    <ul class="card-grid">
+      {
+        fibres.map((f) => (
+          <li>
+            <a class="card" href={f.href}>
+              <h3>{f.name}</h3>
+              <p>{f.blurb}</p>
+              <span class="card-link">Read the story &rarr;</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <!-- LEARN FABRIC -->
+  <section class="section section-alt">
+    <div class="container prose">
+      <h2>Learn the fabric</h2>
+      <p>
+        A label tells you composition — <em>100% Linen</em>, <em>180 GSM</em>,
+        <em>60 Lea</em>. It rarely tells you about the yarn, the weave, the
+        finish, or how the garment will feel and age. Fabric School breaks down
+        what each spec means, and just as importantly, what it leaves out.
+      </p>
+      <p>
+        <a href="/fabric-school">Open Fabric School &rarr;</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- FIBRE JOURNEY -->
+  <section class="section container">
+    <header class="section-head">
+      <h2>The fibre journey</h2>
+      <p>Every garment has a root. We follow it, both directions.</p>
+    </header>
+    <ol class="journey" aria-label="Source to you, and back">
+      {
+        journey.map((step, i) => (
+          <li>
+            <span class="journey-step">{step}</span>
+            {i < journey.length - 1 && (
+              <span class="journey-arrow" aria-hidden="true">
+                &rarr;
+              </span>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+    <p class="journey-note">
+      Source &rarr; Fibre &rarr; Yarn &rarr; Fabric &rarr; Garment &rarr; You —
+      and back again when you learn to read a garment in reverse.
+    </p>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section class="section section-alt">
+    <div class="container prose philosophy">
+      <p class="eyebrow">Our philosophy</p>
+      <blockquote>
+        Don't just learn what a fabric is. Learn to understand it, compare it,
+        judge where it belongs, and decide whether it's right for you.
+      </blockquote>
+      <p>
+        MoolResha is here to make you a more informed clothing buyer. No hype,
+        no "premium" for its own sake — just what's true, so you can choose with
+        confidence anywhere you shop.
+      </p>
+      <p><a href="/about">More about what we stand for &rarr;</a></p>
     </div>
   </section>
 </BaseLayout>
 
 <style>
+  /* HERO */
   .hero {
-    padding-block: var(--space-12);
+    padding-block: var(--space-12) var(--space-10);
+    background:
+      linear-gradient(180deg, var(--c-warm-oat) 0%, var(--color-bg) 100%);
   }
 
   .eyebrow {
@@ -32,7 +146,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     margin-bottom: var(--space-3);
   }
 
-  h1 {
+  .hero h1 {
     font-size: var(--fs-display);
   }
 
@@ -43,9 +157,144 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     max-width: 34rem;
   }
 
-  .note {
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
     margin-top: var(--space-6);
-    font-size: var(--fs-small);
+  }
+
+  .btn {
+    display: inline-block;
+    background: var(--color-accent);
+    color: var(--c-off-white);
+    text-decoration: none;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    transition: background var(--transition);
+  }
+
+  .btn:hover {
+    background: var(--color-accent-soft);
+    color: var(--c-off-white);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-ghost:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  /* SECTIONS */
+  .section {
+    padding-block: var(--space-10);
+  }
+
+  .section-alt {
+    background: var(--color-surface);
+  }
+
+  .section-head {
+    max-width: var(--content-width);
+    margin-bottom: var(--space-6);
+  }
+
+  .section-head p {
     color: var(--color-text-muted);
+    margin-top: var(--space-2);
+  }
+
+  /* CARD GRID */
+  .card-grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+
+  .card {
+    display: block;
+    height: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    text-decoration: none;
+    color: var(--color-text);
+    transition:
+      transform var(--transition),
+      border-color var(--transition);
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-accent-soft);
+  }
+
+  .card p {
+    color: var(--color-text-muted);
+    margin-top: var(--space-2);
+  }
+
+  .card-link {
+    display: inline-block;
+    margin-top: var(--space-4);
+    color: var(--color-accent);
+    font-size: 0.95rem;
+  }
+
+  /* JOURNEY */
+  .journey {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .journey li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .journey-step {
+    display: inline-block;
+    background: var(--c-warm-oat);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: var(--space-2) var(--space-4);
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+  }
+
+  .journey-arrow {
+    color: var(--color-accent-soft);
+  }
+
+  .journey-note {
+    margin-top: var(--space-5);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+    max-width: var(--content-width);
+  }
+
+  /* PHILOSOPHY */
+  .philosophy blockquote {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    line-height: var(--lh-heading);
+    border-left: 3px solid var(--color-accent);
+    padding-left: var(--space-5);
+    margin-block: var(--space-4) var(--space-5);
+    color: var(--color-text);
   }
 </style>

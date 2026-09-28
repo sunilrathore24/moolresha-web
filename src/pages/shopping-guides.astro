@@ -1,0 +1,43 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+// Pillar hub stub (Guides / Shopping Intelligence). Real articles: increments 4–5.
+---
+
+<BaseLayout
+  title="Guides — MoolResha"
+  description="Practical shopping checklists: what to look for, feel for, and ask before you buy."
+>
+  <section class="hub container prose">
+    <p class="eyebrow">Shopping Guides</p>
+    <h1>What to check before you buy.</h1>
+    <p class="lede">
+      Practical checklists for shopping in-store and online — what to look for,
+      what to feel for, and what to ask, so you buy with confidence.
+    </p>
+    <p class="soon">Guides are being written. Check back soon.</p>
+    <p><a href="/">&larr; Back home</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .hub {
+    padding-block: var(--space-10);
+  }
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+  .lede {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+  }
+  .soon {
+    margin-top: var(--space-6);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+</style>

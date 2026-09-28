@@ -1,0 +1,84 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+// About / philosophy page. Soft brand presence — no product, no selling.
+---
+
+<BaseLayout
+  title="About — MoolResha"
+  description="Why MoolResha leads with education: know more, compare better, choose for yourself."
+>
+  <section class="about container prose">
+    <p class="eyebrow">About MoolResha</p>
+    <h1>Closer to the Root.</h1>
+
+    <p class="lede">
+      MoolResha helps people become more informed clothing buyers.
+    </p>
+
+    <p>
+      Most of us shop by feel and by label, but few of us are taught to read
+      what a label actually says — or what it quietly leaves out. MoolResha
+      exists to change that. We trace clothing back to its root: the material
+      story, from source to fibre to yarn to fabric to the garment you wear, and
+      through the life it lives with you.
+    </p>
+
+    <h2>What we believe</h2>
+    <ul>
+      <li>Explain, don't hype. What's true beats what sells.</li>
+      <li>
+        Composition isn't quality. "100%" and "premium" are starting points,
+        not conclusions.
+      </li>
+      <li>
+        Trade-offs, not winners. The right fabric depends on your use, climate,
+        and comfort.
+      </li>
+      <li>
+        Useful even if you never buy from us. That independence is the trust
+        we're building.
+      </li>
+    </ul>
+
+    <blockquote>
+      Know more. Compare better. Choose for yourself.
+    </blockquote>
+
+    <p><a href="/">&larr; Back home</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .about {
+    padding-block: var(--space-10);
+  }
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+  .lede {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    margin-block: var(--space-4);
+  }
+  .about h2 {
+    margin-top: var(--space-8);
+  }
+  .about ul {
+    margin-top: var(--space-4);
+    padding-left: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .about blockquote {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    border-left: 3px solid var(--color-accent);
+    padding-left: var(--space-5);
+    margin-block: var(--space-8);
+  }
+</style>

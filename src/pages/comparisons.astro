@@ -1,0 +1,44 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+// Pillar hub stub (Comparisons). Real articles arrive in increments 4–5.
+---
+
+<BaseLayout
+  title="Comparisons — MoolResha"
+  description="Linen vs cotton, pure vs blend, and more — trade-offs, not winners."
+>
+  <section class="hub container prose">
+    <p class="eyebrow">Comparisons</p>
+    <h1>Which is right — for you?</h1>
+    <p class="lede">
+      Linen vs cotton. 100% linen vs a cotton-linen blend. We never crown a
+      winner — we explain the trade-offs so you can match the fabric to your
+      use.
+    </p>
+    <p class="soon">Comparisons are being written. Check back soon.</p>
+    <p><a href="/">&larr; Back home</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .hub {
+    padding-block: var(--space-10);
+  }
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+  .lede {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+  }
+  .soon {
+    margin-top: var(--space-6);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+</style>
