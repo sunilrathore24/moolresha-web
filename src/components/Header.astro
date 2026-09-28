@@ -1,0 +1,180 @@
+---
+// Site header + primary nav. Nav sections match the topic-cluster IA
+// (SKILL.md §4.2). Links are stubs until their pages exist — no dead-ends
+// to external routes; internal hubs are built in later increments.
+const navItems = [
+  { label: "Fibre Stories", href: "/fibre-stories" },
+  { label: "Fabric School", href: "/fabric-school" },
+  { label: "Comparisons", href: "/comparisons" },
+  { label: "Guides", href: "/shopping-guides" },
+  { label: "About", href: "/about" },
+];
+
+const path = Astro.url.pathname;
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="brand" aria-label="MoolResha — home">
+      <span class="brand-name">MoolResha</span>
+      <span class="brand-tagline">Closer to the Root.</span>
+    </a>
+
+    <nav aria-label="Primary">
+      <button
+        class="nav-toggle"
+        aria-expanded="false"
+        aria-controls="primary-nav"
+      >
+        <span class="visually-hidden">Menu</span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+      </button>
+
+      <ul id="primary-nav" class="nav-list">
+        {
+          navItems.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={path === item.href ? "page" : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding-block: var(--space-4);
+  }
+
+  .brand {
+    text-decoration: none;
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  .brand-name {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .brand-tagline {
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  .nav-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    gap: var(--space-5);
+  }
+
+  .nav-list a {
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.95rem;
+    padding-block: var(--space-1);
+    border-bottom: 2px solid transparent;
+    transition: border-color var(--transition), color var(--transition);
+  }
+
+  .nav-list a:hover,
+  .nav-list a[aria-current="page"] {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+
+  .nav-toggle {
+    display: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: var(--space-2);
+  }
+
+  .nav-toggle-bar,
+  .nav-toggle-bar::before,
+  .nav-toggle-bar::after {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--color-text);
+    position: relative;
+    transition: transform var(--transition);
+  }
+
+  .nav-toggle-bar::before,
+  .nav-toggle-bar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+  }
+
+  .nav-toggle-bar::before {
+    top: -6px;
+  }
+  .nav-toggle-bar::after {
+    top: 6px;
+  }
+
+  /* ---- Mobile ---- */
+  @media (max-width: 40rem) {
+    .nav-toggle {
+      display: block;
+    }
+
+    .nav-list {
+      position: absolute;
+      inset: 100% 0 auto 0;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      flex-direction: column;
+      gap: 0;
+      padding: var(--space-2) var(--space-5) var(--space-4);
+      display: none;
+    }
+
+    .nav-list.open {
+      display: flex;
+    }
+
+    .nav-list a {
+      display: block;
+      padding-block: var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector(".nav-toggle");
+  const list = document.getElementById("primary-nav");
+  toggle?.addEventListener("click", () => {
+    const open = list?.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", String(Boolean(open)));
+  });
+</script>

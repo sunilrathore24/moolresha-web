@@ -1,22 +1,51 @@
 ---
-// Increment 1 placeholder homepage — proves the scaffold builds and serves.
-// Full homepage v1 (hero, fibre cards, journey strip, philosophy) is increment 3.
-const title = 'MoolResha — Closer to the Root.';
+import BaseLayout from "../layouts/BaseLayout.astro";
+// Increment 2 shows the base layout + design system in place.
+// Full homepage v1 (fibre cards, journey strip, philosophy, newsletter)
+// is increment 3.
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Know what you wear. Learn to read any clothing label, judge any fabric, and choose for yourself." />
-    <title>{title}</title>
-  </head>
-  <body>
-    <main>
-      <h1>MoolResha</h1>
-      <p>Closer to the Root.</p>
-      <p>Know what you wear — coming soon.</p>
-    </main>
-  </body>
-</html>
+<BaseLayout title="MoolResha — Closer to the Root.">
+  <section class="hero container">
+    <div class="prose">
+      <p class="eyebrow">MoolResha — Closer to the Root.</p>
+      <h1>Know What You Wear.</h1>
+      <p class="lede">
+        Learn to read any clothing label, judge any fabric, and choose for
+        yourself — even if you never buy from us.
+      </p>
+      <p class="note">The full site is being built one piece at a time.</p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    padding-block: var(--space-12);
+  }
+
+  .eyebrow {
+    font-size: var(--fs-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+
+  h1 {
+    font-size: var(--fs-display);
+  }
+
+  .lede {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+    max-width: 34rem;
+  }
+
+  .note {
+    margin-top: var(--space-6);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+</style>

@@ -1,0 +1,72 @@
+/* MoolResha design tokens — the brand visual DNA as CSS custom properties.
+   Palette: warm neutrals, low saturation, earthy. Editorial, calm, rooted.
+   Light-first; dark mode is a later increment. */
+
+:root {
+  /* ---- Colour: warm neutral palette (brand DNA §3) ---- */
+  --c-flax-beige: #d9cbb3;
+  --c-linen-cream: #f3ece0;
+  --c-warm-oat: #e7dcc8;
+  --c-clay: #c08a6a;
+  --c-terracotta: #b5714f;
+  --c-sage: #9aa78c;
+  --c-raw-umber: #6b5844;
+  --c-off-white: #faf6ef;
+  --c-ink: #2c2620; /* warm near-black for text */
+  --c-ink-soft: #5c5245; /* secondary text */
+
+  /* ---- Semantic roles ---- */
+  --color-bg: var(--c-off-white);
+  --color-surface: var(--c-linen-cream);
+  --color-text: var(--c-ink);
+  --color-text-muted: var(--c-ink-soft);
+  --color-accent: var(--c-terracotta);
+  --color-accent-soft: var(--c-clay);
+  --color-border: #e0d6c5;
+  --color-focus: var(--c-terracotta);
+
+  /* ---- Typography ---- */
+  /* Editorial display serif for headings; readable sans for body/nav/meta.
+     System-font fallbacks now; web fonts added in a later increment. */
+  --font-serif: "Newsreader", "Georgia", "Times New Roman", serif;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Fluid type scale (clamp: min, preferred, max) */
+  --fs-display: clamp(2.5rem, 1.8rem + 3.5vw, 4rem);
+  --fs-h1: clamp(2rem, 1.5rem + 2.5vw, 3rem);
+  --fs-h2: clamp(1.5rem, 1.2rem + 1.5vw, 2.15rem);
+  --fs-h3: clamp(1.25rem, 1.1rem + 0.8vw, 1.6rem);
+  --fs-h4: 1.15rem;
+  --fs-body: 1.0625rem;
+  --fs-small: 0.875rem;
+
+  --lh-tight: 1.15;
+  --lh-heading: 1.25;
+  --lh-body: 1.65;
+
+  /* ---- Spacing scale (8px rhythm) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+  --space-10: 4rem;
+  --space-12: 6rem;
+
+  /* ---- Layout ---- */
+  --content-width: 42rem;   /* ~68–72ch readable article measure */
+  --wide-width: 72rem;      /* page shell / grids */
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  /* ---- Motion (reduced-motion friendly) ---- */
+  --transition: 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition: 0ms;
+  }
+}

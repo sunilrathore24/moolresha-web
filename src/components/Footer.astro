@@ -1,0 +1,92 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="footer-name">MoolResha</span>
+      <span class="footer-tagline">Closer to the Root.</span>
+      <p class="footer-mission">
+        Know what you wear. Learn to read any label, judge any fabric, and
+        choose for yourself.
+      </p>
+    </div>
+
+    <nav aria-label="Footer" class="footer-nav">
+      <ul>
+        <li><a href="/fibre-stories">Fibre Stories</a></li>
+        <li><a href="/fabric-school">Fabric School</a></li>
+        <li><a href="/comparisons">Comparisons</a></li>
+        <li><a href="/shopping-guides">Guides</a></li>
+        <li><a href="/about">About</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <div class="container footer-base">
+    <small>&copy; {year} MoolResha. Educational content — not a storefront.</small>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    margin-top: var(--space-12);
+    padding-block: var(--space-8) var(--space-5);
+  }
+
+  .footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-8);
+  }
+
+  .footer-brand {
+    max-width: 28rem;
+  }
+
+  .footer-name {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    display: block;
+  }
+
+  .footer-tagline {
+    font-style: italic;
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .footer-mission {
+    margin-top: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .footer-nav ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .footer-nav a {
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .footer-nav a:hover {
+    color: var(--color-accent);
+  }
+
+  .footer-base {
+    margin-top: var(--space-6);
+    color: var(--color-text-muted);
+  }
+</style>
