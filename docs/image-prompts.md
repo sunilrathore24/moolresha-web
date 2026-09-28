@@ -5,26 +5,46 @@ visual style (adapted from the social skill's Brand Visual DNA §5.1).
 
 ## How to use
 
-1. Generate each image in **Gemini** (or any image model) using the full prompt below.
-2. Save it with the **exact filename** given, as **`.webp`** (or `.jpg`/`.png` — but
-   update the extension in the page if you don't use `.webp`).
-3. Drop the files into **`moolresha-web/public/images/`**.
-4. They appear on the site automatically at `/images/<filename>` — no code change
-   needed (the pages already reference these paths).
+1. Generate each image in **Gemini** using the full prompt below.
+2. **Crop off the bottom 50px white strip** (see next section) — that removes
+   Gemini's AI badge/icon cleanly. You're left with the exact target size.
+3. Save the cropped file with the **exact filename** given, as **`.webp`**
+   (or `.jpg`/`.png` — but tell me if you don't use `.webp` and I'll update the refs).
+4. Drop the files into **`moolresha-web/public/images/`**.
+5. They appear on the site automatically at `/images/<filename>` — no code change.
+
+## The AI-badge crop strip (READ THIS)
+
+Gemini stamps an **AI icon/watermark in the bottom-right corner** of every image.
+To remove it without cutting into the photo, every prompt below asks Gemini to:
+
+- **Extend the canvas height by 50px** and place a **solid white horizontal strip,
+  50px tall, across the full width of the very bottom edge**, kept empty.
+- The AI badge then lands on that white strip, so you **crop off the bottom 50px**
+  and get a clean image at the exact target dimensions.
+
+So each image is **generated 50px taller** than its final size:
+
+| Final size (after crop) | Generate at | Crop off |
+|---|---|---|
+| 1800 × 1200 (3:2 hero) | **1800 × 1250** | bottom 50px |
+| 1200 × 1200 (1:1 card) | **1200 × 1250** | bottom 50px |
+
+> If Gemini still places the badge slightly above the strip, make the strip a
+> little taller (e.g. 70px) and crop that much off — the goal is: badge sits on
+> white, crop the white away.
 
 ## Key differences from the carousel prompts
 
-- **NO text is rendered into these images.** All headings/copy are real HTML on top
-  of or beside the photo. So there is no `RENDER TEXT ON IMAGE` block here.
-- **Leave generous negative space** in the heroes (a calm, low-detail area) so the
-  HTML headline stays legible over the photo.
-- **Web aspect ratios:** heroes are landscape **3:2** (≈1800×1200); fibre cards are
-  square **1:1** (≈1200×1200). Export optimised (WebP, < ~250 KB each ideally).
+- **NO text is rendered into these images.** All headings/copy are real HTML.
+  So there is no `RENDER TEXT ON IMAGE` block — except the white crop strip.
+- **Leave generous negative space** in the heroes so the HTML headline stays legible.
+- **Web aspect ratios**, generated 50px taller for the crop strip (table above).
 
 ## Image list
 
-| # | Filename | Used on | Aspect | Purpose |
-|---|----------|---------|--------|---------|
+| # | Filename | Used on | Final aspect | Purpose |
+|---|----------|---------|--------------|---------|
 | 1 | `home-hero.webp` | Homepage hero | 3:2 | Main brand hero |
 | 2 | `fibre-linen.webp` | Homepage "Explore fibres" card | 1:1 | Linen card |
 | 3 | `fibre-cotton.webp` | Homepage "Explore fibres" card | 1:1 | Cotton card |
@@ -40,12 +60,13 @@ visual style (adapted from the social skill's Brand Visual DNA §5.1).
 
 ## The shared Brand Visual DNA (baked into every prompt below)
 
-Each prompt is fully self-contained and repeats this block, so you can copy any one
-prompt straight into Gemini with nothing to assemble.
+Each prompt is fully self-contained — copy any one straight into Gemini with
+nothing to assemble. The final line of every prompt is the white crop-strip
+instruction.
 
 ---
 
-### 1. `home-hero.webp` — Homepage hero (3:2)
+### 1. `home-hero.webp` — Homepage hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy or over-stylized. Earthy and calm.
@@ -56,12 +77,12 @@ MOOD: quiet, curious, authentic, rooted. "Closer to the root."
 COMPOSITION: a neatly stacked pile of folded natural linen and cotton garments in beige/cream/oat tones resting on a pale oak surface, positioned to the RIGHT of frame; the LEFT third is calm empty background (soft-focus wall / open table) kept clear as negative space for a headline.
 CAMERA: full-frame look, 50mm, shallow depth of field, fine natural grain, no HDR, no plastic sheen.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no faces, no neon colours, no heavy vignette, no clutter, no plastic gradients.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty (no photo, no text) so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
 
-### 2. `fibre-linen.webp` — Linen fibre card (1:1)
+### 2. `fibre-linen.webp` — Linen fibre card (final 1:1)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -72,12 +93,12 @@ MOOD: quiet, authentic, rooted.
 COMPOSITION: a folded swatch of natural undyed linen fabric with a few dried blue-green flax stems resting on top, centred, top-down flat-lay on a warm oat surface.
 CAMERA: full-frame macro look, 85mm, shallow depth of field on the weave, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-ASPECT RATIO: 1:1 square (1200 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1200 x 1250 px. The photo fills the top 1200 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1200 x 1200 px (1:1).
 ```
 
 ---
 
-### 3. `fibre-cotton.webp` — Cotton fibre card (1:1)
+### 3. `fibre-cotton.webp` — Cotton fibre card (final 1:1)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -88,12 +109,12 @@ MOOD: quiet, authentic, rooted.
 COMPOSITION: an open raw cotton boll on its dried branch resting beside a neatly folded cream cotton fabric swatch, centred, top-down flat-lay on a warm oat surface.
 CAMERA: full-frame macro look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-ASPECT RATIO: 1:1 square (1200 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1200 x 1250 px. The photo fills the top 1200 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1200 x 1200 px (1:1).
 ```
 
 ---
 
-### 4. `fibre-blends.webp` — Blends card (1:1)
+### 4. `fibre-blends.webp` — Blends card (final 1:1)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -104,12 +125,12 @@ MOOD: quiet, curious, authentic.
 COMPOSITION: two folded fabric swatches partly overlapping — one textured natural linen, one smooth cream cotton — centred, top-down flat-lay on a warm oat surface, showing where they meet.
 CAMERA: full-frame macro look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-ASPECT RATIO: 1:1 square (1200 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1200 x 1250 px. The photo fills the top 1200 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1200 x 1200 px (1:1).
 ```
 
 ---
 
-### 5. `hub-fibre-stories.webp` — Fibre Stories hub hero (3:2)
+### 5. `hub-fibre-stories.webp` — Fibre Stories hub hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -120,12 +141,12 @@ MOOD: quiet, curious, rooted. "Closer to the root."
 COMPOSITION: a field of flax plants in soft blue-green bloom stretching toward the horizon at dawn, with the sky occupying the top third as calm negative space for a headline; subject weighted to the lower-right.
 CAMERA: full-frame look, 50mm, wider depth of field for the landscape, fine natural grain, no HDR, no plastic sheen.
 NEGATIVE: no text, no lettering, no watermark, no logos, no people, no neon colours, no heavy vignette, no clutter.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
 
-### 6. `hub-fabric-school.webp` — Fabric School hub hero (3:2)
+### 6. `hub-fabric-school.webp` — Fabric School hub hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -136,12 +157,12 @@ MOOD: quiet, precise, curious.
 COMPOSITION: a macro close-up of natural linen fabric weave filling the right two-thirds of the frame, with a softly blurred calmer area on the LEFT kept as negative space for a headline; a wooden spool or loose thread resting at the edge.
 CAMERA: full-frame macro look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
 
-### 7. `hub-comparisons.webp` — Comparisons hub hero (3:2)
+### 7. `hub-comparisons.webp` — Comparisons hub hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -152,12 +173,12 @@ MOOD: quiet, curious, balanced.
 COMPOSITION: two folded fabric swatches laid side by side on a pale oak surface, top-down — textured linen on one side, smooth cotton on the other, meeting near centre; some calm empty table surface at the top as negative space for a headline.
 CAMERA: full-frame look, 50mm, medium depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no hands, no neon colours, no clutter.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
 
-### 8. `hub-shopping-guides.webp` — Guides hub hero (3:2)
+### 8. `hub-shopping-guides.webp` — Guides hub hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -168,12 +189,12 @@ MOOD: quiet, attentive, curious.
 COMPOSITION: a pair of hands holding up a piece of natural linen fabric toward a soft-lit window to inspect the weave, positioned to the right; the LEFT side is softly blurred bright window light kept as negative space for a headline. Hands natural and relaxed, no distortion.
 CAMERA: full-frame look, 50mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no faces, no distorted hands, no neon colours, no clutter.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
 
-### 9. `about-hero.webp` — About page hero (3:2)
+### 9. `about-hero.webp` — About page hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -184,12 +205,12 @@ MOOD: quiet, honest, rooted. "Closer to the root."
 COMPOSITION: two open hands gently cradling a loose bundle of raw undyed flax fibre, centred slightly right, with a calm softly-blurred earthy background on the left as negative space for a headline. Hands natural, no distortion.
 CAMERA: full-frame look, 85mm, shallow depth of field, fine natural grain, no HDR.
 NEGATIVE: no text, no lettering, no watermark, no logos, no faces, no distorted hands, no neon colours, no clutter.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
 
-### 10. `article-linen-shirt-hero.webp` — Linen-shirt article hero (3:2)
+### 10. `article-linen-shirt-hero.webp` — Linen-shirt article hero (final 3:2)
 
 ```
 STYLE: Editorial, natural, grounded, documentary-meets-minimal. Premium but honest, not glossy. Earthy and calm.
@@ -200,7 +221,7 @@ MOOD: quiet, tactile, honest.
 COMPOSITION: a close detail of a folded or draped natural cream linen shirt showing the collar, a button, and the weave, resting on a pale oak surface; the upper area kept as calm negative space for a headline.
 CAMERA: full-frame look, 85mm, shallow depth of field on the weave and button, fine natural grain, no HDR, no plastic sheen.
 NEGATIVE: no text, no lettering, no watermark, no logos, no faces, no distorted hands, no neon colours, no heavy vignette, no clutter.
-ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
+CANVAS + CROP STRIP: generate the image at 1800 x 1250 px. The photo fills the top 1800 x 1200 px. Add a SOLID PURE-WHITE horizontal strip, exactly 50px tall, spanning the full width along the very BOTTOM edge — keep it completely empty so an AI badge can sit on it and be cropped off. Final image after cropping the bottom 50px is 1800 x 1200 px (3:2).
 ```
 
 ---
@@ -208,5 +229,6 @@ ASPECT RATIO: 3:2 landscape (1800 x 1200 px).
 ## After you add the images
 
 Nothing else to do — the pages already point at these paths. If you use a different
-extension than `.webp`, tell me and I'll update the `<img>` references. If any image
-comes out with unwanted text baked in, regenerate (the NEGATIVE line forbids it).
+extension than `.webp`, tell me and I'll update the references. If the AI badge ever
+lands above the white strip, increase the strip height and crop that much off.
+```
