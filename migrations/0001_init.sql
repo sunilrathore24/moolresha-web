@@ -7,7 +7,7 @@ CREATE TABLE concept_feedback (
   verdict        TEXT NOT NULL CHECK (verdict IN ('would_wear','maybe','not_for_me')),
   changes        TEXT NOT NULL DEFAULT '',          -- '|'-joined allow-listed chips, sorted
   other_text     TEXT CHECK (other_text IS NULL OR length(other_text) <= 200),
-  colour         TEXT CHECK (colour IS NULL OR colour IN ('flax','clay','meadow','indigo_dusk','chalk_white')),
+  colour         TEXT CHECK (colour IS NULL OR colour IN ('flax','clay','meadow','indigo_dusk','chalk_white','graphite')),
   priorities     TEXT NOT NULL DEFAULT '',          -- '|'-joined allow-listed Priority_Chips, sorted; '' = none chosen (Req 9.19)
   price_band_id  TEXT,                              -- allow-listed per Concept in the API; NULL when skipped or unanswered
   price_skipped  INTEGER NOT NULL DEFAULT 0 CHECK (price_skipped IN (0,1)),

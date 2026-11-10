@@ -13,7 +13,14 @@ An education-first, static, visually rich textile-knowledge platform that helps 
 - **Cloudflare Pages** — hosting + auto-deploy on push. Preview deploys on PRs.
 - **Cloudflare Pages Functions + D1** — the thin dynamic layer: Concept feedback, frustrations, interest sign-ups, event counts and cached results.
 - **MailerLite** — email sign-ups (double opt-in).
-- **GA4 + Google Search Console** — analytics + search.
+- **Cloudflare Web Analytics + Google Search Console** — analytics + search. Cloudflare Web
+  Analytics is cookieless and needs no code change here: enable it for the zone in the
+  Cloudflare dashboard. (Not GA4 — chosen so the site adds no new data processor beyond
+  Cloudflare, which the Privacy_Notice already discloses.)
+- First-party, privacy-conscious usage counts also exist in-app: `/api/events` (anonymous
+  day/event/Concept/section/UTM counts, no IP/UA/PII) and `/api/results` (the public, cached
+  aggregate feeding "What others have said so far"). `/api/admin/export/*.csv` gives raw
+  aggregate/feedback CSV pulls behind `ADMIN_BEARER_SECRET` + Cloudflare Access.
 
 ## Local development
 
