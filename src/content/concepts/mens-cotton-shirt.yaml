@@ -1,0 +1,70 @@
+# Concept 1 (featured). Placeholder copy: the founder finalises the wording.
+# Target ranges and "We'll test" rows only. Exact GSM and yarn count appear only
+# after the mill confirms them and a FACT entry backs them (Requirement 8C.6).
+# "RootWeave 01" is the product code already printed on the neck-label photography;
+# it is a small badge next to the Concept number, not a rename of `name`.
+id: mens-cotton-shirt
+order: 1
+featured: true
+name: "Men's textured cotton shirt"
+productCode: "RootWeave 01"
+laterProduct: false
+marketScanId: mens-cotton-shirt
+views:
+  kind: render
+  alt:
+    01-front: "Men's textured cotton shirt, front view, showing a regular collar and a fine diamond micro-dobby texture"
+    02-front-three-quarter: "Men's textured cotton shirt, front three-quarter view, showing the collar, placket and chest embroidery"
+    03-side: "Men's textured cotton shirt, side view, showing the sleeve seam and a straight hem"
+    04-back-three-quarter: "Men's textured cotton shirt, back three-quarter view, showing a plain yoke and the shoulder seam"
+    05-back: "Men's textured cotton shirt, back view, showing a clean, unbranded back"
+    06-inside: "Men's textured cotton shirt, inside view, turned out to show the seam finish, the collar stand and the placket"
+    07-fabric-closeup: "Men's textured cotton shirt, fabric close-up of a fine diamond micro-dobby weave"
+    08-on-model: "Men's textured cotton shirt on a model, cropped at the chin, sleeves rolled once, untucked"
+fabricNotes:
+  composition:
+    - { fibre: cotton, percent: 100 }
+  weave: "Fine diamond micro-dobby"
+  weight: "Light to mid weight, around 115 to 130 GSM (target range, to be confirmed with our mill)"
+  handFeel: "Soft and structured, with a subtle woven diamond texture"
+  softness: "Aimed at a soft hand feel; we will check it after repeated washes"
+  care: "Machine wash cold, dry in shade, warm iron on the reverse side"
+construction:
+  fit: "Comfort-regular: natural shoulders, comfortable movement through the chest and arms, a gently shaped silhouette, full sleeves and a curved hem."
+  details:
+    - "Pocketless front"
+    - "Subtle ivory buttons"
+    - "Interlocking-thread embroidery on the left chest"
+    - "Clean, unbranded back"
+quality:
+  - { row: fibre, label: Target, text: "100% cotton, no blended fibres" }
+  - row: yarn
+    label: Target
+    text: "Fine cotton yarn, count to be confirmed with our mill"
+    range: { kind: count, min: 40, max: 60 }
+  - row: fabric
+    label: Target
+    text: "Fine diamond micro-dobby weave, light to mid weight"
+    range: { kind: gsm, min: 115, max: 130 }
+  - { row: on_your_skin, label: Target, text: "Smooth hand feel that breathes in warm weather" }
+  - row: shrinkage
+    label: WeWillTest
+    text: "Pre-washed to limit shrinkage, aiming for 2 percent or less"
+    test:
+      what: "length and width after five home washes"
+      publish: "the measurements, garment by garment"
+  - row: after_a_year
+    label: WeWillTest
+    text: "Colour, pilling and seams over time"
+    test:
+      what: "colour, pilling and seams after repeated washes"
+      publish: "photos after each round of washing"
+  - { row: care, label: Target, text: "Machine wash cold, dry in shade" }
+priceBands:
+  - { kind: under, id: mcs-under-1000, upper: 1000 }
+  - { kind: range, id: mcs-1000-1499, lower: 1000, upper: 1499 }
+  - { kind: range, id: mcs-1500-1999, lower: 1500, upper: 1999 }
+  - { kind: range, id: mcs-2000-2499, lower: 2000, upper: 2499 }
+  - { kind: range, id: mcs-2500-2999, lower: 2500, upper: 2999 }
+  - { kind: over, id: mcs-3000-plus, lower: 3000 }
+colours: [flax, clay, meadow, indigo_dusk, chalk_white, graphite]

@@ -1,0 +1,18 @@
+# Copy to .dev.vars for local `wrangler pages dev`. NEVER commit real values.
+# In production these are Cloudflare secrets/variables (Requirement 14.8).
+
+# Cloudflare Turnstile secret key (server side)
+TURNSTILE_SECRET=
+
+# MailerLite API token and the id of the double opt-in group
+MAILERLITE_API_KEY=
+ML_GROUP_ID=
+
+# Bearer secret for /api/admin/* (fallback behind Cloudflare Access)
+ADMIN_BEARER_SECRET=
+
+# Seed for the daily identity salt (rate limiting)
+IDENTITY_SALT_SEED=
+
+# Optional: preview origin allowed for CORS and Turnstile hostname, e.g. https://<branch>.moolresha-web.pages.dev
+PREVIEW_ORIGIN=

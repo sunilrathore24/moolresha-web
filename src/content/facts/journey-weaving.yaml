@@ -1,0 +1,12 @@
+# Drafted by AI research (no live web source available this session). Still MoolResha estimate /
+# verifyFlag:true by design — a human should attach a dated source before this is upgraded to a
+# sourced FACT and published.
+id: journey-weaving
+label: MoolResha estimate
+text: "Weaving turns yarn into cloth on a loom by interlacing two sets of threads at right angles: the lengthwise warp held under tension, and the crosswise weft carried back and forth through it. The pattern of interlacing gives a weave like poplin or twill its look and feel."
+assumptions:
+  - "Standard description of plain weaving (warp and weft on a loom), consistent across general textile-industry references. No India-specific or brand-specific statistic is claimed."
+strength: UNVERIFIED
+lastChecked: "2026-11-08"
+verifyFlag: true
+section: journey

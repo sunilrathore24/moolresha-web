@@ -1,0 +1,94 @@
+---
+/**
+ * Fabric_Notes (Requirements 8.3, 8.4): composition with percentages, yarn quality,
+ * weave, weight, hand feel, softness and care.
+ *
+ * Yarn quality is rendered only when `fabricNotes.yarnQuality.factId` exists, and
+ * then through FactText so it carries a Claim_Label and Source_Link. Otherwise the
+ * term (for example "combed" or "long-staple") is omitted.
+ */
+import type { FabricNotesData } from '../../lib/concept-schema';
+import { fabricNoteItems } from '../../lib/quality-card-view';
+import FactText from './FactText.astro';
+
+interface Props {
+  /** The Concept's `fabricNotes` data. */
+  fabricNotes: FabricNotesData;
+  /** Used to build unique heading ids. */
+  conceptId?: string;
+}
+
+const { fabricNotes, conceptId } = Astro.props;
+const items = fabricNoteItems(fabricNotes);
+const headingId = conceptId ? `fn-${conceptId}` : undefined;
+---
+
+<section class="fabric-notes" data-fabric-notes aria-labelledby={headingId}>
+  <h3 id={headingId} class="fn-heading">Fabric notes</h3>
+  <dl class="fn-list">
+    {
+      items.map((item) => (
+        <div class="fn-row" data-fabric-note={item.key}>
+          <dt>{item.term}</dt>
+          <dd data-composition={item.key === 'composition' ? '' : undefined}>
+            {item.factId ? <FactText id={item.factId} /> : item.text}
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>
+
+<style>
+  .fabric-notes {
+    margin-block: var(--space-5);
+  }
+
+  .fn-heading {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .fn-list {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  .fn-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 8.5rem) 1fr;
+    gap: var(--space-1) var(--space-4);
+    padding-block: var(--space-2);
+  }
+
+  .fn-row + .fn-row {
+    border-top: 1px dashed var(--color-border);
+  }
+
+  .fn-row dt {
+    font-size: var(--fs-label, 0.75rem);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.9;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .fn-row dd {
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  @media (max-width: 30rem) {
+    .fn-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+</style>

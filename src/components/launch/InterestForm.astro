@@ -1,0 +1,663 @@
+---
+/**
+ * Optional interest list (Requirements 12.1 to 12.6, 12.10, 12.11, 13.2, 19.x, 21.x).
+ *
+ * Order matters: the notice comes BEFORE the fields (12.2). Email, WhatsApp and size are optional.
+ * The consent checkboxes are separate and unticked (12.3, 12.8), and the 18+ confirmation is its own box (12.6).
+ * The notice text is built from privacy.yaml (src/lib/interest-notice.ts), so it matches /privacy.
+ *
+ * The form works only with JavaScript (the endpoint takes JSON with a Turnstile token); <noscript> says so.
+ * The island (task 16.8) uses these hooks:
+ *   [data-interest-form]     the form. Its `data-notice-version` is NOTICE_VERSION; send it as `noticeVersion`.
+ *   input[name=email]        optional email
+ *   input[name=whatsapp]     the 10 digits after the fixed "+91"; build the value with `whatsappForSubmit()`
+ *   select[name=size]        value "" (not chosen) or one of SIZES
+ *   input[name=consent-email|consent-whatsapp|consent-link|consent-adult]   checkboxes, value "on"
+ *   [data-error-for="<name>"] one field-level error slot per field (ids from `interestErrorId`). The
+ *                            island writes plain text into it and sets `aria-invalid` on the control.
+ *   [data-submit]            submit button. Starts `hidden`; the island reveals it.
+ *   [data-live-region]       role="status" region
+ *   [data-turnstile]         empty Turnstile mount point
+ */
+import { Picture } from 'astro:assets';
+import field from '../../assets/journey/field.jpg';
+import { loadPrivacy } from '../../lib/privacy-schema';
+import { NOTICE_VERSION } from '../../lib/notice-version';
+import { interestNotice } from '../../lib/interest-notice';
+import {
+  INTEREST_FIELDS as F,
+  NOSCRIPT_NOTE,
+  interestControlId as cid,
+  interestErrorId as eid,
+  sizeOptions,
+} from '../../lib/launch-forms';
+
+const notice = interestNotice(loadPrivacy(), NOTICE_VERSION);
+const sizes = sizeOptions();
+---
+
+<section class="interest" data-section="interest" id="interest" aria-labelledby="interest-h">
+  <div class="banner">
+  <div class="banner-bg" aria-hidden="true">
+    <Picture
+      src={field}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
+      widths={[640, 1080, 1600]}
+      sizes="(min-width: 72rem) 72rem, 100vw"
+      loading="lazy"
+      decoding="async"
+      class="banner-img"
+    />
+  </div>
+  <div class="banner-inner">
+  <div class="intro-col">
+  <p class="eyebrow">08 — Stay in touch</p>
+  <h2 id="interest-h">Be part of the research.</h2>
+  <p class="interest-intro">
+    This is optional. You can answer every question on this page without leaving any contact detail.
+  </p>
+
+  <p class="perk">
+    <strong>Why leave your email?</strong> Early supporters get first access and a founding-member
+    discount once we launch pricing — exact terms to follow.
+  </p>
+
+  <div class="notice" data-interest-notice>
+    <h3>{notice.heading}</h3>
+    <ul>
+      <li><strong>What we collect.</strong> {notice.collected}</li>
+      <li><strong>Why.</strong> {notice.purpose}</li>
+      <li><strong>Who handles it.</strong> {notice.processors}</li>
+      <li>
+        <strong>How long we keep it.</strong>
+        <ul class="retention">
+          {notice.retention.map((r) => <li>{r.label}: {r.text}</li>)}
+        </ul>
+      </li>
+      <li>
+        <strong>How to withdraw.</strong>
+        {notice.withdraw}
+        <a href={`mailto:${notice.grievanceEmail}`}>{notice.grievanceEmail}</a>.
+      </li>
+    </ul>
+    <p class="notice-links">
+      <a href={notice.privacyHref}>{notice.privacyLinkText}</a>.
+      <span class="notice-version" data-notice-version-text>{notice.versionText}</span>
+    </p>
+  </div>
+  </div>
+
+  <form
+    method="post"
+    action="/api/interest"
+    class="interest-form"
+    data-interest-form
+    data-notice-version={NOTICE_VERSION}
+    novalidate
+  >
+    <div class="field field-half">
+      <label for={cid(F.email)}>Email address (optional)</label>
+      <input
+        type="email"
+        id={cid(F.email)}
+        name={F.email}
+        autocomplete="email"
+        inputmode="email"
+        maxlength="254"
+        aria-describedby={eid(F.email)}
+      />
+      <p class="field-error" id={eid(F.email)} data-error-for={F.email}></p>
+    </div>
+
+    <div class="field field-half">
+      <label for={cid(F.whatsapp)}>WhatsApp number (optional)</label>
+      <div class="phone">
+        <span class="phone-prefix" aria-hidden="true">+91</span>
+        <input
+          type="tel"
+          id={cid(F.whatsapp)}
+          name={F.whatsapp}
+          autocomplete="tel-national"
+          inputmode="numeric"
+          maxlength="16"
+          aria-describedby={`${cid(F.whatsapp)}-hint ${eid(F.whatsapp)}`}
+        />
+      </div>
+      <p class="hint" id={`${cid(F.whatsapp)}-hint`}>
+        Indian mobile number after +91: ten digits starting with 6, 7, 8 or 9.
+      </p>
+      <p class="field-error" id={eid(F.whatsapp)} data-error-for={F.whatsapp}></p>
+    </div>
+
+    <div class="field">
+      <label for={cid(F.size)}>Your usual size (optional)</label>
+      <select id={cid(F.size)} name={F.size} aria-describedby={eid(F.size)}>
+        <option value="">Choose a size</option>
+        {sizes.map((s) => <option value={s.value}>{s.label}</option>)}
+      </select>
+      <p class="field-error" id={eid(F.size)} data-error-for={F.size}></p>
+    </div>
+
+    <fieldset class="consents">
+      <legend>Your consents</legend>
+      <p class="hint">Each box is separate and starts unticked. Tick only what you are happy with.</p>
+
+      <div class="check">
+        <input
+          type="checkbox"
+          id={cid(F.consentEmail)}
+          name={F.consentEmail}
+          aria-describedby={eid(F.consentEmail)}
+        />
+        <label for={cid(F.consentEmail)}>
+          Email: I agree that MoolResha may store my email address and send me the results and launch updates.
+          We will first send a confirmation email.
+        </label>
+      </div>
+      <p class="field-error" id={eid(F.consentEmail)} data-error-for={F.consentEmail}></p>
+
+      <div class="check">
+        <input
+          type="checkbox"
+          id={cid(F.consentWhatsapp)}
+          name={F.consentWhatsapp}
+          aria-describedby={eid(F.consentWhatsapp)}
+        />
+        <label for={cid(F.consentWhatsapp)}>
+          WhatsApp: I agree that MoolResha may store my WhatsApp number and message me close updates such as
+          fit tests and launch day.
+        </label>
+      </div>
+      <p class="field-error" id={eid(F.consentWhatsapp)} data-error-for={F.consentWhatsapp}></p>
+
+      <div class="check">
+        <input
+          type="checkbox"
+          id={cid(F.consentLink)}
+          name={F.consentLink}
+          aria-describedby={eid(F.consentLink)}
+        />
+        <label for={cid(F.consentLink)}>
+          Link to my answers: I agree that MoolResha may connect my contact details to the answers I gave on this
+          page. If I leave this unticked, my answers stay anonymous.
+        </label>
+      </div>
+      <p class="field-error" id={eid(F.consentLink)} data-error-for={F.consentLink}></p>
+
+      <div class="check">
+        <input
+          type="checkbox"
+          id={cid(F.consentAdult)}
+          name={F.consentAdult}
+          aria-describedby={eid(F.consentAdult)}
+        />
+        <label for={cid(F.consentAdult)}>I confirm that I am 18 or older (needed before we store an email or number).</label>
+      </div>
+      <p class="field-error" id={eid(F.consentAdult)} data-error-for={F.consentAdult}></p>
+    </fieldset>
+
+    <div data-turnstile></div>
+
+    <button type="submit" class="submit" data-submit hidden>Keep me informed</button>
+
+    <noscript>
+      <p class="noscript-note">{NOSCRIPT_NOTE}</p>
+    </noscript>
+
+    <p class="live-region" role="status" aria-live="polite" data-live-region></p>
+  </form>
+
+  <div class="share-prompt" data-share-prompt hidden>
+    <p class="share-prompt-title">You're in.</p>
+    <p class="share-prompt-body">
+      Know someone who'd have an opinion on this? Ask a friend what they think.
+    </p>
+    <div class="share-row">
+      <button type="button" class="share-copy" data-share-copy>Copy link</button>
+      <p class="share-status" role="status" aria-live="polite" data-share-status></p>
+    </div>
+  </div>
+  </div>
+  </div>
+</section>
+
+<style>
+  .interest {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    padding: var(--space-section, var(--space-10)) var(--space-4);
+  }
+
+  /* ---- Banner: the field photo under a strong cream overlay, so text contrast stays that of cream ---- */
+  .banner {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: var(--radius-card, 14px);
+    background: var(--color-page, #f6efe4);
+    box-shadow: var(--shadow-card, var(--shadow-soft));
+  }
+
+  .banner-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .banner-bg :global(.banner-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .banner-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      rgb(246 239 228 / 0.94) 0%,
+      rgb(246 239 228 / 0.9) 55%,
+      rgb(246 239 228 / 0.86) 100%
+    );
+  }
+
+  .banner-inner {
+    display: grid;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .intro-col,
+  .interest-form {
+    min-width: 0;
+  }
+
+  .interest-form {
+    padding: var(--space-5);
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card, 14px);
+  }
+
+  @media (min-width: 60rem) {
+    .banner-inner {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+      align-items: start;
+      gap: var(--space-8);
+      padding: var(--space-8);
+    }
+
+    .interest-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--space-5);
+      padding: var(--space-6);
+    }
+
+    /* Email and WhatsApp side by side; everything else spans the form. */
+    .interest-form > :not(.field-half) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .eyebrow {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  h2 {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .interest-intro {
+    margin: 0 0 var(--space-5);
+    color: var(--color-text);
+  }
+
+  /* ---- Perk: directional only (no exact percentage or headcount promised — that would be a
+     real commitment on a pre-launch, pre-pricing site) ---- */
+  .perk {
+    margin: 0 0 var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-accent-text, #8f5233);
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .notice {
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .notice h3 {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 500;
+  }
+
+  .notice ul {
+    margin: 0;
+    padding-left: var(--space-5);
+  }
+
+  .notice li + li {
+    margin-top: var(--space-2);
+  }
+
+  .retention {
+    margin-top: var(--space-1);
+  }
+
+  .notice-links {
+    margin: var(--space-3) 0 0;
+  }
+
+  .notice a {
+    display: inline-block;
+    min-height: 24px;
+    color: var(--color-accent-text, #8f5233);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .notice a:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .notice-version {
+    margin-left: var(--space-2);
+    color: var(--color-text-muted);
+  }
+
+  .field {
+    margin-bottom: var(--space-4);
+  }
+
+  .field > label {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  input[type='email'],
+  input[type='tel'],
+  select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: var(--radius-lg);
+  }
+
+  input[type='email']:focus-visible,
+  input[type='tel']:focus-visible,
+  select:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .phone {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .phone-prefix {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--space-3);
+    min-height: 44px;
+    background: var(--color-surface);
+    border: 1px solid var(--c-raw-umber);
+    border-right: 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    font-family: var(--font-sans);
+    color: var(--color-text);
+  }
+
+  .phone input {
+    min-width: 0;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+
+  .hint {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  /* Error text starts with a word, not only a colour, and gets a bar (Requirement 21.4). */
+  .field-error {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-small);
+    color: #8a2f1a;
+  }
+
+  .field-error:empty {
+    display: none;
+  }
+
+  .field-error:not(:empty) {
+    padding-left: var(--space-2);
+    border-left: 3px solid #8a2f1a;
+  }
+
+  .field-error:not(:empty)::before {
+    content: 'Problem: ';
+    font-weight: 600;
+  }
+
+  [aria-invalid='true'] {
+    border-color: #8a2f1a;
+    border-width: 2px;
+  }
+
+  fieldset.consents {
+    margin: var(--space-2) 0 var(--space-4);
+    padding: var(--space-4) 0 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    min-width: 0;
+  }
+
+  legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin-bottom: var(--space-1);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  legend + * {
+    clear: both;
+  }
+
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .check input {
+    flex: none;
+    width: 1.375rem;
+    height: 1.375rem;
+    margin: 0.6rem 0 0;
+    accent-color: var(--color-olive, #3b3a2b);
+    cursor: pointer;
+  }
+
+  .check input:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .check label {
+    flex: 1;
+    min-height: 44px;
+    padding-block: var(--space-2);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .submit {
+    justify-self: start;
+    margin-top: var(--space-2);
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--space-2) var(--space-6);
+    background: var(--color-accent-text, #8f5233);
+    color: var(--c-off-white, #faf6ef);
+    border: 1px solid var(--color-accent-text, #8f5233);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition);
+  }
+
+  .submit:hover {
+    background: var(--color-olive, #3b3a2b);
+    border-color: var(--color-olive, #3b3a2b);
+  }
+
+  .submit:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .submit[hidden] {
+    display: none;
+  }
+
+  .submit[aria-disabled='true'] {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .noscript-note {
+    margin: var(--space-3) 0 0;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius);
+    font-size: var(--fs-small);
+    color: var(--color-text);
+  }
+
+  .live-region {
+    margin: var(--space-3) 0 0;
+    min-height: 1.5em;
+    font-size: var(--fs-small);
+    color: var(--color-text);
+  }
+
+  /* ---- Share prompt: revealed by the island once the form succeeds (Round 2 research:
+     a referral step costs nothing and multiplies reach). Sits where the form was, in the
+     same card, so the moment of "you're in" doesn't require scrolling to find it. ---- */
+  .share-prompt[hidden] {
+    display: none;
+  }
+
+  .share-prompt {
+    padding: var(--space-5);
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card, 14px);
+  }
+
+  .share-prompt-title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    color: var(--color-text);
+  }
+
+  .share-prompt-body {
+    margin: 0 0 var(--space-4);
+    color: var(--color-text-muted);
+  }
+
+  .share-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .share-copy {
+    min-height: 44px;
+    padding: var(--space-2) var(--space-5);
+    background: var(--color-accent-text, #8f5233);
+    color: var(--c-off-white, #faf6ef);
+    border: 1px solid var(--color-accent-text, #8f5233);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition);
+  }
+
+  .share-copy:hover {
+    background: var(--color-olive, #3b3a2b);
+    border-color: var(--color-olive, #3b3a2b);
+  }
+
+  .share-copy:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .share-status {
+    margin: 0;
+    min-height: 1.5em;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .submit,
+    .share-copy {
+      transition: none;
+    }
+  }
+</style>

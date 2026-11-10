@@ -1,0 +1,63 @@
+# Concept 5. Placeholder copy: the founder finalises the wording.
+# Composition is 100% cotton, or cotton with 10-20% linen (Requirement 8.5).
+# ⚠️ confirm: 100% cotton is a placeholder until the founder picks the composition.
+# Target ranges and "We'll test" rows only. Exact GSM and yarn count appear only
+# after the mill confirms them and a FACT entry backs them (Requirement 8C.6).
+id: womens-coord-set
+order: 5
+featured: false
+name: "Women's relaxed cotton co-ord set"
+laterProduct: false
+marketScanId: womens-coord-set
+views:
+  kind: render
+  alt:
+    01-front: "Women's relaxed cotton co-ord set, front view, on a hanger, showing a relaxed shirt top and matching straight pant"
+    02-front-three-quarter: "Women's relaxed cotton co-ord set, front three-quarter view, on a hanger, showing the top's collar, placket and the pant waistband"
+    03-side: "Women's relaxed cotton co-ord set, side view, on a hanger, showing the top's side seam and the pant's side pocket"
+    04-back-three-quarter: "Women's relaxed cotton co-ord set, back three-quarter view, on a hanger, showing the top's back yoke and the pant waistband"
+    05-back: "Women's relaxed cotton co-ord set, back view, on a hanger, showing a plain back yoke and an even top and pant hem"
+    06-inside: "Women's relaxed cotton co-ord set, inside view, turned out to show the seam finish of the top and the pant waistband lining"
+    07-fabric-closeup: "Women's relaxed cotton co-ord set, fabric close-up of a plain cotton weave with even, tight threads"
+    08-on-model: "Women's relaxed cotton co-ord set worn by a model, on a model cropped at the chin, top untucked over the pant"
+fabricNotes:
+  composition:
+    - { fibre: cotton, percent: 100 }
+  weave: "Plain weave"
+  weight: "Light to mid weight (target range, to be confirmed with our mill)"
+  handFeel: "Smooth and soft, with an easy drape"
+  softness: "Aimed at a soft hand feel; we will check it after repeated washes"
+  care: "Machine wash cold, dry in shade, warm iron"
+quality:
+  - { row: fibre, label: Target, text: "100% cotton, composition to be confirmed" }
+  - row: yarn
+    label: Target
+    text: "Cotton yarn, count to be confirmed with our mill"
+    range: { kind: count, min: 40, max: 60 }
+  - row: fabric
+    label: Target
+    text: "Plain weave, light to mid weight"
+    range: { kind: gsm, min: 120, max: 150 }
+  - { row: on_your_skin, label: Target, text: "Smooth, soft hand feel that breathes in warm weather" }
+  - row: shrinkage
+    label: WeWillTest
+    text: "Pre-washed to limit shrinkage"
+    test:
+      what: "length and width of the top and the pant after five home washes"
+      publish: "the measurements, garment by garment"
+  - row: after_a_year
+    label: WeWillTest
+    text: "Colour, pilling and seams over time"
+    test:
+      what: "colour, pilling and seams after repeated washes"
+      publish: "photos after each round of washing"
+  - { row: care, label: Target, text: "Machine wash cold, dry in shade" }
+priceBands:
+  - { kind: under, id: wcs-under-1500, upper: 1500 }
+  - { kind: range, id: wcs-1500-1999, lower: 1500, upper: 1999 }
+  - { kind: range, id: wcs-2000-2499, lower: 2000, upper: 2499 }
+  - { kind: range, id: wcs-2500-2999, lower: 2500, upper: 2999 }
+  - { kind: range, id: wcs-3000-3499, lower: 3000, upper: 3499 }
+  - { kind: range, id: wcs-3500-3999, lower: 3500, upper: 3999 }
+  - { kind: over, id: wcs-4000-plus, lower: 4000 }
+colours: [flax, clay, meadow, indigo_dusk, chalk_white]

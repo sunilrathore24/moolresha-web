@@ -1,200 +1,123 @@
 # MoolResha — Rate Limiting & Abuse Protection for Open APIs
 
-_The MoolResha site is static-first. Only three interactions are dynamic: **like**, **subscribe (newsletter)**, and **comment**. Each is an unauthenticated, network-exposed endpoint — so each MUST be rate-limited, bot-protected, and input-validated before it ships._
+The site is static-first. The dynamic part is a handful of unauthenticated Cloudflare Pages Functions under `/api/`. Anyone on the internet can call them, so every one is rate limited, origin checked and validated before it stores anything.
 
-> **Security reality (stated plainly):** these endpoints have **no login**. Anyone on the internet can call them. Without the controls below they become spam, cost-abuse, and data-poisoning vectors. This doc is the required design for all of them.
+This document describes what is implemented in `functions/_shared/rate-limit.ts`, `functions/_shared/identity.ts`, `functions/_shared/pipeline.ts` and `migrations/0001_init.sql`. The numbers marked `⚠️ confirm` are the design's proposals and still need an owner's sign-off. Change them only in `RATE_LIMITS` in `rate-limit.ts`; nothing else hard-codes them.
 
----
+## 1. Scope and storage
 
-## 0. Authentication policy — no login, tiered by action (DECIDED)
+| Route | Method | Rate limited | Notes |
+|---|---|---|---|
+| `/api/feedback` | POST | yes | Turnstile checked after the limit |
+| `/api/frustration` | POST | yes | Turnstile checked after the limit |
+| `/api/interest` | POST | yes | Turnstile checked after the limit. Also caps MailerLite calls |
+| `/api/events` | POST | yes | No Turnstile (counts carry no personal data) |
+| `/api/results` | GET | yes, on cache miss only | A cache hit never touches D1 |
+| `/api/admin/export/*` | GET | yes, after authentication | Cloudflare Access JWT or bearer secret first |
 
-**Decision:** MoolResha does **not** require account login for like, subscribe, or comment. Auth is applied per action, matched to that action's value and abuse risk — because login is the single heaviest friction on the funnel, and the funnel's whole job in the discovery phase is to convert cold, anonymous visitors arriving from Instagram/Reels.
+Counters live in the D1 table `rate_limits`. KV is not used. A fixed-window counter writes once per request, and the Workers Free plan allows about 1,000 KV writes a day, which would cap the whole site. D1 Free allows about 100,000 rows written per day (`⚠️ confirm`: figure from design.md, re-verify on Cloudflare's pricing page at build time).
 
-| Action | Auth requirement | Rationale |
+There is no like, subscribe or comment endpoint in the current build. The earlier design for those endpoints (KV counters, `POST /api/like`) is not implemented and has been removed from this document.
+
+## 2. Layers, cheapest first
+
+1. **Cloudflare edge.** Built-in DDoS protection, plus Bot Fight Mode and WAF rules configured in the dashboard. No code. `⚠️ confirm` which rules are switched on; the repo does not record this.
+2. **Method, Origin, Content-Type and body-size checks** (`pipeline.ts`). Wrong method gives `405`, a missing or disallowed Origin gives `403 origin_not_allowed`, a non-JSON body gives `415`, an oversized body gives `413`. Allowed origins are `https://www.moolresha.com` and, when set, `PREVIEW_ORIGIN`.
+3. **Rate limit** (this document). Runs before validation and Turnstile, so a flood costs one D1 write and no Turnstile `siteverify` call.
+4. **Validation, then Turnstile, then the endpoint's own write.** Zod allow-list validation (`400`), Turnstile (`403 bot_check_failed`), then the D1 write.
+
+Pipeline order for write endpoints: method, Origin, Content-Type, body size, **rate limit**, validation, Turnstile, store.
+
+## 3. Identity
+
+The limiter has no login to key on, so identity is an opaque hash (`identity.ts`):
+
+```
+dailySalt = HMAC-SHA-256( IDENTITY_SALT_SEED, "yyyy-mm-dd" in UTC )      (hex)
+identity  = SHA-256( CF-Connecting-IP | User-Agent | dailySalt )        (hex)
+key       = route + ":" + identity
+```
+
+- `CF-Connecting-IP` is set by Cloudflare. If a header is missing it is treated as an empty string.
+- `IDENTITY_SALT_SEED` is a Cloudflare secret (see `.dev.vars.example` for local use). The salt changes at 00:00 UTC, so an identity cannot be linked from one day to the next.
+- The raw IP and user agent are never stored or logged. Only the hash reaches the table.
+- `IDENTITY_SALT_SEED` must be set. `⚠️ confirm` what the Workers runtime does with an empty HMAC key; the code does not guard against it. Any error here is caught by the pipeline and fails closed (section 6).
+
+## 4. Algorithm: fixed window in D1
+
+Each route has a limit (requests) and a window (seconds). Windows are aligned to the Unix epoch:
+
+```
+windowStart = now - (now mod windowSec)
+```
+
+For every request, one statement increments the counter and returns the new count (atomic per row):
+
+```sql
+INSERT INTO rate_limits (key, window_start, count, expires_at) VALUES (?1, ?2, 1, ?3)
+ON CONFLICT(key, window_start) DO UPDATE SET count = count + 1
+RETURNING count;
+```
+
+`?3` is `windowStart + windowSec`. The k-th request in a window is allowed if and only if `k <= limit`. A denied request still increments the counter, so every request costs exactly one D1 write.
+
+### Table (`migrations/0001_init.sql`)
+
+```sql
+CREATE TABLE rate_limits (
+  key           TEXT NOT NULL,      -- route:identity-hash
+  window_start  INTEGER NOT NULL,   -- unix seconds
+  count         INTEGER NOT NULL,
+  expires_at    INTEGER NOT NULL,
+  PRIMARY KEY (key, window_start)
+) WITHOUT ROWID;
+CREATE INDEX idx_rate_limits_expiry ON rate_limits (expires_at);
+```
+
+### Cleanup
+
+Pages has no cron, so expired rows are removed opportunistically. On about 1 request in 50 (`CLEANUP_ONE_IN = 50`), the limiter deletes up to 100 rows (`CLEANUP_BATCH = 100`) whose `expires_at` is before now. The batch is chosen through a sub-select on the primary key, served by `idx_rate_limits_expiry`. A failing cleanup is ignored and never fails the request. Expired rows are harmless; they only take space.
+
+## 5. Limits
+
+Per hashed identity, per route. All numbers are proposals (`⚠️ confirm`).
+
+| Route | Limit | Window |
 |---|---|---|
-| **Like** | **Anonymous.** No login, no Turnstile. | Must feel instant. Its purpose is a frictionless topic-preference signal; gating it behind login would kill ~all of the volume and destroy the signal. Abuse value is near-zero (cosmetic count), and idempotency + rate limits (§3.1) are enough. |
-| **Subscribe** | **Email + double opt-in — this IS the identity step.** No separate login. | Newsletter signup via MailerLite's double opt-in already verifies an identity (the confirmed email). It's the owned-audience mechanic. Adding a login on top is redundant friction on the single most valuable conversion. |
-| **Comment** | **Guest (name + comment) + Turnstile + honeypot + moderation queue now.** Optional social login later. | Comments are the real abuse surface (spam/XSS/harassment) but the lowest-volume action, so friction hurts engagement least here. Full account creation is overkill at launch; a moderation queue handles low early volume. |
-| **Share** | **Not a server action.** | Sharing happens on the social platform / native share sheet — client-side only, nothing to authenticate or rate-limit. |
+| `feedback` | 20 ⚠️ confirm | 10 min ⚠️ confirm |
+| `frustration` | 5 ⚠️ confirm | 10 min ⚠️ confirm |
+| `interest` | 3 ⚠️ confirm | 60 min ⚠️ confirm |
+| `events` | 60 ⚠️ confirm | 10 min ⚠️ confirm |
+| `results` | 30 ⚠️ confirm | 60 s ⚠️ confirm |
+| `admin` | 30 ⚠️ confirm | 60 min ⚠️ confirm |
 
-**Why not "login for everything":**
-- It contradicts the funnel: the goal is an **owned email list**, not a pile of website accounts to store, secure, and run password resets for.
-- Auth is the biggest security liability we could take on (password storage, breach risk, data-protection obligations, reset flows) — spent to protect the *lowest-value* action (likes).
-- It delays the v1 launch bar (5–10 articles + working interactions) by a multi-week auth detour.
+Reasoning for the starting values: `feedback` covers five Concepts plus a few edits each. `interest` is low because it also triggers a MailerLite call. `results` applies only on a cache miss, because the response is cached for five minutes. `admin` is checked only after authentication succeeds.
 
-**The real tradeoff (honest):** anonymous = more volume, noisier signal, more spam exposure; login = less volume, cleaner signal, near-zero spam. For a trust-and-reach brand in the discovery phase, **volume + a clean opt-in email list wins** — quality is captured where it matters (the verified email), without taxing reach.
+## 6. What happens on exceed or failure
 
-**Future option (documented, not built):** if comment spam outgrows the moderation queue, add **optional social login** (Google/GitHub via a managed provider such as Cloudflare Access, Auth.js, or Clerk's free tier) as a *convenience* — "comment as guest, or sign in to skip the name field" — never as a hard requirement. Re-evaluate only when spam volume justifies it. Likes and subscribe stay anonymous regardless.
+| Situation | Response |
+|---|---|
+| Limit exceeded | `429`, body `{ "ok": false, "error": "rate_limited", "retryAfter": <seconds> }`, header `Retry-After: <seconds>` |
+| Counter write or identity hashing fails (for example a D1 error) on a write endpoint or `events` | `503 storage_unavailable` (fails closed; nothing is stored) |
+| Counter write or identity hashing fails on `/api/results` | `503 results_unavailable` |
 
----
+`retryAfter` is `windowStart + windowSec - now`, rounded up and never below 1. No `X-RateLimit-*` headers are sent. The CORS and `Vary: Origin` headers are added to the 429 as to any other response. For admin exports, the 429 comes from `requireAdmin`; `⚠️ confirm` how an error from the admin counter write is surfaced, because that path was not checked.
 
-## 0.1 Cost goal: stay on free tiers
+## 7. Configuration
 
-Everything here is designed to run at **$0/month** at MoolResha's early scale:
-
-| Service | Free tier (as of build; re-verify) | What we use it for |
+| Name | Kind | Used for |
 |---|---|---|
-| Cloudflare Pages | Unlimited static requests, 500 builds/mo | Hosting the static site |
-| Cloudflare Pages Functions / Workers | ~100,000 requests/day | The 3 API endpoints |
-| Cloudflare KV | ~100,000 reads/day, 1,000 writes/day, 1 GB | Like counts + rate-limit counters |
-| Cloudflare D1 (SQLite) | 5 GB storage, 5M rows read/day | Comments (when built) |
-| Cloudflare Turnstile | Unlimited, free | Bot/CAPTCHA check on subscribe + comment |
-| MailerLite | 1,000 subscribers / 12,000 emails per mo | Newsletter double opt-in + sending |
+| `DB` | D1 binding | `rate_limits` and all other tables |
+| `IDENTITY_SALT_SEED` | secret | Daily identity salt |
+| `PREVIEW_ORIGIN` | optional variable | Extra allowed Origin |
 
-> ⚠️ Free-tier limits change. Re-verify each provider's current limits at build time. The **KV 1,000 writes/day** limit is the tightest constraint — the like design below is built around it.
+The full list of environment values is in `functions/_shared/env.ts` and `.dev.vars.example`. Secrets are Cloudflare secrets, never in Git (`.dev.vars` is gitignored).
 
----
+## 8. Monitoring
 
-## 1. Defence in depth (four layers, cheapest first)
+- Structured logs (`functions/_shared/log.ts`) drop keys such as `email`, `phone`, `ip`, `ua`, `anonId`, `token` and `text`. Rate-limit failures are logged as `rate_limit_unavailable` with the route name only.
+- Watch the Cloudflare dashboard for 429 and 503 spikes, and the D1 rows-written count against the free-tier cap. The launch checklist includes a free-tier re-check.
 
-Requests pass through layers in order; each one is cheaper than the one after it, so we reject junk as early as possible.
+## 9. Tests
 
-```
-1. Cloudflare edge (WAF + built-in DDoS)   ← free, blocks floods before our code runs
-2. Turnstile token check                    ← free, blocks bots on write actions
-3. Per-identity rate limit (KV counter)     ← our sliding/fixed window per IP+action
-4. Application validation + idempotency      ← input schema, size caps, dedupe
-```
-
-### Layer 1 — Cloudflare edge (automatic, free)
-- Cloudflare's network absorbs volumetric DDoS and offers WAF rules on the free plan.
-- Turn on: **Bot Fight Mode** (free) and a couple of custom WAF rules (e.g. block obviously bad user-agents, block requests missing an `Origin`/`Referer` from our domain on POST).
-- No code needed; configured in the Cloudflare dashboard.
-
-### Layer 2 — Turnstile (free, on write actions only)
-- **Subscribe** and **comment** forms embed a Cloudflare Turnstile widget (privacy-friendly, invisible/managed mode).
-- The endpoint verifies the token server-side (`siteverify`) before doing anything.
-- **Likes deliberately skip Turnstile** — a like must feel instant/frictionless; it relies on layers 1, 3, 4 instead.
-
-### Layer 3 — Per-identity rate limiting (our code, KV-backed)
-The core of this doc. See §2 for the algorithm and §3 for per-endpoint limits.
-
-### Layer 4 — Application validation + idempotency
-- Strict input schema (types, max lengths) — reject anything off-shape with `400`.
-- Body size cap (e.g. reject `Content-Length` over a few KB for comments).
-- Idempotency where it matters (a like is one-per-identity-per-article, not a counter you can spam — see §3.1).
-
----
-
-## 2. The rate-limit algorithm (fixed-window counter in KV)
-
-We use a **fixed-window counter** — the simplest algorithm that fits KV's model and free-tier write budget. (A sliding-window log is more precise but costs more writes; not worth it at our scale.)
-
-### Identity key
-We have no login, so "identity" = a best-effort composite, hashed (never store raw IP):
-
-```
-identity = SHA-256( clientIP + ":" + userAgent + ":" + dailySalt )
-key      = "rl:" + action + ":" + identity + ":" + windowStart
-```
-
-- `clientIP` = `request.headers.get('CF-Connecting-IP')` (set by Cloudflare, hard to spoof at the edge).
-- Hashing means we store **no PII** — just an opaque bucket id.
-- `windowStart` = the current window bucket (e.g. `Math.floor(now / windowSeconds)`).
-
-### Pseudocode (Cloudflare Pages Function / Worker)
-
-```ts
-// limitConfig: { limit: number, windowSeconds: number }
-async function checkRateLimit(env, action, identity, cfg) {
-  const now = Math.floor(Date.now() / 1000);
-  const windowStart = Math.floor(now / cfg.windowSeconds);
-  const key = `rl:${action}:${identity}:${windowStart}`;
-
-  const current = parseInt((await env.RL.get(key)) ?? '0', 10);
-
-  if (current >= cfg.limit) {
-    const resetIn = (windowStart + 1) * cfg.windowSeconds - now;
-    return { allowed: false, resetIn };            // caller returns HTTP 429
-  }
-
-  // increment; set TTL so the key auto-expires at window end (keeps KV clean)
-  await env.RL.put(key, String(current + 1), { expirationTtl: cfg.windowSeconds });
-  return { allowed: true, remaining: cfg.limit - current - 1 };
-}
-```
-
-### The 429 response (be a good API citizen)
-```
-HTTP/1.1 429 Too Many Requests
-Retry-After: <resetIn seconds>
-Content-Type: application/json
-
-{ "error": "rate_limited", "retryAfterSeconds": <resetIn> }
-```
-Also send informational headers on success:
-```
-X-RateLimit-Limit: <limit>
-X-RateLimit-Remaining: <remaining>
-```
-
-### KV write-budget note (important)
-KV free tier ≈ **1,000 writes/day**. Every rate-limit check that increments is a write, and every like is a write. Mitigations:
-- **Count writes per action.** At early traffic this is fine; monitor it.
-- If writes become the bottleneck, move counters to **Durable Objects** (still cheap) or **D1** (5M row reads/day, higher write ceiling), or batch/aggregate likes.
-- Prefer **reject-early** (layers 1–2) so bot floods never reach the KV increment.
-
----
-
-## 3. Per-endpoint limits
-
-Tuned so a real human never hits them, but abuse is capped. All limits are per hashed identity unless noted.
-
-### 3.1 `POST /api/like`  (like / unlike an article)
-- **Turnstile:** no (must feel instant).
-- **Rate limit:** `30 requests / 60 s` per identity (generous — covers rapid browsing), plus a **global per-article** guard of e.g. `600 writes / 60 s` to blunt a targeted inflation attack.
-- **Idempotency (the real protection):** a like is **one-per-identity-per-article**, not a free counter. Store membership, not just a number:
-  - Key `like:<slug>:<identity>` → `1` (with long TTL). If it exists, a second POST is a no-op (toggle off) — you cannot inflate the count by replaying.
-  - The displayed count is a separate aggregate updated only on a real state change.
-- **Validation:** `slug` must match a known published article (allowlist from the build), else `400`.
-- **Abuse ceiling:** even if someone scripts thousands of identities, Turnstile-free means layer 1 (Bot Fight Mode) + the global per-article guard are the backstop; likes are low-value to attackers.
-
-### 3.2 `POST /api/subscribe`  (newsletter signup)
-- **Turnstile:** **yes, required** — verify token server-side first.
-- **Rate limit:** `5 requests / 60 s` and `20 / day` per identity. Signing up more than a handful of times is never legitimate.
-- **Validation:** RFC-ish email check + max length; reject disposable-domain patterns optionally.
-- **Double opt-in:** hand the email to **MailerLite**, which sends the confirmation email. We **never** store the email ourselves — this offloads compliance, unsubscribe, and deliverability, and means a leak of our system exposes no subscriber list.
-- **Idempotency:** MailerLite dedupes an already-subscribed address; we treat "already subscribed" as success (no enumeration signal).
-
-### 3.3 `POST /api/comment`  (submit a comment)  — highest risk, ships last
-- **Turnstile:** **yes, required.**
-- **Rate limit:** `3 requests / 60 s`, `10 / hour`, `30 / day` per identity.
-- **Validation:** max length (e.g. 1,500 chars), strip/escape HTML (store as plain text, render escaped — no stored XSS), require a known `slug`, optional name ≤ 60 chars.
-- **Moderation queue (mandatory before launch):** comments land in a **pending** state in D1 and are **not shown publicly** until approved. No open, auto-published comments — ever.
-- **Spam heuristics:** honeypot hidden field (bots fill it → silently drop), link-count cap, simple keyword/blocklist, and Turnstile score.
-
----
-
-## 4. CORS & method hygiene (all endpoints)
-
-- Accept **`POST` only** for write actions (`GET` for reading like counts). Reject other methods with `405`.
-- **CORS:** allow only `https://www.moolresha.com` (and the Cloudflare preview domain during dev) as `Access-Control-Allow-Origin`. No `*` on write endpoints.
-- Require the request `Origin` to match our domain on POST; reject cross-origin POSTs (blocks trivial CSRF/abuse from other sites).
-- Never reflect user input in error messages. Generic errors only.
-
----
-
-## 5. Secrets & config
-- Turnstile secret, MailerLite API key → **Cloudflare secrets / environment variables** only. Never in Git (`.env` is gitignored; `.env.example` documents the names).
-- KV namespace + D1 binding names live in `wrangler`/Pages config, not in code literals where avoidable.
-
----
-
-## 6. Monitoring (so we notice abuse)
-- Log (via GA4 custom events + Cloudflare analytics) the counts of `429`s, Turnstile failures, and comment-moderation rejects.
-- A sudden spike in 429s or Turnstile failures = someone's probing; Cloudflare dashboard + WAF rules are the response surface.
-
----
-
-## 7. Build order (matches SKILL.md §4 interaction phase)
-1. **Likes** first — simplest, no Turnstile, exercises the KV rate-limit util (§2).
-2. **Newsletter** — adds Turnstile + MailerLite; highest funnel value.
-3. **Comments** — last; needs the moderation queue + full spam stack before it can go live.
-
-Each reuses the same `checkRateLimit` util and the same CORS/validation helpers — write them once (`functions/_shared/`), share across all three.
-
----
-
-## 8. Free-tier summary (the answer to "will everything be free?")
-
-**Yes, at MoolResha's early scale — with one caveat.** Hosting, the API layer, bot protection, and analytics all sit comfortably in free tiers. The one number to watch is **Cloudflare KV's ~1,000 writes/day**: every like and every rate-limit increment is a write. If the site grows past that, the fix is cheap (Durable Objects / D1, or aggregate likes) — not a jump to a paid plan you'd feel. Newsletter stays free until **1,000 subscribers**, at which point you'll happily pay because the list is working.
+The limiter has an in-memory store (`createMemoryRateLimitStore`) with the same decisions as the D1 store, and `RateLimitOptions` lets tests inject limits and the cleanup random source. Run `npm test`.

@@ -1,0 +1,12 @@
+# ⚠️ verify: confirm the publication title, year and exact wording before publishing. Stitching abroad is one factor among several (Requirement 4.3).
+id: journey-stitching
+label: FACT
+text: "The World Bank describes India as the upstream yarn and fabric supplier to Bangladesh's apparel sector."
+source:
+  name: "World Bank"
+  url: "https://openknowledge.worldbank.org/entities/publication/9bbc6705-0471-5ac4-929d-ab5f887cbc95"
+  date: "date to confirm"
+strength: STRONG
+lastChecked: "2026-11-07"
+verifyFlag: true
+section: journey

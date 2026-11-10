@@ -1,0 +1,12 @@
+# ⚠️ verify: secondary source. Open the Government trade data it cites, confirm figures and set the date, then clear verifyFlag. Neutral journey wording only (Requirement 4.6).
+id: journey-spinning
+label: FACT
+text: "In 2024-25 India exported US$1.47 billion of cotton yarn and 12 to 14 lakh bales of cotton to Bangladesh."
+source:
+  name: "Vajiram & Ravi, citing Government of India trade data"
+  url: "https://vajiramandravi.com/current-affairs/india-us-textile-trade-dynamics/"
+  date: "2025"
+strength: MODERATE
+lastChecked: "2026-11-07"
+verifyFlag: true
+section: journey

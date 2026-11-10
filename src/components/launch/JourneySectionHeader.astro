@@ -1,0 +1,79 @@
+---
+/**
+ * Editorial section header shared by the journey, money and price-layers sections:
+ * a small terracotta eyebrow ("01 — The journey"), a large serif <h2>, and a short intro.
+ * Two columns on desktop (heading left, intro right), stacked on mobile.
+ * The eyebrow numbers are section counters, not statistics: no ₹, % or year.
+ */
+interface Props {
+  eyebrow: string;
+  headingId: string;
+  heading: string;
+}
+
+const { eyebrow, headingId, heading } = Astro.props;
+---
+
+<header class="jsh">
+  <div class="jsh-title">
+    <p class="jsh-eyebrow">{eyebrow}</p>
+    <h2 id={headingId}>{heading}</h2>
+  </div>
+  <div class="jsh-intro">
+    <slot />
+  </div>
+</header>
+
+<style>
+  .jsh {
+    display: grid;
+    gap: var(--space-4, 1rem);
+    margin: 0 0 var(--space-8, 3rem);
+  }
+
+  .jsh-eyebrow {
+    margin: 0 0 var(--space-3, 0.75rem);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small, 0.875rem);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  h2 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+    font-weight: 400;
+    line-height: var(--lh-tight, 1.1);
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+  }
+
+  .jsh-intro :global(p) {
+    margin: 0 0 var(--space-3, 0.75rem);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .jsh-intro :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  @media (min-width: 64rem) {
+    .jsh {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      align-items: end;
+      gap: var(--space-8, 3rem);
+    }
+
+    .jsh-intro {
+      max-width: 28rem;
+      justify-self: end;
+    }
+  }
+</style>

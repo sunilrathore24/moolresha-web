@@ -1,6 +1,10 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
+import { Concept } from "./lib/concept-schema";
+import { Fact } from "./lib/fact-schema";
+import { MarketScan } from "./lib/market-scan-schema";
+import { PriceLayers, Story } from "./lib/price-layers-schema";
 
 /**
  * Article collection — the typed frontmatter schema from SKILL.md §6.2.
@@ -80,4 +84,54 @@ const articles = defineCollection({
     }),
 });
 
-export const collections = { articles };
+/**
+ * Fact_Registry (Requirement 3). One YAML file per Fact in src/content/facts/.
+ * The schema lives in src/lib/fact-schema.ts (no Astro imports) so Vitest and
+ * the Content_Check script reuse it. The entry id is the file name.
+ */
+const facts = defineCollection({
+  loader: glob({ pattern: "**/*.yaml", base: "./src/content/facts" }),
+  schema: Fact,
+});
+
+/**
+ * Concepts (Requirements 8, 8A.13, 8C, 9.7). One YAML file per Concept in
+ * src/content/concepts/. The schema lives in src/lib/concept-schema.ts (no Astro
+ * imports) so Vitest and the Content_Check script reuse it. The entry id is the
+ * file name, which must equal the `id` field.
+ */
+const concepts = defineCollection({
+  loader: glob({ pattern: "**/*.yaml", base: "./src/content/concepts" }),
+  schema: Concept,
+});
+
+/**
+ * Market_Price_Context (Requirements 7.1, 7.6, 7.7, 7.9, 7.10). One YAML file per
+ * Concept in src/content/market-scans/, with a private evidence trail. Pages get
+ * only `toPublicMarketScan(scan)` from src/lib/market-scan.ts.
+ */
+const marketScans = defineCollection({
+  loader: glob({ pattern: "**/*.yaml", base: "./src/content/market-scans" }),
+  schema: MarketScan,
+});
+
+/** Price_Layers (Requirements 6.1-6.4): one file, no amounts. */
+const priceLayers = defineCollection({
+  loader: glob({ pattern: "**/*.yaml", base: "./src/content/price-layers" }),
+  schema: PriceLayers,
+});
+
+/** Lead_Message and Aim_Statement copy (Requirements 4.7, 5.5, 11A.1): one file. */
+const story = defineCollection({
+  loader: glob({ pattern: "**/*.yaml", base: "./src/content/story" }),
+  schema: Story,
+});
+
+export const collections = {
+  articles,
+  facts,
+  concepts,
+  "market-scans": marketScans,
+  "price-layers": priceLayers,
+  story,
+};

@@ -1,0 +1,152 @@
+---
+/**
+ * Trends section (Requirement 11.2): three to five cards, one sourced Fact each.
+ * The card list lives in src/lib/why-trends.ts. The build fails if the count is out of range.
+ * Each card gets a decorative photo (alt="") chosen to match its own Fact; see
+ * src/lib/trend-images.ts.
+ */
+import TrendCard from './TrendCard.astro';
+import LastUpdated from './LastUpdated.astro';
+import { TREND_CARDS, TREND_CARD_MAX, TREND_CARD_MIN, factIdsOf } from '../../lib/why-trends';
+import { trendImage, type TrendImageName } from '../../lib/trend-images';
+
+if (TREND_CARDS.length < TREND_CARD_MIN || TREND_CARDS.length > TREND_CARD_MAX) {
+  throw new Error(
+    `Trends needs ${TREND_CARD_MIN} to ${TREND_CARD_MAX} cards (Requirement 11.2); found ${TREND_CARDS.length}.`,
+  );
+}
+
+/**
+ * One photo per card, matched to what that card's Fact actually says (Requirement 11.2):
+ * a shipping box for order size and spend, a relaxed linen flat-lay for relaxed menswear,
+ * a shirt handed over tea for trusted recommendations, a shirt on a home-office chair for
+ * hybrid work. Keyed by factId, not list position, so a reordering of TREND_CARDS can
+ * never silently pair a card with the wrong photo.
+ */
+const PHOTO_BY_FACT_ID: Record<string, TrendImageName> = {
+  'trend-split-market': 'order-size-spend',
+  'trend-relaxed-menswear': 'relaxed-menswear',
+  'trend-intentional-buying': 'trusted-recommendations',
+  'trend-hybrid-work-dress-codes': 'hybrid-work',
+};
+---
+
+<section class="trends section" data-section="trends" id="trends" aria-labelledby="trends-h">
+  <div class="sec-head section-head">
+    <div>
+      <p class="trends-label section-label eyebrow">06 — Trends</p>
+      <h2 id="trends-h">What is changing in how people choose clothes.</h2>
+    </div>
+    <p class="sec-intro section-intro">Reported shifts in Indian fashion, each with its source.</p>
+  </div>
+  <ul class="trend-list" data-count={TREND_CARDS.length}>
+    {
+      TREND_CARDS.map((c) => {
+        const photoName = PHOTO_BY_FACT_ID[c.factId];
+        if (!photoName) {
+          throw new Error(`Trend card "${c.factId}" has no matching photo in PHOTO_BY_FACT_ID.`);
+        }
+        return <TrendCard heading={c.heading} factId={c.factId} image={trendImage(photoName)} />;
+      })
+    }
+  </ul>
+  <div class="trends-updated">
+    <LastUpdated factIds={factIdsOf(TREND_CARDS)} />
+  </div>
+</section>
+
+<style>
+  .trends {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    padding: var(--space-section) var(--space-4);
+  }
+
+  /* Header: fallback for the global .section-head / .eyebrow. */
+  .sec-head {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-8);
+  }
+
+  .trends-label {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  h2 {
+    margin: 0;
+    max-width: 22ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 400;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+
+  .sec-intro {
+    margin: 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  /* One column on phones, two on tablets, three on desktop (four in one row when there are four cards). */
+  .trend-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .trends-updated {
+    margin-top: var(--space-5);
+  }
+
+  @media (min-width: 40rem) {
+    .trend-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 56rem) {
+    .sec-head {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      align-items: end;
+      gap: var(--space-10);
+    }
+  }
+
+  @media (min-width: 60rem) {
+
+    .trend-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-5);
+    }
+  }
+
+  /* Four cards: one row of four on wide screens, so no card sits alone on a second row. */
+  @media (min-width: 68rem) {
+    .trend-list[data-count='4'] {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 60rem) and (max-width: 67.99rem) {
+    .trend-list[data-count='4'] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

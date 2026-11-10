@@ -1,0 +1,36 @@
+---
+/**
+ * Section "last updated" date (Requirement 1.7): the latest `lastChecked` among the
+ * given Fact_Registry entries. Renders nothing when no ids are given.
+ */
+import { getFact, formatIsoDate } from '../../lib/facts';
+import { latestChecked } from '../../lib/last-updated';
+
+interface Props {
+  /** Ids of every fact used in the section. */
+  factIds: readonly string[];
+}
+
+const { factIds } = Astro.props;
+const entries = await Promise.all(factIds.map((id) => getFact(id)));
+const latest = latestChecked(entries.map((e) => e.lastChecked));
+---
+
+{
+  latest && (
+    <p class="last-updated">
+      Last updated: <time datetime={latest}>{formatIsoDate(latest)}</time>
+    </p>
+  )
+}
+
+<style>
+  .last-updated {
+    margin: var(--space-5, 1.5rem) 0 0;
+    letter-spacing: 0.02em;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+</style>

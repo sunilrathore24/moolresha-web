@@ -1,0 +1,172 @@
+# Privacy_Notice content (Requirement 13). Schema: src/lib/privacy-schema.ts.
+# The page src/pages/privacy.astro renders this file. `version` is the source
+# of NOTICE_VERSION (src/lib/notice-version.ts); a unit test and the page build
+# both fail if the two differ. Bump `version` and `lastUpdated` on every change
+# to this notice. Visitors who gave consent under an older version are
+# recorded against that version.
+#
+# ⚠️ founder and lawyer to confirm: every retention period, every response time
+# and the Grievance_Contact address below are PLACEHOLDERS. Each one carries the
+# marker text so it cannot be missed. Remove the marker only after sign-off.
+
+version: "0.1"
+lastUpdated: "2026-11-07"
+
+intro: >-
+  MoolResha is a research project, not a shop. This page says what we collect
+  when you use this website, why, who handles it for us, how long we keep it,
+  and how you can withdraw consent, ask us to delete your data or raise a
+  complaint. You can use the whole site without giving us your name, email
+  address or phone number.
+
+# Marker text that must appear on every placeholder value.
+confirmMarker: "⚠️ founder and lawyer to confirm"
+
+dataItems:
+  - id: feedback
+    name: "Your answers about the five design concepts"
+    detail: >-
+      Whether you would wear a piece, what you would change, a preferred
+      colour, what matters most to you, and the price band you pick or your
+      choice to skip that question. Stored together with a random Anonymous ID.
+    purpose: "Product research"
+    storedIn: "Cloudflare D1 database"
+    retention: "Until the research phase ends, and at most 24 months. ⚠️ founder and lawyer to confirm"
+    personal: false
+    placeholder: true
+  - id: frustration
+    name: "Your answer about your biggest clothing frustration"
+    detail: "The options you tick, and any short note you choose to write."
+    purpose: "Product research"
+    storedIn: "Cloudflare D1 database"
+    retention: "Same as your concept answers. ⚠️ founder and lawyer to confirm"
+    personal: false
+    placeholder: true
+  - id: anonymous-id
+    name: "Anonymous ID"
+    detail: >-
+      A random code made in your browser and kept in your browser's local
+      storage. It is not a cookie and is not made from your device or your
+      details. It is sent with your answers so that your answers on different
+      concepts stay together, and so that sending the same form again updates
+      your earlier answer instead of counting twice.
+    purpose: "Grouping your own answers, and avoiding double counting"
+    storedIn: "Your browser (local storage), and Cloudflare D1 database with your answers"
+    retention: "In your browser until you clear site data. On our side, same as your concept answers. ⚠️ founder and lawyer to confirm"
+    personal: false
+    placeholder: true
+  - id: contact-email
+    name: "Email address (optional)"
+    detail: "Only if you fill in the interest form and tick the email consent."
+    purpose: "Sending results and launch updates"
+    storedIn: "Cloudflare D1 database and MailerLite"
+    retention: "Until you withdraw consent, or 12 months after the last email we sent you. ⚠️ founder and lawyer to confirm"
+    personal: true
+    placeholder: true
+  - id: contact-whatsapp
+    name: "WhatsApp number (optional)"
+    detail: "Only if you fill in the interest form and tick the WhatsApp consent."
+    purpose: "Close updates such as fit tests and launch day"
+    storedIn: "Cloudflare D1 database"
+    retention: "Until you withdraw consent. ⚠️ founder and lawyer to confirm"
+    personal: true
+    placeholder: true
+  - id: contact-size
+    name: "Usual size (optional)"
+    detail: "Only if you choose one in the interest form."
+    purpose: "Planning which sizes to make"
+    storedIn: "Cloudflare D1 database"
+    retention: "Same as the contact detail it is stored with. ⚠️ founder and lawyer to confirm"
+    personal: true
+    placeholder: true
+  - id: consent-records
+    name: "Consent records"
+    detail: >-
+      For each consent you tick (email, WhatsApp, linking your contact details
+      to your answers, and confirming you are 18 or older): which consent, the
+      version of this notice you saw, and the time you gave it.
+    purpose: "Proof of what you agreed to"
+    storedIn: "Cloudflare D1 database"
+    retention: "As long as the data you consented to, plus 12 months. ⚠️ founder and lawyer to confirm"
+    personal: true
+    placeholder: true
+  - id: event-counts
+    name: "Day-level counts of page events"
+    detail: >-
+      How many times a section was viewed or a form was sent on a given day,
+      and which campaign link brought the visit (the utm_source, utm_medium and
+      utm_campaign values in the address). These are totals per day. They hold
+      no Anonymous ID, IP address or other detail about you.
+    purpose: "Seeing which parts of the page work, and where visitors come from"
+    storedIn: "Cloudflare D1 database"
+    retention: "No fixed end, because the counts do not identify anyone"
+    personal: false
+    placeholder: false
+  - id: abuse-prevention
+    name: "Short-lived anonymised request code"
+    detail: >-
+      To stop automated abuse, each request is turned into a one-way code
+      using a salt that changes every day. We cannot work back from the code to
+      your IP address or device.
+    purpose: "Limiting how often one visitor can send forms"
+    storedIn: "Cloudflare D1 database"
+    retention: "Deleted when the rate-limit window ends, within 24 hours. ⚠️ founder and lawyer to confirm"
+    personal: false
+    placeholder: true
+  - id: web-analytics
+    name: "Visit counts"
+    detail: "Page visits counted by Cloudflare Web Analytics, which sets no cookies."
+    purpose: "Counting visits"
+    storedIn: "Cloudflare"
+    retention: "As set by Cloudflare's own terms"
+    personal: false
+    placeholder: false
+
+processors:
+  - name: "Cloudflare"
+    does: >-
+      Hosts this website, runs the form endpoints, stores the database, and
+      provides the cookieless visit counts.
+    receives: "Everything in the table above except email delivery."
+  - name: "Cloudflare Turnstile"
+    does: >-
+      Checks that a form is sent by a person and not by a bot. It runs when you
+      send a form. Turnstile may look at details of your browser to decide.
+    receives: "A one-time check token and your IP address, at the moment you send a form."
+  - name: "MailerLite"
+    does: >-
+      Stores your email address and sends the confirmation email and any later
+      emails, only if you give email consent.
+    receives: "Your email address, only if you tick the email consent."
+
+withdrawal:
+  summary: >-
+    You can withdraw any consent at any time. Withdrawing does not affect what
+    we did before you withdrew.
+  steps:
+    - "Email: use the unsubscribe link at the bottom of any email we send. We stop emailing you straight away."
+    - "Any consent, including WhatsApp and linking: write to the Grievance Contact below, from the address or number you gave us, and say which consent you are withdrawing."
+
+deletion:
+  summary: >-
+    You can ask us to delete your email address, WhatsApp number, size, consent
+    records and anything linked to them, from our database and from MailerLite.
+  steps:
+    - "Write to the Grievance Contact below and say what you want deleted."
+    - "We will ask you to confirm you control the email address or number. For an email address we reply to it. For a WhatsApp number we ask you to message us from it."
+    - "We delete the data from our database and from MailerLite, then tell you it is done."
+  anonymousNote: >-
+    Answers that were never linked to your contact details are anonymous. We
+    cannot tell which answers are yours, so we cannot find or delete them
+    for you.
+
+responseTimes:
+  acknowledgeDays: 7
+  completeDays: 30
+  note: "We aim to acknowledge a request within 7 days and complete it within 30 days. ⚠️ founder and lawyer to confirm"
+
+grievance:
+  label: "Grievance Contact"
+  organisation: "MoolResha"
+  email: "grievance@moolresha.com"
+  note: "No studio name or address is disclosed while the site is online-only. ⚠️ founder and lawyer to confirm this is sufficient under applicable grievance-contact rules before launch."

@@ -1,0 +1,17 @@
+# Price_Layers (Requirements 6.1-6.4). No amounts, percentages, subtotals or totals.
+# Drafted by AI research from general apparel-costing knowledge (no live web source available
+# this session). A founder/lawyer pass should still confirm this wording before PUBLIC_LAUNCH,
+# per docs/launch-checklist.md.
+id: price-layers
+layers:
+  - { id: fabric, name: "Fabric", explanation: "The cloth itself: the fibre, the yarn spun from it, and the weaving or knitting that turns yarn into cloth, priced by the metre." }
+  - { id: making, name: "Making (cutting and stitching)", explanation: "Cutting the fabric to pattern, sewing every seam, and checking each piece for fit and finish before it leaves the workshop." }
+  - { id: finishing, name: "Finishing", explanation: "Washing, pressing, trims like buttons and labels, and the final quality check that gets a piece ready to pack and sell." }
+  - { id: packaging, name: "Packaging", explanation: "The bag, box or mailer that protects the piece in transit, plus any tags, tissue or inserts packed in with it." }
+  - { id: shipping, name: "Shipping", explanation: "Moving the piece from the workshop or warehouse to the courier, and from the courier to your door." }
+  - { id: rto_returns, name: "RTO and returns", explanation: "The cost of parcels that are undelivered, refused or sent back, including return shipping and re-checking the piece." }
+  - { id: platform_payment_fees, name: "Platform and payment fees", explanation: "The commission a sales platform charges per order, plus the fee a payment gateway takes to process the payment." }
+  - { id: gst, name: "GST", explanation: "The Goods and Services Tax added to a sale at the rate the government sets for the category; see the note below." }
+  - { id: margin, name: "Margin", explanation: "What is left after every other layer is paid for; it funds the next season's fabric and keeps the studio running." }
+launchPromise: "Our aim, not a promise yet: a real cost breakdown for every piece, once pricing is settled."
+gstFactId: gst-cliff-2025

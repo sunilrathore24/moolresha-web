@@ -1,0 +1,18 @@
+# Verified 2026-11-09 by direct navigation to the UNEP story page (not a search snippet):
+# https://www.unep.org/en/news-and-stories/story/zero-waste-day-shines-light-fashion-and-textiles.
+# UNEP itself attributes the 92-million-tonne figure to "studies" (primarily Global Fashion
+# Agenda's Pulse of the Industry report and the Ellen MacArthur Foundation's A New Textiles
+# Economy), rather than measuring it directly, so this is reported as UNEP's own framing of
+# that figure, not a MoolResha-verified primary count. Deliberately global, not India- or
+# Europe-specific — this is an environmental fact, not a market-geography claim.
+id: beyond-textile-waste-landfill
+label: FACT
+text: "The UN Environment Programme reports that an estimated 92 million tonnes of textile waste are generated worldwide every year, and that the equivalent of a garbage truck full of clothing is landfilled or incinerated every second."
+source:
+  name: "UN Environment Programme (UNEP)"
+  url: "https://www.unep.org/en/news-and-stories/story/zero-waste-day-shines-light-fashion-and-textiles"
+  date: "4 April 2025"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: true
+section: beyond-label

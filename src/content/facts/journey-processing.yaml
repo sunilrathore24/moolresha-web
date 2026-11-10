@@ -1,0 +1,12 @@
+# Drafted by AI research (no live web source available this session). Still MoolResha estimate /
+# verifyFlag:true by design — a human should attach a dated source before this is upgraded to a
+# sourced FACT and published.
+id: journey-processing
+label: MoolResha estimate
+text: "After weaving, fabric is washed to remove sizing and impurities, dyed or bleached for colour, and finished with steps such as calendering or softening that set its final hand-feel, shrinkage and colour-fastness before it is cut and sewn."
+assumptions:
+  - "Standard description of textile wet-processing and finishing stages (washing, dyeing, finishing). No environmental claim is made here, matching Requirement 4.4's restriction; a human should add plant-specific or certification detail only once confirmed."
+strength: UNVERIFIED
+lastChecked: "2026-11-08"
+verifyFlag: true
+section: journey

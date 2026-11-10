@@ -1,0 +1,442 @@
+---
+/**
+ * The design lab: five Concepts with their feedback controls (Requirements 2.1, 2.2, 8.1, 8.2, 7.1, 7.10).
+ *
+ * `<section data-section="concepts" id="concepts">`. The hero call to action links here.
+ * Concepts come from the `concepts` collection sorted by `order` (the men's 100% cotton
+ * shirt first). Each Concept's market scan comes from the `market-scans` collection,
+ * matched by `marketScanId`, and is projected with `toPublicMarketScan` before it goes
+ * anywhere else: the evidence trail never leaves this file.
+ *
+ * Layout: one full-bleed preview slide at a time (photo on the left, name and a single
+ * "View the design" link on the right), with big prev/next arrows and a dot row over the
+ * photo, then the five Concept_Cards. The research framing ("design concepts, not finished
+ * products") is said once in the section intro above the slide, so the slide itself carries
+ * no repeated disclaimer tag — just the photo, the name and the way in.
+ *
+ * Without JavaScript every slide and every Concept_Card shows one after another, in order;
+ * each slide's "View the design" link is a plain `href="#concept-<id>"` anchor to its own
+ * card. `src/islands/design-lab.ts` turns the slide row into a single-at-a-time carousel,
+ * reveals the arrows and dots and adds the class `dl-enhanced` to the root; only then does
+ * CSS hide the slides and cards that are not selected.
+ *
+ * `HowWeCheck` (id="how-we-check") renders once, after the last card. Every Quality_Card
+ * links to it. It is not a separate `data-section`.
+ *
+ * v1 homepage: the Concepts sit well below the first viewport, so `firstCardAboveFold` is false.
+ */
+import { getCollection } from 'astro:content';
+import { toPublicMarketScan } from '../../lib/market-scan';
+import { conceptColourViews, conceptViews } from '../../lib/concept-images';
+import ConceptCard from './ConceptCard.astro';
+import ConceptViewImage from './ConceptViewImage.astro';
+import HowWeCheck from './HowWeCheck.astro';
+import ImagePlaceholder from './ImagePlaceholder.astro';
+
+const FIRST_CARD_ABOVE_FOLD = false;
+
+const concepts = (await getCollection('concepts')).map((e) => e.data).sort((a, b) => a.order - b.order);
+const scans = (await getCollection('market-scans')).map((e) => e.data);
+
+const cards = concepts.map((concept, conceptIndex) => {
+  const scan = scans.find((s) => s.id === concept.marketScanId);
+  if (!scan) {
+    throw new Error(`Concept "${concept.id}": no market scan with id "${concept.marketScanId}"`);
+  }
+  if (scan.conceptId !== concept.id) {
+    throw new Error(
+      `Concept "${concept.id}": market scan "${scan.id}" belongs to "${scan.conceptId}"`,
+    );
+  }
+  // Prefer the default colour's own front photo (see concept-images.ts's conceptColourViews);
+  // falls back to the plain view set every other Concept already uses.
+  const colourViews = conceptColourViews[concept.id];
+  const defaultColour = colourViews ? concept.colours.find((c) => c in colourViews) : undefined;
+  const views = colourViews && defaultColour ? colourViews[defaultColour] : conceptViews[concept.id];
+  const front = views.find((v) => v.view === '01-front');
+  return { concept, conceptIndex, scan: toPublicMarketScan(scan), front };
+});
+
+const SLIDE_SIZES = '(min-width: 60rem) 38rem, 100vw';
+---
+
+<section class="section concepts" data-section="concepts" id="concepts" aria-labelledby="concepts-h">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">03 — The design lab</p>
+      <h2 id="concepts-h">Five ideas. Your point of view.</h2>
+    </div>
+    <p class="section-intro">
+      These are design concepts, not finished products. Pick one, turn it around, read the fabric
+      notes and tell us what you would change.
+    </p>
+  </div>
+
+  <div class="lab" data-design-lab>
+    <div class="dl-stage" data-dl-stage aria-roledescription="carousel" aria-label="The five concepts">
+      <button type="button" class="dl-arrow dl-arrow-prev" data-dl-prev hidden aria-label="Previous concept">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+      </button>
+
+      <div class="dl-slides" data-dl-slides>
+        {
+          cards.map((c) => {
+            const number = String(c.conceptIndex + 1).padStart(2, '0');
+            return (
+              <div class="dl-slide" data-dl-slide={`concept-${c.concept.id}`}>
+                <div class="dl-slide-media">
+                  {c.front && c.front.status === 'file' ? (
+                    <ConceptViewImage
+                      image={c.front.image}
+                      alt=""
+                      view="01-front"
+                      slot="stage"
+                      conceptIndex={c.conceptIndex}
+                      firstCardAboveFold={FIRST_CARD_ABOVE_FOLD}
+                      sizes={SLIDE_SIZES}
+                    />
+                  ) : (
+                    <ImagePlaceholder conceptName={c.concept.name} view="01-front" />
+                  )}
+                </div>
+                <div class="dl-slide-info">
+                  <p class="dl-slide-eyebrow">Concept {number}</p>
+                  <h3 class="dl-slide-name">{c.concept.name}</h3>
+                  <a class="dl-slide-cta" href={`#concept-${c.concept.id}`}>
+                    View the design
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            );
+          })
+        }
+      </div>
+
+      <button type="button" class="dl-arrow dl-arrow-next" data-dl-next hidden aria-label="Next concept">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          <path d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div class="dl-dots" data-dl-dots hidden role="tablist" aria-label="Choose a concept">
+        {
+          cards.map((c, i) => (
+            <button
+              type="button"
+              class="dl-dot"
+              data-dl-dot={i}
+              role="tab"
+              aria-label={`Show concept ${i + 1}: ${c.concept.name}`}
+            />
+          ))
+        }
+      </div>
+    </div>
+
+    <p class="dl-status" data-dl-status aria-live="polite"></p>
+
+    <div class="dl-cards">
+      {
+        cards.map((c) => (
+          <ConceptCard
+            concept={c.concept}
+            scan={c.scan}
+            conceptIndex={c.conceptIndex}
+            firstCardAboveFold={FIRST_CARD_ABOVE_FOLD}
+          />
+        ))
+      }
+    </div>
+  </div>
+
+  <HowWeCheck />
+</section>
+
+<style>
+  .concepts {
+    scroll-margin-top: var(--header-height);
+  }
+
+  /* ---- Stage: one full-bleed slide, arrows at the outer edges, dots over the photo ---- */
+  .dl-stage {
+    position: relative;
+  }
+
+  .dl-slides {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .dl-slide {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'media' 'info';
+    min-width: 0;
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card, var(--shadow-soft));
+  }
+
+  .dl-slide[hidden] {
+    display: none;
+  }
+
+  .dl-slide-media {
+    grid-area: media;
+    position: relative;
+    aspect-ratio: 4 / 5;
+    min-width: 0;
+    background: var(--c-warm-oat);
+  }
+
+  .dl-slide-media :global(picture),
+  .dl-slide-media :global(img),
+  .dl-slide-media :global(.av-placeholder) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .dl-slide-media :global(img) {
+    object-fit: cover;
+  }
+
+  /* The "Design coming soon" graphic carries text to its edges (its own logo and heading), so
+     cropping it like a real garment photo would cut that off — letterbox it instead. */
+  .dl-slide-media :global(.av-placeholder-img img) {
+    object-fit: contain;
+  }
+
+  .dl-slide-info {
+    grid-area: info;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-6) var(--space-5);
+  }
+
+  @media (min-width: 60rem) {
+    .dl-slide {
+      grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+      grid-template-areas: 'media info';
+    }
+
+    .dl-slide-media {
+      aspect-ratio: auto;
+    }
+
+    .dl-slide-info {
+      padding: var(--space-8);
+    }
+  }
+
+  .dl-slide-eyebrow {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  .dl-slide-name {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .dl-slide-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    border-radius: 999px;
+    background: var(--color-accent-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--c-off-white);
+    text-decoration: none;
+    width: fit-content;
+    transition: background-color var(--transition);
+  }
+
+  .dl-slide-cta:hover {
+    background: var(--c-terracotta-deep, var(--color-accent-text));
+  }
+
+  .dl-slide-cta:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .dl-slide-cta svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ---- Previous / next (shown by the island), pinned to the stage's outer edges ---- */
+  .dl-arrow[hidden] {
+    display: none;
+  }
+
+  .dl-arrow {
+    position: absolute;
+    top: var(--space-8);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 50%;
+    background: var(--c-off-white);
+    color: var(--color-text);
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    transition:
+      background-color var(--transition),
+      color var(--transition);
+  }
+
+  @media (min-width: 60rem) {
+    .dl-arrow {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+
+  .dl-arrow-prev {
+    left: var(--space-3);
+  }
+
+  .dl-arrow-next {
+    right: var(--space-3);
+  }
+
+  .dl-arrow svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .dl-arrow:hover {
+    background: var(--color-accent-text);
+    border-color: var(--color-accent-text);
+    color: var(--c-off-white);
+  }
+
+  .dl-arrow:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* ---- Dots: over the photo, bottom-left ---- */
+  .dl-dots[hidden] {
+    display: none;
+  }
+
+  .dl-dots {
+    position: absolute;
+    left: var(--space-5);
+    bottom: var(--space-4);
+    z-index: 2;
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  @media (min-width: 60rem) {
+    .dl-dots {
+      bottom: auto;
+      top: calc(100% - var(--space-5));
+    }
+  }
+
+  .dl-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 1px solid var(--c-off-white);
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.5);
+    cursor: pointer;
+  }
+
+  .dl-dot[aria-selected='true'] {
+    background: var(--c-off-white);
+  }
+
+  .dl-dot:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .dl-status {
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Cards ---- */
+  .dl-cards {
+    display: grid;
+    gap: var(--space-6);
+    margin-top: var(--space-6);
+  }
+
+  .lab:global(.dl-enhanced) .dl-cards {
+    margin-top: var(--space-6);
+  }
+
+  /* Only once the island has run: one card at a time. Without JS every card stays visible. */
+  .lab:global(.dl-enhanced) .dl-cards > :global([data-concept-card][hidden]) {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lab:global(.dl-enhanced) .dl-cards > :global([data-concept-card]:not([hidden])) {
+      animation: dl-in 220ms ease;
+    }
+  }
+
+  @keyframes dl-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dl-arrow,
+    .dl-slide-cta {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import '../../islands/design-lab';
+</script>

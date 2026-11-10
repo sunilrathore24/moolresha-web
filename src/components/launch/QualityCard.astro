@@ -1,0 +1,185 @@
+---
+/**
+ * Quality_Card (Requirements 8.8, 8C.1 to 8C.6, 8C.9, 21.4). Markup matches what
+ * Content_Check CC-18 / CC-19 read (see src/lib/content-rules/story-quality-rules.ts):
+ *
+ *  - `section[data-quality-card]` with `aria-labelledby="qc-<concept-id>"`;
+ *  - seven `[data-quality-row="<row>"][data-quality-label="FACT|Target|WeWillTest"]`;
+ *  - exactly one visible label per row: `.q-label` for Target / We'll test, or the
+ *    ClaimLabel (`[data-claim-label]`, text "FACT") inside FactText for FACT rows.
+ *    Never both;
+ *  - Target rows carry the exact Target note;
+ *  - a link to `#how-we-check`, which HowWeCheck renders once after the last card.
+ *
+ * The label is always text, so colour is never the only signal.
+ */
+import type { QualityCardData } from '../../lib/concept-schema';
+import {
+  HOW_WE_CHECK_ID,
+  HOW_WE_CHECK_LINK_TEXT,
+  qualityRowViews,
+} from '../../lib/quality-card-view';
+import FactText from './FactText.astro';
+
+interface Props {
+  /** The Concept's `quality` rows (seven, in order). */
+  quality: QualityCardData;
+  /** The Concept id; sets the heading id `qc-<id>` that `aria-labelledby` points to. */
+  conceptId: string;
+}
+
+const { quality, conceptId } = Astro.props;
+const rows = qualityRowViews(quality);
+const headingId = `qc-${conceptId}`;
+---
+
+<section class="quality-card" data-quality-card aria-labelledby={headingId}>
+  <h3 id={headingId} class="qc-heading">Quality</h3>
+  <dl class="qc-list">
+    {
+      rows.map((r) => (
+        <div class="qc-row" data-quality-row={r.row} data-quality-label={r.label}>
+          <dt>{r.name}</dt>
+          <dd>
+            {r.label === 'FACT' && r.factId ? (
+              <FactText id={r.factId} />
+            ) : (
+              <>
+                {r.text}
+                {r.rangeText && (
+                  <>
+                    {' '}
+                    <span class="q-range" data-range>
+                      {r.rangeText}
+                    </span>
+                  </>
+                )}{' '}
+                <span class={`q-label q-label-${r.label}`}>{r.labelText}</span>
+                {r.note && (
+                  <span class="q-detail q-note">{r.note}</span>
+                )}
+                {r.testText && (
+                  <span class="q-detail q-test">{r.testText}</span>
+                )}
+              </>
+            )}
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+  <p class="qc-link"><a href={`#${HOW_WE_CHECK_ID}`}>{HOW_WE_CHECK_LINK_TEXT}</a></p>
+</section>
+
+<style>
+  .quality-card {
+    margin-block: var(--space-5);
+    padding: var(--space-4);
+    border-radius: var(--radius-card, 14px);
+    background: var(--color-surface);
+  }
+
+  .qc-heading {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .qc-list {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  .qc-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 8.5rem) 1fr;
+    gap: var(--space-1) var(--space-4);
+    padding-block: var(--space-2);
+  }
+
+  .qc-row + .qc-row {
+    border-top: 1px dashed var(--color-border);
+  }
+
+  .qc-row dt {
+    font-size: var(--fs-label, 0.75rem);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.9;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .qc-row dd {
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .q-range {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Same look as ClaimLabel, so the three labels read as one family: a quiet inline
+     attribution, not a UI chip. Text carries the meaning, not colour or a box. */
+  .q-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    font-style: italic;
+    line-height: var(--lh-body);
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  /* A second non-colour cue: a dashed underline for Target, a dotted one for We'll test. */
+  .q-label-Target {
+    text-decoration: underline dashed;
+    text-underline-offset: 0.2em;
+  }
+
+  .q-label-WeWillTest {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+
+  .q-detail {
+    display: block;
+    margin-top: var(--space-1);
+    color: var(--color-text-muted);
+  }
+
+  .qc-link {
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+  }
+
+  /* Standalone link: 44 px high hit area (WCAG 2.5.8 needs at least 24 px). */
+  .qc-link a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .qc-link a:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 30rem) {
+    .qc-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+</style>

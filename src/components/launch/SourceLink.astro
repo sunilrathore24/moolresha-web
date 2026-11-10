@@ -1,0 +1,50 @@
+---
+/**
+ * Source_Link (Requirements 3.2, 3.8): visible "<source name>, <date>" link that opens
+ * the source in a new tab with rel="noopener noreferrer". A native <a>, so it is
+ * keyboard-operable (Requirement 21.2).
+ */
+import type { SourceLinkViewModel } from '../../lib/facts';
+
+interface Props {
+  link: SourceLinkViewModel;
+}
+
+const { link } = Astro.props;
+---
+
+<a class="source-link" href={link.url} rel={link.rel} target="_blank">{link.text}</a><span
+  class="hidden-text"> (opens in a new tab)</span
+>
+
+<style>
+  .source-link {
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    color: var(--c-raw-umber);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .source-link:hover {
+    color: var(--color-text);
+  }
+
+  .source-link:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  .hidden-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

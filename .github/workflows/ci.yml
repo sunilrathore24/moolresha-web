@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Check, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # No .nvmrc or "engines" field exists in the repo; Node 22 is the LTS line
+      # that current Astro releases support. Change here if package.json adds engines.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Type and content check
+        run: npm run check
+
+      - name: Unit and property tests
+        run: npm test
+
+      # Not a PUBLIC_LAUNCH build: missing Concept images only warn.
+      - name: Build
+        run: npm run build
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Pinned gitleaks image run directly: no licence key and no repo secrets needed.
+      # Exits non-zero if any secret is found in the repository history.
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.18.4 \
+            detect --source=/repo --redact --verbose

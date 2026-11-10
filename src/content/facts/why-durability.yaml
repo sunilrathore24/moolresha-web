@@ -1,0 +1,12 @@
+# ⚠️ verify: confirm sample size and wording against the press release.
+id: why-durability
+label: INDUSTRY CLAIM
+text: "A Deloitte India survey of more than 600 people (January 2026) found shoppers justify higher-priced purchases by craftsmanship, durability and authenticity."
+source:
+  name: "Deloitte India"
+  url: "https://www.deloitte.com/in/en/about/press-room/accessible-premium-reshapes-indias-fashion-market.html"
+  date: "January 2026"
+strength: MODERATE
+lastChecked: "2026-11-07"
+verifyFlag: true
+section: why

@@ -1,0 +1,115 @@
+---
+/**
+ * One trend card (Requirement 11.2): a decorative photo, a short heading and exactly one
+ * sourced Fact. The Fact stays inside FactText (`.fact`), so no free-standing number
+ * appears in the card (CC-09). The photo has alt="" because the text carries the meaning.
+ * The photo zooms slightly on hover or focus within the card; never under reduced motion.
+ */
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import FactText from './FactText.astro';
+import { pictureWidths } from '../../lib/journey-images';
+
+interface Props {
+  /** Plain heading with no numbers or claims. */
+  heading: string;
+  /** Fact_Registry id. */
+  factId: string;
+  /** Optional decorative photo shown at the top of the card. */
+  image?: ImageMetadata;
+}
+
+const { heading, factId, image } = Astro.props;
+---
+
+<li class="trend-card" data-trend-card>
+  {
+    image && (
+      <div class="trend-photo">
+        <Picture
+          src={image}
+          alt=""
+          formats={['avif', 'webp']}
+          fallbackFormat="webp"
+          widths={pictureWidths(image, [360, 540, 720])}
+          sizes="(min-width: 68rem) 17rem, (min-width: 60rem) 30vw, (min-width: 40rem) 45vw, 92vw"
+          width={image.width}
+          height={image.height}
+          loading="lazy"
+          decoding="async"
+          class="trend-img"
+        />
+      </div>
+    )
+  }
+  <div class="trend-body">
+    <h3>{heading}</h3>
+    <div class="trend-fact">
+      <FactText id={factId} />
+    </div>
+  </div>
+</li>
+
+<style>
+  .trend-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .trend-photo {
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    background: var(--c-warm-oat);
+  }
+
+  .trend-photo :global(picture),
+  .trend-photo :global(.trend-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .trend-photo :global(.trend-img) {
+    object-fit: cover;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .trend-photo :global(.trend-img) {
+      transition: transform 400ms ease;
+    }
+
+    .trend-card:hover .trend-photo :global(.trend-img),
+    .trend-card:focus-within .trend-photo :global(.trend-img) {
+      transform: scale(1.05);
+    }
+  }
+
+  .trend-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+  }
+
+  h3 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .trend-fact {
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+</style>

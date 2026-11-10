@@ -1,0 +1,87 @@
+---
+/**
+ * The Journal index: every published article, newest first, regardless of category.
+ * This is what the header/footer "Journal" link points to (Requirement 2.5) — previously
+ * that link went straight to the newest article because no index existed yet (see
+ * src/content/config/site.ts). Each card's own "Read" link is the "see more" into the
+ * full article; this page is the browse-everything view above that.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import HubHero from "../components/HubHero.astro";
+import ArticleCard from "../components/ArticleCard.astro";
+import { CATEGORY_PATH, getPublishedArticles } from "../lib/articles";
+
+const articles = await getPublishedArticles();
+---
+
+<BaseLayout
+  title="Journal — MoolResha"
+  description="Every MoolResha article in one place: what fibres and fabrics actually are, how to judge them, and what the label leaves out."
+>
+  <HubHero
+    eyebrow="Journal"
+    title="Everything we've written, in one place."
+    lede="Fibre, fabric, sourcing, longevity — every article we've published, newest first. Browse by topic below, or dive into a category hub for a narrower read."
+    image="/images/hub-fibre-stories.webp"
+  />
+
+  <section class="hub container">
+    {
+      articles.length > 0 ? (
+        <ul class="hub-grid">
+          {articles.map((a) => (
+            <li>
+              <ArticleCard article={a} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="soon">The first articles are being written. Check back soon.</p>
+      )
+    }
+
+    <nav class="hub-categories" aria-label="Browse by category">
+      {
+        Object.entries(CATEGORY_PATH).map(([label, href]) => (
+          <a href={href}>{label}</a>
+        ))
+      }
+    </nav>
+
+    <p class="back"><a href="/">&larr; Back home</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .hub {
+    padding-block: var(--space-8) var(--space-10);
+  }
+  .hub-grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+  .soon {
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+  .hub-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+    margin-top: var(--space-10);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+  .hub-categories a {
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-accent-text);
+    text-decoration: underline;
+  }
+  .back {
+    margin-top: var(--space-8);
+  }
+</style>

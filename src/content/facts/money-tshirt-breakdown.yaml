@@ -1,0 +1,17 @@
+# ⚠️ verify: confirm every share and the chart date against the source before building the chart (Requirement 5.1).
+# 2026-11-09: dropped "European"/"EUR 29" from the sentence — our audience is Indian and the
+# geography was leading the headline without adding anything they could act on. The source is
+# still the same (genuinely European) study; its name, url and date below are the honest trail
+# for anyone who wants to check it. No Indian-specific equivalent of this exact breakdown was
+# found to replace it with (checked; only unverifiable anecdotal answers turned up).
+id: money-tshirt-breakdown
+label: FACT
+text: "In a widely cited breakdown of a T-shirt's retail price, about 60% of the price went to the retailer, 12% to brand profit, 12% to materials and 8% to transport."
+source:
+  name: "Statista, citing Clean Clothes Campaign"
+  url: "https://www.statista.com/chart/34514/breakdown-of-the-retail-price-of-a-t-shirt/"
+  date: "date to confirm"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: true
+section: money

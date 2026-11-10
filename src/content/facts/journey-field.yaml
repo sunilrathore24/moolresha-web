@@ -1,0 +1,12 @@
+# Drafted by AI research (no live web source available this session). Still MoolResha estimate /
+# verifyFlag:true by design — a human should attach a dated Ministry of Textiles or Cotton
+# Corporation of India source before this is upgraded to a sourced FACT and published.
+id: journey-field
+label: MoolResha estimate
+text: "Cotton in India is grown mainly in Gujarat, Maharashtra, Telangana, Madhya Pradesh and Karnataka. It is a kharif crop, sown with the monsoon and picked by hand from the open bolls between October and February."
+assumptions:
+  - "Based on the commonly reported major cotton-growing states in India and the typical kharif sowing-to-picking calendar. A human should confirm the current leading states and dates against the latest Ministry of Textiles / Cotton Corporation of India release before publishing, since rankings shift year to year."
+strength: UNVERIFIED
+lastChecked: "2026-11-08"
+verifyFlag: true
+section: journey

@@ -1,0 +1,62 @@
+---
+// One Concept_View image (Requirements 8A.13, 8A.14, 8B.4, 20.3).
+// Always AVIF or WebP; width and height come from the image metadata.
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import type { ViewBase } from '../../lib/concept-views';
+import { loadingFor } from '../../lib/image-loading';
+
+interface Props {
+  image: ImageMetadata;
+  alt: string;
+  view: ViewBase;
+  slot?: 'stage' | 'grid';
+  conceptIndex?: number;
+  firstCardAboveFold?: boolean;
+  /** Override the default `sizes` for the slot. */
+  sizes?: string;
+}
+
+const {
+  image,
+  alt,
+  view,
+  slot = 'stage',
+  conceptIndex = 0,
+  firstCardAboveFold = false,
+  sizes,
+} = Astro.props;
+
+const STAGE_WIDTHS = [360, 540, 720, 1080, 1440];
+const GRID_WIDTHS = [180, 360];
+
+const widths = slot === 'grid' ? GRID_WIDTHS : STAGE_WIDTHS;
+const defaultSizes =
+  slot === 'grid' ? '(min-width: 48rem) 180px, 45vw' : '(min-width: 72rem) 72rem, 100vw';
+const loading = loadingFor({ conceptIndex, view, slot, firstCardAboveFold });
+---
+
+<Picture
+  src={image}
+  alt={alt}
+  formats={['avif', 'webp']}
+  fallbackFormat="webp"
+  widths={widths}
+  sizes={sizes ?? defaultSizes}
+  width={image.width}
+  height={image.height}
+  loading={loading}
+  decoding="async"
+  draggable="false"
+  class="concept-view-img"
+/>
+
+<style>
+  .concept-view-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+</style>

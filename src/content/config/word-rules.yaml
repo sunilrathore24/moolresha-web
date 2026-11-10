@@ -1,0 +1,38 @@
+# Editable word rules used by the Content_Check (design: Data Models).
+# Schema: src/lib/word-rules-schema.ts. Edit the lists, no code change needed.
+
+# CC-03: allowed only inside a .fact whose fact lists the word in `substantiates`.
+restricted:
+  - "sustainable"
+  - "eco"
+  - "eco-friendly"
+  - "green"
+  - "planet-friendly"
+  - "conscious"
+
+# CC-10: tone words (whole word, case-insensitive).
+superlatives:
+  - "best"
+  - "premium"
+  - "luxury"
+  - "amazing"
+
+# CC-09: exact strings allowed outside a .fact even though they contain a
+# number sign. Empty at launch; add an entry only with a reason.
+numericAllow: []
+
+# Restricted_Phrase_List (Requirement 11A.6, CC-17): allowed only wholly
+# inside a .fact with a source.
+restrictedPhrases:
+  - "made in Bangladesh"
+  - "instead of Bangladesh"
+  - "less GST"
+
+# Health_Term_List (Requirement 8C.11, CC-20): banned everywhere.
+healthTerms:
+  - "skin-friendly"
+  - "hypoallergenic"
+  - "anti-allergy"
+  - "chemical-free"
+  - "non-toxic"
+  - "hypo-allergenic" # proposed extra spelling, ⚠️ confirm

@@ -1,0 +1,488 @@
+---
+/**
+ * Concept feedback form (Requirements 9.1 to 9.6, 9.9, 9.11, 9.12, 9.18,
+ * 21.3, 21.4). Server-rendered only. The island (task 16.6,
+ * `src/islands/feedback-island.ts`) is NOT written here.
+ *
+ * It is a real <form method="post" action="/api/feedback">, so it degrades:
+ * without JavaScript the submit button stays hidden and a <noscript> note
+ * explains why. A no-JS post gets the server's HTML note.
+ *
+ * Content comes from `src/lib/feedback-form.ts` (labels) and the allow-lists.
+ * Price_Band radios use `bandLabel` through that module. There is no free-text
+ * or numeric price input. The only MoolResha-side figures in this component
+ * are the band labels inside fieldset[data-price-question].
+ *
+ * STABLE HOOKS FOR THE ISLAND (do not rename without updating task 16.6):
+ *   form[data-feedback-form][data-concept-id="<id>"]
+ *                       the form root; one per Concept card.
+ *   name="verdict"      radios. Values: would_wear | maybe | not_for_me.
+ *   name="changes"      checkboxes (Change_Chips). One has value="other".
+ *   [data-other-field]  wrapper div, starts `hidden`. Island shows it while the
+ *                       "other" checkbox is ticked. The checkbox has
+ *                       aria-controls pointing at the wrapper id.
+ *   name="otherText"    text input inside [data-other-field], maxlength="200".
+ *   name="colour"       radios (Palette_Colour). Values from PALETTE.
+ *   name="priorities"   checkboxes (Priority_Chips), inside the
+ *                       "What matters most to you?" fieldset.
+ *   fieldset[data-price-question]
+ *                       the price question. Contains the radios and the skip.
+ *   name="priceBandId"  radios. Values are the Concept's Price_Band ids.
+ *   button[data-price-skip][aria-pressed]
+ *                       type="button" "Skip this question", INSIDE the price
+ *                       fieldset. Island toggles aria-pressed, clears radios.
+ *   button[data-submit] type="submit", starts `hidden`; island reveals it.
+ *   [data-live-region]  role="status" aria-live="polite" message area.
+ *   [data-turnstile]    empty container the island fills (no script is loaded here).
+ *
+ * The island also uses `[data-market-for="<id>"]` on the sibling
+ * MarketPriceContext (task 8.7), not this component.
+ */
+import type { PaletteColour } from '../../content/config/allow-lists';
+import type { PriceBand } from '../../lib/price-bands';
+import {
+  FIELD_NAMES,
+  NOSCRIPT_NOTE,
+  OTHER_TEXT_MAX_LENGTH,
+  PRICE_QUESTION,
+  PRICE_SKIP_LABEL,
+  PRIORITY_QUESTION,
+  feedbackFormModel,
+  fieldId,
+} from '../../lib/feedback-form';
+
+interface Props {
+  concept: {
+    id: string;
+    name: string;
+    priceBands: readonly PriceBand[];
+    colours?: readonly PaletteColour[];
+  };
+}
+
+const { concept } = Astro.props;
+const model = feedbackFormModel(concept.priceBands, concept.colours);
+
+const id = concept.id;
+const otherId = fieldId(id, 'other-field');
+const otherTextId = fieldId(id, FIELD_NAMES.otherText);
+const liveId = fieldId(id, 'live');
+---
+
+<form
+  class="cff"
+  method="post"
+  action="/api/feedback"
+  data-feedback-form
+  data-concept-id={id}
+  aria-label={`Feedback on ${concept.name}`}
+>
+  <p class="cff-intro">Your view</p>
+
+  <fieldset class="cff-group">
+    <legend class="cff-legend">Would you wear it?</legend>
+    <div class="cff-options cff-options-verdict">
+      {
+        model.verdicts.map((o) => (
+          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.verdict, o.value)}>
+            <input
+              type="radio"
+              id={fieldId(id, FIELD_NAMES.verdict, o.value)}
+              name={FIELD_NAMES.verdict}
+              value={o.value}
+            />
+            <span class="cff-text">{o.label}</span>
+          </label>
+        ))
+      }
+    </div>
+  </fieldset>
+
+  <fieldset class="cff-group">
+    <legend class="cff-legend">What would you change? <span class="cff-optional">Optional</span></legend>
+    <div class="cff-options">
+      {
+        model.changes.map((o) => (
+          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.changes, o.value)}>
+            <input
+              type="checkbox"
+              id={fieldId(id, FIELD_NAMES.changes, o.value)}
+              name={FIELD_NAMES.changes}
+              value={o.value}
+              aria-controls={o.value === 'other' ? otherId : undefined}
+            />
+            <span class="cff-text">{o.label}</span>
+          </label>
+        ))
+      }
+    </div>
+    <div class="cff-other" id={otherId} data-other-field hidden>
+      <label class="cff-text-label" for={otherTextId}>Tell us more (up to {OTHER_TEXT_MAX_LENGTH} characters)</label>
+      <input
+        class="cff-input"
+        type="text"
+        id={otherTextId}
+        name={FIELD_NAMES.otherText}
+        maxlength={OTHER_TEXT_MAX_LENGTH}
+        autocomplete="off"
+      />
+    </div>
+  </fieldset>
+
+  <fieldset class="cff-group">
+    <legend class="cff-legend">Which colour do you prefer? <span class="cff-optional">Optional</span></legend>
+    <div class="cff-options cff-options-swatch">
+      {
+        model.colours.map((o) => (
+          <label class="cff-swatch" for={fieldId(id, FIELD_NAMES.colour, o.value)}>
+            <input
+              type="radio"
+              id={fieldId(id, FIELD_NAMES.colour, o.value)}
+              name={FIELD_NAMES.colour}
+              value={o.value}
+            />
+            <span class="cff-chip" style={`background-color: ${o.swatch}`} aria-hidden="true" />
+            <span class="cff-swatch-name">{o.label}</span>
+          </label>
+        ))
+      }
+    </div>
+  </fieldset>
+
+  <fieldset class="cff-group">
+    <legend class="cff-legend">{PRIORITY_QUESTION} <span class="cff-optional">Optional</span></legend>
+    <div class="cff-options">
+      {
+        model.priorities.map((o) => (
+          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.priorities, o.value)}>
+            <input
+              type="checkbox"
+              id={fieldId(id, FIELD_NAMES.priorities, o.value)}
+              name={FIELD_NAMES.priorities}
+              value={o.value}
+            />
+            <span class="cff-text">{o.label}</span>
+          </label>
+        ))
+      }
+    </div>
+  </fieldset>
+
+  <fieldset class="cff-group cff-price" data-price-question>
+    <legend class="cff-legend">{PRICE_QUESTION}</legend>
+    <div class="cff-options">
+      {
+        model.prices.map((o) => (
+          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.priceBandId, o.value)}>
+            <input
+              type="radio"
+              id={fieldId(id, FIELD_NAMES.priceBandId, o.value)}
+              name={FIELD_NAMES.priceBandId}
+              value={o.value}
+            />
+            <span class="cff-text">{o.label}</span>
+          </label>
+        ))
+      }
+    </div>
+    <button type="button" class="cff-btn cff-skip" aria-pressed="false" data-price-skip>
+      {PRICE_SKIP_LABEL}
+    </button>
+  </fieldset>
+
+  <div data-turnstile></div>
+
+  <button type="submit" class="cff-btn cff-submit" data-submit hidden>Send feedback</button>
+
+  <noscript><p class="cff-note">{NOSCRIPT_NOTE}</p></noscript>
+
+  <p class="cff-live" id={liveId} role="status" aria-live="polite" data-live-region></p>
+</form>
+
+<style>
+  .cff {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    margin-top: var(--space-5);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .cff-intro {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .cff-group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+
+  .cff-legend {
+    padding: 0;
+    margin-bottom: var(--space-3);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    line-height: var(--lh-body);
+  }
+
+  .cff-optional {
+    margin-left: var(--space-1);
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  .cff-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* ---- Chip: the real input stays in the label, covers it and keeps focus; it is only made transparent ---- */
+  .cff-choice,
+  .cff-swatch {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .cff-choice input,
+  .cff-swatch input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .cff-choice {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 999px;
+    font-size: var(--fs-small);
+    line-height: var(--lh-tight);
+    transition: background-color var(--transition), color var(--transition);
+  }
+
+  .cff-options-verdict .cff-choice {
+    padding-inline: var(--space-5);
+  }
+
+  .cff-choice:hover {
+    background: var(--c-warm-oat);
+  }
+
+  /* Checked: dark fill, cream text and a tick, so the state never rests on colour alone. */
+  .cff-choice:has(input:checked) {
+    background: var(--color-olive, #3b3a2b);
+    border-color: var(--color-olive, #3b3a2b);
+    color: var(--c-linen-cream, #f3ece0);
+    font-weight: 600;
+  }
+
+  .cff-choice:has(input:checked) .cff-text::before {
+    content: '\2713';
+    display: inline-block;
+    margin-right: var(--space-2);
+  }
+
+  .cff-choice:has(input:focus-visible),
+  .cff-swatch:has(input:focus-visible) {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* ---- Colour swatches: a round dot with its name ---- */
+  .cff-options-swatch {
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .cff-swatch {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 4.25rem;
+    min-height: 44px;
+    padding: var(--space-1);
+    border-radius: var(--radius-lg);
+  }
+
+  .cff-chip {
+    display: block;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px var(--color-card, #fbf7f0);
+    transition: box-shadow var(--transition);
+  }
+
+  .cff-swatch:hover .cff-chip {
+    box-shadow:
+      0 0 0 3px var(--color-card, #fbf7f0),
+      0 0 0 4px var(--c-raw-umber);
+  }
+
+  /* Checked: a dark ring around the dot and a bold, underlined name. */
+  .cff-swatch:has(input:checked) .cff-chip {
+    box-shadow:
+      0 0 0 3px var(--color-card, #fbf7f0),
+      0 0 0 5px var(--color-text);
+  }
+
+  .cff-swatch-name {
+    font-size: var(--fs-label, 0.75rem);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+    text-align: center;
+  }
+
+  .cff-swatch:has(input:checked) .cff-swatch-name {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* ---- "Other" text field ---- */
+  .cff-other[hidden] {
+    display: none;
+  }
+
+  .cff-other {
+    margin-top: var(--space-3);
+  }
+
+  .cff-text-label {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-size: var(--fs-small);
+  }
+
+  .cff-input {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 28rem;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: var(--radius-lg);
+  }
+
+  .cff-input:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* ---- Price question ---- */
+  .cff-price {
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border-radius: var(--radius-card, 14px);
+  }
+
+  .cff-price .cff-legend {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+  }
+
+  /* ---- Buttons ---- */
+  .cff-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-5);
+    font: inherit;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    line-height: var(--lh-tight);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color var(--transition), color var(--transition);
+  }
+
+  .cff-btn:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .cff-btn[hidden] {
+    display: none;
+  }
+
+  .cff-skip {
+    margin-top: var(--space-3);
+    padding-inline: var(--space-3);
+    color: var(--color-text);
+    background: transparent;
+    border: 1px solid transparent;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .cff-skip:hover {
+    background: var(--c-warm-oat);
+  }
+
+  /* Pressed: a filled pill and a tick, so it is not colour alone. */
+  .cff-skip[aria-pressed='true'] {
+    background: var(--color-olive, #3b3a2b);
+    color: var(--c-linen-cream, #f3ece0);
+    border-color: var(--color-olive, #3b3a2b);
+    text-decoration: none;
+  }
+
+  .cff-skip[aria-pressed='true']::before {
+    content: '\2713';
+    margin-right: var(--space-2);
+  }
+
+  .cff-submit {
+    align-self: flex-start;
+    color: var(--c-off-white, #faf6ef);
+    background: var(--color-accent-text, #8f5233);
+    border: 1px solid var(--color-accent-text, #8f5233);
+  }
+
+  .cff-submit:hover {
+    background: var(--color-olive, #3b3a2b);
+    border-color: var(--color-olive, #3b3a2b);
+  }
+
+  .cff-note,
+  .cff-live {
+    margin: 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .cff-live:empty {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cff-choice,
+    .cff-chip,
+    .cff-btn {
+      transition: none;
+    }
+  }
+</style>

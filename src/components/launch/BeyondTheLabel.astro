@@ -1,0 +1,250 @@
+---
+/**
+ * Beyond the label (new homepage section, Nov 2026): two short, sourced "problem" cards —
+ * recycled polyester's microfibre shedding, and where discarded clothing actually goes —
+ * each linking into a full Journal article for depth, followed by a closing band making
+ * the one claim that survives scrutiny: a natural/cellulosic fibre returns to the earth,
+ * a synthetic one structurally cannot. Mirrors Trends' card grid and the Journey section's
+ * Aim_Statement pattern, rather than inventing new layout language.
+ *
+ * Deliberately not a third equal card: the closing claim is a synthesis of the two cards
+ * above it, so it reads as a conclusion, not a third problem.
+ */
+import { Picture } from 'astro:assets';
+import BeyondLabelCard from './BeyondLabelCard.astro';
+import FactText from './FactText.astro';
+import LastUpdated from './LastUpdated.astro';
+import fibreTexture from '../../assets/beyond-label/fibre-texture.png';
+import keptGarment from '../../assets/beyond-label/kept-garment.png';
+import rawFibreSoil from '../../assets/beyond-label/raw-fibre-soil.png';
+import { pictureWidths } from '../../lib/journey-images';
+
+const FACT_IDS = [
+  'beyond-polyester-microfibre-shedding',
+  'beyond-textile-waste-landfill',
+  'beyond-natural-fibre-biodegrades',
+];
+---
+
+<section class="beyond section" data-section="beyond-label" id="beyond-label" aria-labelledby="beyond-h">
+  <div class="beyond-head section-head">
+    <div>
+      <p class="beyond-label-eyebrow section-label eyebrow">Fibre &amp; footprint</p>
+      <h2 id="beyond-h">What a fibre choice actually costs — on you, and after you're done with it.</h2>
+    </div>
+    <p class="beyond-intro section-intro">
+      A fibre is a material decision, not just a feel decision. Here's what two widely-marketed
+      shortcuts actually hold up to, each with the sourced study behind it.
+    </p>
+  </div>
+
+  <ul class="beyond-list">
+    <BeyondLabelCard
+      heading="The fibre you can't see"
+      intro="Recycled polyester is marketed as the fix for plastic in fashion. Washed, it tells a different story."
+      factId="beyond-polyester-microfibre-shedding"
+      image={fibreTexture}
+      imageAlt=""
+      articleSlug="recycled-polyester-microplastics"
+    />
+    <BeyondLabelCard
+      heading="A shirt that's still here next year"
+      intro="Most clothing doesn't get worn out — it gets replaced. Keeping what you already have is the one lever every wardrobe controls."
+      factId="beyond-textile-waste-landfill"
+      image={keptGarment}
+      imageAlt=""
+      articleSlug="why-clothes-end-up-in-landfill"
+    />
+  </ul>
+
+  <div class="beyond-conclusion">
+    <div class="beyond-conclusion-media">
+      <Picture
+        src={rawFibreSoil}
+        alt="Hands cradling a loose tuft of raw natural fibre, held low over bare soil."
+        formats={['avif', 'webp']}
+        fallbackFormat="webp"
+        widths={pictureWidths(rawFibreSoil, [480, 720, 960])}
+        sizes="(min-width: 60rem) 26rem, 80vw"
+        width={rawFibreSoil.width}
+        height={rawFibreSoil.height}
+        loading="lazy"
+        decoding="async"
+        class="beyond-conclusion-img"
+      />
+    </div>
+    <div class="beyond-conclusion-text">
+      <p class="beyond-aim">
+        <strong>The one thing that doesn't need debating</strong>
+        <span class="beyond-aim-body">
+          A natural or plant-based fibre — cotton, linen, responsibly made cellulosics — breaks down back
+          into the soil through ordinary biology. A synthetic fibre, recycled or not, is a plastic polymer
+          that structurally can't. That part isn't in dispute. Everything else about a fibre — how it's
+          grown, dyed and finished — still has to be checked, label by label, not assumed.
+        </span>
+      </p>
+      <div class="beyond-conclusion-fact">
+        <FactText id="beyond-natural-fibre-biodegrades" />
+      </div>
+    </div>
+  </div>
+
+  <div class="beyond-updated">
+    <LastUpdated factIds={FACT_IDS} />
+  </div>
+</section>
+
+<style>
+  .beyond {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    padding: var(--space-section) var(--space-4);
+  }
+
+  /* ---- Header (fallback for the global .section-head / .eyebrow) ---- */
+  .beyond-head {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-8);
+  }
+
+  .beyond-label-eyebrow {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  h2 {
+    margin: 0;
+    max-width: 26ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 400;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+
+  .beyond-intro {
+    margin: 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 56rem) {
+    .beyond-head {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      align-items: end;
+      gap: var(--space-10);
+    }
+  }
+
+  /* ---- Cards ---- */
+  .beyond-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  @media (min-width: 40rem) {
+    .beyond-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-5);
+    }
+  }
+
+  /* ---- Closing conclusion band: image + Aim_Statement-style text, not a third card ---- */
+  .beyond-conclusion {
+    display: grid;
+    gap: var(--space-6);
+    align-items: center;
+    margin-top: var(--space-10);
+    padding-top: var(--space-8);
+  }
+
+  .beyond-conclusion-media {
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    aspect-ratio: 4 / 3;
+    background: var(--c-flax-beige);
+  }
+
+  .beyond-conclusion-media :global(picture),
+  .beyond-conclusion-media :global(.beyond-conclusion-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .beyond-conclusion-media :global(.beyond-conclusion-img) {
+    object-fit: cover;
+  }
+
+  .beyond-conclusion-text {
+    position: relative;
+  }
+
+  /* Decorative thread above the label, matching the Journey section's Aim_Statement. */
+  .beyond-conclusion-text::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6rem;
+    height: 1px;
+    background: linear-gradient(90deg, var(--color-accent, #b5714f) 0%, var(--color-accent, #b5714f) 60%, transparent);
+  }
+
+  .beyond-aim {
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-serif);
+    font-size: clamp(1.25rem, 1.05rem + 1vw, 1.75rem);
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--color-text);
+  }
+
+  .beyond-aim strong {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  .beyond-aim-body {
+    display: block;
+  }
+
+  .beyond-conclusion-fact {
+    margin-top: var(--space-4);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  @media (min-width: 56rem) {
+    .beyond-conclusion {
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    }
+  }
+
+  .beyond-updated {
+    margin-top: var(--space-5);
+  }
+</style>

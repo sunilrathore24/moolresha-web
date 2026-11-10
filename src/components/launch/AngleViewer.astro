@@ -1,0 +1,631 @@
+---
+/**
+ * Angle_Viewer, server-rendered part (Requirements 8A.1, 8A.2, 8A.8, 8A.9,
+ * 8A.11, 8A.12, 8A.16, 21.2, 21.6). The island (task 6.7,
+ * `src/islands/angle-viewer-island.ts`) is NOT written here.
+ *
+ * Navigation is a single thumbnail strip (`.av-grid`) below the big photo —
+ * no Previous/Next buttons and no separate labelled tabs. Every thumbnail is
+ * one of the eight views; clicking one calls `goto(state, view)` (from
+ * `angle-viewer-state.ts`, unchanged) to make it the big photo. `.av-grid` is
+ * always visible, with or without JavaScript: without JS it is simply a row
+ * of eight plain photos (no interactivity); the island adds the click-to-swap
+ * behaviour and the "selected" ring on top.
+ *
+ * STABLE HOOKS FOR THE ISLAND (do not rename without updating task 6.7):
+ *   [data-angle-viewer]            root; one per Concept. Island runs per root.
+ *   [data-concept-id]              on root; the Concept id.
+ *   .av-stage                      focusable group (tabindex=0). Gets pointer
+ *                                  and key listeners (Left/Right still turn the
+ *                                  five Turn_Views; there is no visible button
+ *                                  for this — it's a keyboard-only bonus).
+ *                                  CSS: touch-action: pan-y; display: grid,
+ *                                  frames stack in one cell.
+ *   .av-frame[data-view]           one <figure> per view; data-view is a
+ *                                  VIEW_BASES name. Frame 01 has [data-current].
+ *                                  Shown = opacity 1 with [data-current]; others
+ *                                  opacity 0. Opacity fades over 250 ms; none
+ *                                  under prefers-reduced-motion. A frame with
+ *                                  [hidden] is display: none (remove `hidden`,
+ *                                  then set data-current on the next frame so
+ *                                  the fade runs; re-add `hidden` after
+ *                                  transitionend or 300 ms).
+ *   template[data-av-frames]       frames 02 to 08 (hidden, inert). Island
+ *                                  clones template.content into .av-stage.
+ *   .av-position                  aria-live="polite" text; island keeps it
+ *                                  current via positionText(state). Always
+ *                                  visible (frame 01's own position is correct
+ *                                  without JS too, so nothing needs revealing).
+ *   .av-grid                       the thumbnail strip; always visible. Each
+ *                                  `li` holds a `button[data-view]`; the
+ *                                  island marks the current one
+ *                                  `aria-current="true"`.
+ *
+ * Alt text comes from `concept.views.alt[view]`. The caller does not pass a
+ * frame size: the component takes it from the first present view of
+ * `conceptViews[concept.id]` (4 / 5 when none exists).
+ *
+ * `views` lets a caller override which resolved view set renders — used only
+ * for a Palette_Colour's own photography (see `concept-images.ts`'s
+ * `conceptColourViews` and `ConceptCard.astro`'s colour panels). Omitted, this
+ * is exactly the single flat `conceptViews[concept.id]` set every other
+ * Concept already uses.
+ *
+ * `materialCard` adds one more thumbnail and frame beyond the eight Concept_Views,
+ * entirely dynamic: pass it only when `concept-images.ts`'s `conceptMaterialCards`
+ * actually has one for this Concept and colour; omit it and nothing extra renders.
+ *
+ * `extraPhotos` adds up to three more thumbnails and frames for real photography that does
+ * not fit one of the eight named Concept_Views — an embroidery macro, a front-and-back
+ * composite, a detail collage. Same dynamic rule: pass `concept-images.ts`'s
+ * `conceptExtraPhotos[concept.id][colour]`, and whichever of the three slots it actually has
+ * render; the rest render nothing. They sit after the eight Concept_Views and before the
+ * material card.
+ */
+import { Picture } from 'astro:assets';
+import ConceptViewImage from './ConceptViewImage.astro';
+import ImagePlaceholder from './ImagePlaceholder.astro';
+import RenderLabel from './RenderLabel.astro';
+import { conceptViews } from '../../lib/concept-images';
+import { VIEW_BASES, VIEW_NAMES, type ViewBase } from '../../lib/concept-views';
+import { EXTRA_VIEW_NAMES } from '../../islands/angle-viewer-state';
+import type { ConceptId } from '../../content/config/allow-lists';
+import { EXTRA_PHOTO_SLOTS, type ExtraPhotoSlot, type ResolvedView } from '../../lib/concept-image-resolver';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  concept: {
+    id: ConceptId;
+    name: string;
+    views: { kind: 'render' | 'photo'; alt: Record<ViewBase, string> };
+  };
+  /** Index of the Concept on the page (0 for the first card). */
+  conceptIndex?: number;
+  /** True when the first Concept card is inside the first viewport. */
+  firstCardAboveFold?: boolean;
+  /** Override for a specific Palette_Colour's resolved views (see comment above). */
+  views?: ResolvedView<ImageMetadata>[];
+  /** This colour's material card, when one exists (see comment above). */
+  materialCard?: { path: string; image: ImageMetadata };
+  /** This colour's extra photos (any of up to three slots), when any exist — real photography
+   * that does not fit one of the eight named Concept_Views (see `concept-image-resolver.ts`'s
+   * `resolveExtraPhotos`). Omitted or missing slots just render nothing extra. */
+  extraPhotos?: Partial<Record<ExtraPhotoSlot, { path: string; image: ImageMetadata }>>;
+}
+
+const { concept, conceptIndex = 0, firstCardAboveFold = false, views, materialCard, extraPhotos } = Astro.props;
+
+const resolved = views ?? conceptViews[concept.id];
+const isRender = concept.views.kind === 'render';
+
+const firstPresent = resolved.find((v) => v.status === 'file');
+const frame =
+  firstPresent && firstPresent.status === 'file'
+    ? { width: firstPresent.image.width, height: firstPresent.image.height }
+    : undefined;
+
+const byView = (view: ViewBase) => resolved.find((v) => v.view === view)!;
+// Dynamic: only views with a real photo render at all — no per-view placeholders in the
+// thumbnail strip. A Concept with no photography yet (none of the eight) still shows one
+// "Design coming soon" placeholder rather than an empty viewer; every other Concept already
+// has real photos for all eight, so this fallback never shows alongside a real photo.
+const availableBases = VIEW_BASES.filter((v) => byView(v).status === 'file');
+const shownBases: ViewBase[] = availableBases.length > 0 ? availableBases : [VIEW_BASES[0]];
+const [firstView, ...restViews] = shownBases;
+const first = byView(firstView);
+
+// Whichever of the three generic extra slots this colour actually has a photo for, in order.
+const presentExtraSlots = EXTRA_PHOTO_SLOTS.filter((slot) => extraPhotos?.[slot]);
+const extraCount = presentExtraSlots.length + (materialCard ? 1 : 0);
+
+const stageLabel = `${concept.name}: views.`;
+const gridLabel = `All views of ${concept.name}. Choose one to see it larger.`;
+const initialPosition = `${VIEW_NAMES[firstView]}, 1 of ${shownBases.length + extraCount}`;
+// Fixed stage shape, from the primary photo's own ratio (4 / 5 when none exists yet). Every
+// frame — including ones with a different natural shape, like the material card — then sits
+// inside this same box via object-fit: contain, so switching frames never resizes the stage.
+const stageRatio = frame ? `${frame.width} / ${frame.height}` : '4 / 5';
+const materialCardAlt = `MoolResha RootWeave 01 material passport card, ${concept.name}`;
+const materialCardLabel = `Show ${EXTRA_VIEW_NAMES['material-card']}`;
+/** Alt text and thumbnail label for one generic extra-photo slot. */
+const extraPhotoAlt = (slot: ExtraPhotoSlot) => `${concept.name}: ${EXTRA_VIEW_NAMES[slot].toLowerCase()}`;
+const extraPhotoLabel = (slot: ExtraPhotoSlot) => `Show ${EXTRA_VIEW_NAMES[slot].toLowerCase()}`;
+
+/** The accessible name for one thumbnail button. */
+function thumbLabel(view: ViewBase): string {
+  const name = `Show ${VIEW_NAMES[view]}`;
+  return isRender ? `${name} — AI design render, not a photo of a finished garment` : name;
+}
+---
+
+<div class="angle-viewer" data-angle-viewer data-concept-id={concept.id}>
+  <div class="av-stage" role="group" tabindex="0" aria-label={stageLabel} style={`aspect-ratio: ${stageRatio}`}>
+    <figure class="av-frame" data-view={firstView} data-current>
+      {
+        first.status === 'file' ? (
+          <ConceptViewImage
+            image={first.image}
+            alt={concept.views.alt[firstView]}
+            view={firstView}
+            slot="stage"
+            conceptIndex={conceptIndex}
+            firstCardAboveFold={firstCardAboveFold}
+          />
+        ) : (
+          <ImagePlaceholder conceptName={concept.name} view={firstView} frame={frame} />
+        )
+      }
+      {
+        isRender && (
+          <figcaption class="av-caption">
+            <RenderLabel />
+          </figcaption>
+        )
+      }
+    </figure>
+    <button type="button" class="av-expand" data-av-expand aria-label="View full screen">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+        <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+      </svg>
+    </button>
+  </div>
+
+  <p class="av-position" aria-live="polite">{initialPosition}</p>
+
+  <template data-av-frames>
+    {
+      restViews.map((view) => {
+        const r = byView(view);
+        return (
+          <figure class="av-frame" data-view={view} hidden>
+            {r.status === 'file' ? (
+              <ConceptViewImage
+                image={r.image}
+                alt={concept.views.alt[view]}
+                view={view}
+                slot="stage"
+                conceptIndex={conceptIndex}
+                firstCardAboveFold={firstCardAboveFold}
+              />
+            ) : (
+              <ImagePlaceholder conceptName={concept.name} view={view} frame={frame} />
+            )}
+            {isRender && (
+              <figcaption class="av-caption">
+                <RenderLabel />
+              </figcaption>
+            )}
+          </figure>
+        );
+      })
+    }
+    {
+      presentExtraSlots.map((slot) => {
+        const photo = extraPhotos![slot]!;
+        return (
+          <figure class="av-frame" data-view={slot} hidden>
+            <Picture
+              src={photo.image}
+              alt={extraPhotoAlt(slot)}
+              formats={['avif', 'webp']}
+              fallbackFormat="webp"
+              widths={[360, 540, 720, 1080, 1440]}
+              sizes="(min-width: 72rem) 72rem, 100vw"
+              width={photo.image.width}
+              height={photo.image.height}
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+              class="concept-view-img"
+            />
+            {isRender && (
+              <figcaption class="av-caption">
+                <RenderLabel />
+              </figcaption>
+            )}
+          </figure>
+        );
+      })
+    }
+    {
+      materialCard && (
+        <figure class="av-frame" data-view="material-card" hidden>
+          <Picture
+            src={materialCard.image}
+            alt={materialCardAlt}
+            formats={['avif', 'webp']}
+            fallbackFormat="webp"
+            widths={[360, 540, 720, 1080, 1440]}
+            sizes="(min-width: 72rem) 72rem, 100vw"
+            width={materialCard.image.width}
+            height={materialCard.image.height}
+            loading="lazy"
+            decoding="async"
+            draggable="false"
+            class="concept-view-img"
+          />
+          {isRender && (
+            <figcaption class="av-caption">
+              <RenderLabel />
+            </figcaption>
+          )}
+        </figure>
+      )
+    }
+  </template>
+
+  <ul class="av-grid" aria-label={gridLabel}>
+    {
+      shownBases.map((view, i) => {
+        const r = byView(view);
+        return (
+          <li class="av-grid-item">
+            <button
+              type="button"
+              class="av-thumb"
+              data-view={view}
+              aria-current={i === 0 ? 'true' : 'false'}
+              aria-label={thumbLabel(view)}
+            >
+              {r.status === 'file' ? (
+                <ConceptViewImage
+                  image={r.image}
+                  alt=""
+                  view={view}
+                  slot="grid"
+                  conceptIndex={conceptIndex}
+                  firstCardAboveFold={firstCardAboveFold}
+                />
+              ) : (
+                <ImagePlaceholder conceptName={concept.name} view={view} frame={frame} />
+              )}
+            </button>
+          </li>
+        );
+      })
+    }
+    {
+      presentExtraSlots.map((slot) => {
+        const photo = extraPhotos![slot]!;
+        return (
+          <li class="av-grid-item">
+            <button type="button" class="av-thumb" data-view={slot} aria-current="false" aria-label={extraPhotoLabel(slot)}>
+              <Picture
+                src={photo.image}
+                alt=""
+                formats={['avif', 'webp']}
+                fallbackFormat="webp"
+                widths={[180, 360]}
+                sizes="(min-width: 48rem) 180px, 45vw"
+                width={photo.image.width}
+                height={photo.image.height}
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+                class="concept-view-img"
+              />
+            </button>
+          </li>
+        );
+      })
+    }
+    {
+      materialCard && (
+        <li class="av-grid-item">
+          <button type="button" class="av-thumb" data-view="material-card" aria-current="false" aria-label={materialCardLabel}>
+            <Picture
+              src={materialCard.image}
+              alt=""
+              formats={['avif', 'webp']}
+              fallbackFormat="webp"
+              widths={[180, 360]}
+              sizes="(min-width: 48rem) 180px, 45vw"
+              width={materialCard.image.width}
+              height={materialCard.image.height}
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+              class="concept-view-img"
+            />
+          </button>
+        </li>
+      )
+    }
+  </ul>
+</div>
+
+<style>
+  .angle-viewer {
+    display: block;
+    width: 100%;
+  }
+
+  /* `hidden` must win over any display value set below. */
+  .av-frame[hidden] {
+    display: none;
+  }
+
+  /* ---- Stage: a fixed-height box (aspect-ratio set inline from the primary photo's own
+     shape). All frames stack in one grid cell so they can crossfade, and every frame fills
+     the same box via object-fit: contain, so a differently-shaped photo (the material card,
+     a tighter macro crop) is letterboxed on this same background rather than resizing the
+     stage or cropping oddly. ---- */
+  .av-stage {
+    position: relative;
+    width: 100%;
+    touch-action: pan-y;
+    background: var(--color-surface);
+    border-radius: var(--radius-card, 14px);
+    overflow: hidden;
+  }
+
+  /* The material card's inline <Picture> isn't routed through ConceptViewImage.astro, so it
+     doesn't inherit that component's own scoped sizing — set it here instead. Harmless for the
+     other frames too, which already size the same way via ConceptViewImage.astro's own style. */
+  .av-frame :global(picture),
+  .av-frame :global(img),
+  .av-frame :global(.av-placeholder) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .av-frame :global(img) {
+    object-fit: contain;
+  }
+
+  .av-frame {
+    /* Absolute, not a grid cell: a percentage height on a grid item only resolves against a
+       definite row track, and that fought with aspect-ratio's own sizing in a way that let the
+       frame grow past the stage and get clipped by overflow: hidden — exactly the cropping this
+       avoids. Absolute positioning against the stage's own definite box has no such ambiguity. */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    transform: scale(0.98);
+    pointer-events: none;
+    transition: opacity 250ms ease, transform 250ms ease;
+  }
+
+  .av-frame[data-current] {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+
+  .av-caption {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .av-stage:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* ---- Full-screen trigger: bottom-right of the stage, like Flipkart/Amazon's zoom icon ---- */
+  .av-expand {
+    position: absolute;
+    right: var(--space-2);
+    bottom: var(--space-2);
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color var(--transition);
+  }
+
+  .av-expand:hover {
+    background: var(--color-accent-text);
+    color: var(--c-off-white);
+  }
+
+  .av-expand:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .av-expand svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ---- Position indicator ---- */
+  .av-position {
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Thumbnail strip: the only navigation. Always visible, with or without JS. ---- */
+  .av-grid {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0 0 var(--space-1);
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  .av-grid-item {
+    flex: none;
+    scroll-snap-align: start;
+  }
+
+  .av-thumb {
+    display: block;
+    width: 4.5rem;
+    height: 4.5rem;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius, 10px);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--color-surface);
+    transition: border-color var(--transition);
+  }
+
+  .av-thumb :global(picture),
+  .av-thumb :global(img),
+  .av-thumb :global(.av-placeholder) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .av-thumb :global(img) {
+    object-fit: cover;
+  }
+
+  .av-thumb :global(.av-placeholder) {
+    padding: 0;
+    font-size: 0.6rem;
+  }
+
+  .av-thumb:hover {
+    border-color: var(--c-raw-umber);
+  }
+
+  .av-thumb:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .av-thumb[aria-current='true'] {
+    border-color: var(--color-accent-text, #8f5233);
+  }
+
+  @media (min-width: 48rem) {
+    .av-thumb {
+      width: 5.5rem;
+      height: 5.5rem;
+    }
+  }
+
+  /* ---- Reduced motion: instant swaps, no fades (Requirements 8A.9, 21.6) ---- */
+  @media (prefers-reduced-motion: reduce) {
+    .av-frame,
+    .av-thumb {
+      transition: none;
+    }
+  }
+</style>
+
+<style is:global>
+  /* The full-screen lightbox (src/islands/image-lightbox.ts) is a single shared <dialog>
+     created once in JS and appended to document.body — outside any component's scope, so
+     its styling has to be global rather than Astro's usual per-component scoping. */
+  dialog.av-lightbox {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgb(20 18 14 / 0.92);
+  }
+
+  /* An author rule setting `display` beats the UA stylesheet's own `dialog:not([open])`
+     default regardless of specificity, so the closed state needs restating explicitly —
+     otherwise the lightbox would show even before showModal() is ever called. */
+  dialog.av-lightbox:not([open]) {
+    display: none;
+  }
+
+  dialog.av-lightbox::backdrop {
+    background: rgb(20 18 14 / 0.6);
+  }
+
+  .av-lightbox-img {
+    display: block;
+    max-width: 92vw;
+    max-height: 92vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .av-lightbox-btn {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid rgb(250 246 239 / 0.4);
+    border-radius: 50%;
+    background: rgb(250 246 239 / 0.12);
+    color: var(--c-off-white, #faf6ef);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .av-lightbox-btn:hover {
+    background: rgb(250 246 239 / 0.24);
+  }
+
+  .av-lightbox-btn:focus-visible {
+    outline: 3px solid var(--color-focus-on-dark, var(--color-focus));
+    outline-offset: 2px;
+  }
+
+  .av-lightbox-close {
+    top: var(--space-4, 1.25rem);
+    right: var(--space-4, 1.25rem);
+    font-size: 1.1rem;
+  }
+
+  .av-lightbox-prev,
+  .av-lightbox-next {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .av-lightbox-prev {
+    left: var(--space-4, 1.25rem);
+  }
+
+  .av-lightbox-next {
+    right: var(--space-4, 1.25rem);
+  }
+
+  .av-lightbox-prev[hidden],
+  .av-lightbox-next[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 30rem) {
+    .av-lightbox-btn {
+      width: 40px;
+      height: 40px;
+    }
+  }
+</style>
+
+<script>
+  import '../../islands/angle-viewer-island';
+</script>

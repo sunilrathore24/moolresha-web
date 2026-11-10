@@ -1,40 +1,96 @@
 ---
-const year = new Date().getFullYear();
+/**
+ * Site footer. Shared by every page.
+ *
+ * Launch_Page mode (Requirements 19.4, 13.2, 2.5): the wrapper carries `data-section="footer"`
+ * and the footer shows the contact email, the Grievance_Contact, a Privacy notice link, a Journal
+ * link, and the registered entity name and address when src/content/config/site.ts has one.
+ * No studio name or location is shown (online-only at launch, 2026-11-10 decision).
+ *
+ * Other pages keep their existing links and copy and gain the Journal and Privacy links.
+ *
+ * `launch` defaults to true only on the home page ("/"), so BaseLayout needs no change. A page can set
+ * it explicitly: <Footer launch={true} />.
+ */
+import { SITE } from '../content/config/site';
+import { loadPrivacy } from '../lib/privacy-schema';
+import { footerModel } from '../lib/footer';
+
+interface Props {
+  launch?: boolean;
+}
+
+const launch = Astro.props.launch ?? Astro.url.pathname === '/';
+const privacy = loadPrivacy();
+const m = footerModel(launch, SITE, privacy.grievance, new Date().getFullYear());
+// The copyright year sits in <time datetime="YYYY"> so Content_Check CC-09 reads it as a declared date.
+const [baseBefore, baseAfter] =
+  m.copyrightYear === null ? [m.baseLine, ''] : m.baseLine.split(String(m.copyrightYear));
 ---
 
-<footer class="site-footer">
+<footer class="site-footer" data-section={launch ? 'footer' : undefined}>
   <div class="container footer-inner">
     <div class="footer-brand">
+      <svg class="footer-icon" aria-hidden="true" focusable="false" viewBox="0 0 48 48" width="40" height="40">
+        <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M24 30c-5 0-9-3-9-7.5 0-3 2.2-5.3 5-5.8C20.6 13.6 22.5 12 24 12s3.4 1.6 4 4.7c2.8.5 5 2.8 5 5.8 0 4.5-4 7.5-9 7.5z" />
+          <path d="M18.5 21.5c1.8 1 3.6 1.4 5.5 1.4s3.7-.4 5.5-1.4" />
+          <path d="M24 30v12M24 36c-2.5-1-4.5-.6-6.5 1M24 34c2.5-1 4.5-.6 6.5 1" />
+          <path d="M17 29l-3 3M31 29l3 3" />
+        </g>
+      </svg>
       <span class="footer-name">MoolResha</span>
       <span class="footer-tagline">Closer to the Root.</span>
       <p class="footer-mission">
         Know what you wear. Learn to read any label, judge any fabric, and
         choose for yourself.
       </p>
+      {
+        launch && (
+          <address class="footer-contact">
+            <span>
+              Contact: <a href={`mailto:${m.contactEmail}`} data-footer-contact>{m.contactEmail}</a>
+            </span>
+            <span>
+              {m.grievanceLabel}: <a href={`mailto:${m.grievanceEmail}`} data-footer-grievance>{m.grievanceEmail}</a>
+            </span>
+            {m.entity && (
+              <span class="footer-entity" data-footer-entity>
+                {m.entity.name}
+                {m.entity.name && m.entity.address ? ', ' : ''}
+                {m.entity.address}
+              </span>
+            )}
+          </address>
+        )
+      }
     </div>
 
     <nav aria-label="Footer" class="footer-nav">
       <ul>
-        <li><a href="/fibre-stories">Fibre Stories</a></li>
-        <li><a href="/fabric-school">Fabric School</a></li>
-        <li><a href="/comparisons">Comparisons</a></li>
-        <li><a href="/shopping-guides">Guides</a></li>
-        <li><a href="/about">About</a></li>
+        {m.nav.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
       </ul>
     </nav>
   </div>
 
   <div class="container footer-base">
-    <small>&copy; {year} MoolResha. Educational content — not a storefront.</small>
+    <small>
+      {baseBefore}{m.copyrightYear !== null && <time datetime={String(m.copyrightYear)}>{m.copyrightYear}</time>}{baseAfter}
+    </small>
   </div>
 </footer>
 
 <style>
+  /* Dark olive band (#3b3d2c). Contrast: off-white text 10.31:1, warm-oat secondary text 8.19:1,
+     light-terracotta links 5.99:1, focus ring off-white. */
   .site-footer {
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
-    margin-top: var(--space-12);
-    padding-block: var(--space-8) var(--space-5);
+    background: var(--color-footer-bg);
+    color: var(--color-footer-text);
+    padding-block: var(--space-10) var(--space-6);
+  }
+
+  .site-footer :focus-visible {
+    outline-color: var(--color-focus-on-dark);
   }
 
   .footer-inner {
@@ -45,26 +101,58 @@ const year = new Date().getFullYear();
   }
 
   .footer-brand {
-    max-width: 28rem;
+    max-width: 30rem;
+  }
+
+  .footer-icon {
+    margin-bottom: var(--space-3);
+    color: var(--color-footer-link);
   }
 
   .footer-name {
-    font-family: var(--font-serif);
-    font-size: 1.35rem;
-    font-weight: 600;
     display: block;
+    font-family: var(--font-serif);
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.1;
   }
 
   .footer-tagline {
+    font-family: var(--font-serif);
     font-style: italic;
-    color: var(--color-text-muted);
+    color: var(--color-footer-muted);
     font-size: var(--fs-small);
   }
 
   .footer-mission {
-    margin-top: var(--space-3);
-    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+    color: var(--color-footer-muted);
     font-size: var(--fs-small);
+  }
+
+  .footer-contact {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-4);
+    font-style: normal;
+    font-size: var(--fs-small);
+    color: var(--color-footer-muted);
+  }
+
+  .site-footer a {
+    color: var(--color-footer-link);
+  }
+
+  .site-footer a:hover {
+    color: var(--color-footer-text);
+  }
+
+  .footer-contact a {
+    display: inline-block;
+    min-height: 24px;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
   }
 
   .footer-nav ul {
@@ -72,21 +160,25 @@ const year = new Date().getFullYear();
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
   }
 
   .footer-nav a {
-    color: var(--color-text);
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     text-decoration: none;
     font-size: 0.95rem;
   }
 
   .footer-nav a:hover {
-    color: var(--color-accent);
+    text-decoration: underline;
   }
 
   .footer-base {
-    margin-top: var(--space-6);
-    color: var(--color-text-muted);
+    margin-top: var(--space-8);
+    padding-top: var(--space-5);
+    border-top: 1px solid rgb(250 246 239 / 0.18);
+    color: var(--color-footer-muted);
   }
 </style>

@@ -1,0 +1,18 @@
+# Verified 2026-11-09: swapped from Livemint to Financial Express. The Livemint piece
+# ("Are Indian men dressing sexier?") never mentions "hybrid," "dress code" or "office" at
+# all — checked the full article text. This Financial Express article does support the claim
+# directly: "Relaxed workplace codes and hybrid working are bringing colour, print, texture
+# and Indian craft into the office wardrobe" and "hybrid and more relaxed office environments
+# have made versatility a priority... The stiff formal, tucked-in shirt is no longer the
+# default. Now there's a relaxed fit." Text below is rephrased to match what it actually says.
+id: trend-hybrid-work-dress-codes
+label: INDUSTRY CLAIM
+text: "Financial Express reports that relaxed workplace codes and hybrid working are changing Indian office dressing: the stiff, tucked-in shirt is no longer the default, replaced by a relaxed fit and more versatile pieces."
+source:
+  name: "Financial Express"
+  url: "https://www.financialexpress.com/life/lifestyle/slaying-at-work-with-ikat-ajrakh/4358296/"
+  date: "10 October 2026"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: true
+section: trends

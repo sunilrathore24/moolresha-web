@@ -1,0 +1,5 @@
+# Lead_Message and Aim_Statement (Requirements 4.7, 5.5, 11A.1).
+# These are literal sentences: the schema rejects any other wording.
+leadMessage: "Most of what you pay for a shirt goes to the layers between the field and you."
+aimLabel: "Our aim"
+aimStatement: "Our aim: grown, spun, woven and stitched in India, with every step shown."

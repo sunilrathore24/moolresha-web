@@ -1,0 +1,25 @@
+# Market_Price_Context for the men's 100% linen shirt (Requirements 7.1, 7.6, 7.7, 7.9, 7.10).
+# ⚠️ PLACEHOLDER DATA. The range, prices, dates and URLs below are invented
+# stand-ins, not research findings. Replace with the real scan before launch.
+# ⚠️ confirm repo privacy: the real evidence trail names brands and URLs. Keep this
+# repo private, or move `evidence` to a private file, before adding real entries.
+# Brand names here are generic placeholders only. Never put real brand names in this repo
+# unless repo privacy is confirmed.
+# The `evidence` array is never rendered; the page gets only toPublicMarketScan().
+id: mens-linen-shirt
+conceptId: mens-linen-shirt
+label: "MoolResha market scan"
+rangeMin: 1500
+rangeMax: 3400
+methodNote:
+  listings: 3
+  from: "2026-01-05"
+  to: "2026-01-11"
+  channels:
+    - online marketplaces
+    - brand sites
+    - mall high-street
+evidence:
+  - { brand: "Placeholder Brand 1", url: "https://evidence.invalid/placeholder/mens-linen-shirt/1", price: 1500, seen: "2026-01-05" }
+  - { brand: "Placeholder Brand 2", url: "https://evidence.invalid/placeholder/mens-linen-shirt/2", price: 2400, seen: "2026-01-08" }
+  - { brand: "Placeholder Brand 3", url: "https://evidence.invalid/placeholder/mens-linen-shirt/3", price: 3400, seen: "2026-01-11" }

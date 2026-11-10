@@ -1,0 +1,20 @@
+# Verified 2026-11-09 by direct navigation to the organisation's own page (not a search
+# snippet): https://cottonworks.com/cotton-sustainability/biodegradability-of-cotton/. That
+# page itself cites the original study: Li, Frey & Browning, "Biodegradability Study on
+# Cotton and Polyester Fabrics," a Cotton Incorporated / Cornell University study (2010),
+# originally published in the Journal of Engineered Fibers and Fabrics. The journal copy was
+# behind a bot-check this session; the exact 55-77% figure below comes from CottonWorks'
+# own restatement of that study's result, which is why the source line credits CottonWorks
+# first. Cotton Incorporated is a cotton-industry trade body (same status as the source
+# behind why-natural-fibre-preference.yaml), so labelled INDUSTRY CLAIM, not FACT.
+id: beyond-natural-fibre-biodegrades
+label: INDUSTRY CLAIM
+text: "Research backed by Cotton Incorporated and Cornell University found that after 90 days in a commercial composting facility, cotton fabric had lost 55 to 77% of its weight, while polyester showed only slow degradation and stayed largely intact."
+source:
+  name: "CottonWorks (Cotton Incorporated), citing Li, Frey & Browning, Cornell University (2010)"
+  url: "https://cottonworks.com/cotton-sustainability/biodegradability-of-cotton/"
+  date: "2010 study"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: false
+section: beyond-label

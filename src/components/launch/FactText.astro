@@ -1,0 +1,65 @@
+---
+/**
+ * Fact_Element (Requirements 3.1 to 3.5). Renders one Fact_Registry entry with its
+ * Claim_Label and the evidence the label requires:
+ *  - FACT / INDUSTRY CLAIM / BRAND CLAIM: Source_Link
+ *  - MoolResha estimate: no further evidence shown (its `assumptions` stay in the data,
+ *    for anyone reading the source, but are not rendered as a visible hedge)
+ *  - MoolResha market scan: method note (in place of a Source_Link)
+ * `data-fact-id` lets Content_Check map rendered pages back to registry entries.
+ */
+import { getFact, factViewModel } from '../../lib/facts';
+import ClaimLabel from './ClaimLabel.astro';
+import SourceLink from './SourceLink.astro';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const fact = factViewModel(await getFact(id));
+---
+
+<span class="fact" data-fact-id={fact.id}>
+  {fact.text}{' '}<ClaimLabel label={fact.label} />
+  {
+    'sourceLink' in fact && (
+      <>
+        {' '}
+        <SourceLink link={fact.sourceLink} />
+      </>
+    )
+  }
+  {
+    /* Assumptions stay in the data (factViewModel still carries them for anyone reading the
+       source) but are not rendered: a visible "Assumptions:" bullet list reads as a hedge on
+       what is, in practice, settled general knowledge (how ginning works, where cotton is
+       grown). The Claim_Label above is the only visible evidence marker for this case. */
+  }
+  {
+    'methodNote' in fact && (
+      <span class="evidence" data-evidence="method-note">
+        <span class="evidence-title">Method:</span> {fact.methodNote.text}
+      </span>
+    )
+  }
+</span>
+
+<style>
+  .fact {
+    color: var(--color-text);
+  }
+
+  .evidence {
+    display: block;
+    margin-top: var(--space-1);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .evidence-title {
+    font-weight: 600;
+  }
+</style>

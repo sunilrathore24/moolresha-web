@@ -16,6 +16,11 @@ node_modules/
 .env.*
 !.env.example
 
+# local worker/pages secrets — NEVER commit
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
 # logs
 *.log
 npm-debug.log*
@@ -24,3 +29,11 @@ npm-debug.log*
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# Playwright MCP scratch output (screenshots, snapshots, console logs)
+.playwright-mcp/
+
+# Playwright test runner and Lighthouse CI output
+test-results/
+playwright-report/
+.lighthouseci/

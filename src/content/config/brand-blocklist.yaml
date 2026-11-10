@@ -1,0 +1,10 @@
+# Brand_Blocklist (Requirement 7.11). Brand names that must not appear on any
+# rendered page. The Content_Check merges this list with every brand named in
+# src/content/market-scans/*.yaml evidence, and removes "MoolResha".
+#
+# ⚠️ confirm: the founder adds real brand names here, privately. This repo holds
+# only generic placeholders. Schema: src/lib/word-rules-schema.ts.
+brands:
+  - "Brand A"
+  - "Brand B"
+  - "Brand C"

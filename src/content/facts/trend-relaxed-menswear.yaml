@@ -1,0 +1,16 @@
+# Verified 2026-11-09: opened the source and confirmed every element of the claim is in it —
+# "Relaxed Tailoring" (Trend 02), "Earth Tones" (Trend 03), linen/natural fabrics (Trend 04),
+# relaxed trousers (Trend 05). The previous source (Financial Express) was swapped out: that
+# article is actually about prints (Ikat/Ajrakh), not this claim — see trend-hybrid-work-dress-codes,
+# which now carries it instead, since it genuinely supports that claim.
+id: trend-relaxed-menswear
+label: INDUSTRY CLAIM
+text: "Fashion editorial coverage describes menswear moving towards relaxed tailoring, breathable fabrics, linen, earthy colours and relaxed-fit trousers."
+source:
+  name: "FashionBeans"
+  url: "https://www.fashionbeans.com/article/menswear-reset-2026-style-trends/"
+  date: "19 October 2026"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: true
+section: trends

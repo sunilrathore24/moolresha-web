@@ -1,0 +1,12 @@
+# Drafted by AI research (no live web source available this session). Still MoolResha estimate /
+# verifyFlag:true by design — a human should attach a dated source (e.g. a textile-standards
+# body) before this is upgraded to a sourced FACT and published.
+id: why-softness-easy-care
+label: MoolResha estimate
+text: "Natural fibres such as cotton and linen are breathable and absorb moisture well, and both soften with washing and wear rather than losing shape. Hand-feel depends as much on the yarn count and weave as on the fibre itself, which is why two garments both labelled '100% cotton' can feel very different."
+assumptions:
+  - "General fibre-science description (breathability, moisture absorption, softening with wash) rather than a specific product claim. No health or skin claim is made, matching the existing restriction note."
+strength: UNVERIFIED
+lastChecked: "2026-11-08"
+verifyFlag: true
+section: why

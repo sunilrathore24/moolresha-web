@@ -1,0 +1,91 @@
+---
+/**
+ * Verified results: forward-compatible placeholder for lab-tested numbers
+ * (GSM, shrinkage after wash testing, colour-fastness, air permeability).
+ *
+ * `results` is optional and unused today — no Concept has lab results yet.
+ * Once a Concept does, pass a real `results` value and this renders a table
+ * instead of the pending paragraph, with no markup rework elsewhere.
+ */
+export interface VerifiedResultRow {
+  label: string;
+  value: string;
+}
+
+interface Props {
+  results?: VerifiedResultRow[];
+  conceptId?: string;
+}
+
+const { results, conceptId } = Astro.props;
+const headingId = conceptId ? `vr-${conceptId}` : undefined;
+---
+
+<section class="verified-results" data-verified-results aria-labelledby={headingId}>
+  <h4 id={headingId} class="vr-heading">Verified results</h4>
+  {
+    results && results.length > 0 ? (
+      <dl class="vr-list">
+        {results.map((r) => (
+          <div class="vr-row">
+            <dt>{r.label}</dt>
+            <dd>{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    ) : (
+      <p class="vr-pending">
+        We have not tested physical samples yet. Once we do, we will publish the measured GSM,
+        shrinkage after wash testing, colour-fastness and air permeability results here.
+      </p>
+    )
+  }
+</section>
+
+<style>
+  .verified-results {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px dashed var(--color-border);
+  }
+
+  .vr-heading {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .vr-pending {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .vr-list {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  .vr-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 8.5rem) 1fr;
+    gap: var(--space-1) var(--space-4);
+    padding-block: var(--space-2);
+  }
+
+  .vr-row dt {
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .vr-row dd {
+    margin: 0;
+    color: var(--color-text);
+  }
+</style>

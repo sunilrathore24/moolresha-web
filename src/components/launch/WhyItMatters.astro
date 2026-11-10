@@ -1,0 +1,258 @@
+---
+/**
+ * Why the details matter (Requirements 11.1, 11.3, 1.7).
+ * Softness and easy care, how long clothes last, and fibre preference: one icon card per
+ * Fact_Registry entry in WHY_ITEMS, rendered by FactText so each carries its Claim_Label and
+ * evidence. The headings hold no numbers and no claims of their own. The line icons and the
+ * loom banner photo are decorative (aria-hidden / alt="").
+ */
+import { Picture } from 'astro:assets';
+import FactText from './FactText.astro';
+import LastUpdated from './LastUpdated.astro';
+import { WHY_ITEMS, factIdsOf } from '../../lib/why-trends';
+import { journeyImage, pictureWidths } from '../../lib/journey-images';
+
+type Icon = 'soft' | 'care' | 'life' | 'fibre';
+
+/** Short card heading and icon per Fact. Unknown ids keep the heading from why-trends.ts. */
+const CARD_LOOK: Record<string, { heading: string; icon: Icon }> = {
+  'why-softness-easy-care': { heading: 'Softness and easy care', icon: 'soft' },
+  'why-durability': { heading: 'How long clothes last', icon: 'life' },
+  'why-natural-fibre-preference': { heading: 'Natural fibres', icon: 'fibre' },
+};
+
+const items = WHY_ITEMS.map((item) => ({
+  ...item,
+  heading: CARD_LOOK[item.factId]?.heading ?? item.heading,
+  icon: CARD_LOOK[item.factId]?.icon ?? ('care' as Icon),
+}));
+const banner = journeyImage('weaving');
+---
+
+<section class="why section" data-section="why" id="why" aria-labelledby="why-h">
+  <div class="why-head section-head">
+    <div>
+      <p class="why-label section-label eyebrow">Beyond appearance</p>
+      <h2 id="why-h">Why the details matter.</h2>
+    </div>
+    <p class="why-intro section-intro">
+      Three things people tell us they look for in a shirt: how it feels, how easy it is to look after, and how long
+      it lasts.
+    </p>
+  </div>
+
+  <div class="why-banner">
+    <Picture
+      src={banner}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
+      widths={pictureWidths(banner, [480, 768, 1080, 1280])}
+      sizes="(min-width: 72rem) 70rem, 100vw"
+      width={banner.width}
+      height={banner.height}
+      loading="lazy"
+      decoding="async"
+      class="why-img"
+    />
+  </div>
+
+  <ul class="why-list">
+    {
+      items.map((item) => (
+        <li class="why-item">
+          <span class="why-icon" aria-hidden="true">
+            {item.icon === 'soft' && (
+              <svg viewBox="0 0 32 32" width="32" height="32" focusable="false">
+                <path d="M4 20c4-6 8-6 12 0s8 6 12 0" />
+                <path d="M4 13c4-6 8-6 12 0s8 6 12 0" />
+              </svg>
+            )}
+            {item.icon === 'care' && (
+              <svg viewBox="0 0 32 32" width="32" height="32" focusable="false">
+                <path d="M5 10h22l-3 16H8z" />
+                <path d="M8 16c3 2 5 2 8 0s5-2 8 0" />
+              </svg>
+            )}
+            {item.icon === 'life' && (
+              <svg viewBox="0 0 32 32" width="32" height="32" focusable="false">
+                <circle cx="16" cy="16" r="11" />
+                <path d="M16 9v7l5 3" />
+              </svg>
+            )}
+            {item.icon === 'fibre' && (
+              <svg viewBox="0 0 32 32" width="32" height="32" focusable="false">
+                <path d="M16 28V14" />
+                <path d="M16 14c-6 0-9-4-9-9 5 0 9 3 9 9z" />
+                <path d="M16 18c5 0 8-3 8-8-4 0-8 3-8 8z" />
+              </svg>
+            )}
+          </span>
+          <h3>{item.heading}</h3>
+          <div class="why-fact">
+            <FactText id={item.factId} />
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+  <div class="why-updated">
+    <LastUpdated factIds={factIdsOf(WHY_ITEMS)} />
+  </div>
+</section>
+
+<style>
+  .why {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    padding: var(--space-section) var(--space-4);
+  }
+
+  /* ---- Header (fallback for the global .section-head / .eyebrow) ---- */
+  .why-head {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-8);
+  }
+
+  .why-label {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  h2 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 400;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+
+  .why-intro {
+    margin: 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 56rem) {
+    .why-head {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      align-items: end;
+      gap: var(--space-10);
+    }
+  }
+
+  /* ---- Banner ---- */
+  .why-banner {
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--c-warm-oat);
+    aspect-ratio: 3 / 2;
+  }
+
+  .why-banner :global(picture),
+  .why-banner :global(.why-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .why-banner :global(.why-img) {
+    object-fit: cover;
+  }
+
+  @media (min-width: 40rem) {
+    .why-banner {
+      aspect-ratio: 21 / 8;
+    }
+  }
+
+  /* ---- Cards: overlap the banner on wide screens ---- */
+  .why-list {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 48rem) {
+    .why-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .why-list {
+      margin: calc(-1 * var(--space-10)) var(--space-6) 0;
+      gap: var(--space-5);
+    }
+  }
+
+  .why-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-5);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .why-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-accent-text);
+  }
+
+  .why-icon svg {
+    width: 1.75rem;
+    height: 1.75rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  h3 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .why-fact {
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  .why-updated {
+    margin-top: var(--space-5);
+  }
+</style>

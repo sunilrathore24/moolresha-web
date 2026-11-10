@@ -1,0 +1,12 @@
+# ⚠️ verify: confirm the figures and publication date against the article.
+id: trend-split-market
+label: INDUSTRY CLAIM
+text: "In festive 2026, 50.1% of online fashion orders were under ₹1,000, while orders above ₹3,000 (11.8% of orders) made up over 41% of order value."
+source:
+  name: "Fortune India"
+  url: "https://www.fortuneindia.com/business-news/half-of-festive-fashion-orders-below-1000-as-indian-shoppers-prioritise-value/168679"
+  date: "2026"
+strength: MODERATE
+lastChecked: "2026-11-07"
+verifyFlag: true
+section: trends

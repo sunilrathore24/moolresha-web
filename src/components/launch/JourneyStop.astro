@@ -1,0 +1,209 @@
+---
+/**
+ * One cotton journey stop as a tall photo card (Requirements 4.1, 4.2, 4.5).
+ *
+ * The text block is a native <details open>, so the fact is visible by default, readable
+ * without hover or JavaScript, and the summary stays a keyboard-focusable control (the e2e
+ * no-JS and focus checks rely on it). The number tile ("01" ...) is a CSS counter on the
+ * <ol>, so it is not page text and Content_Check CC-09 never sees it.
+ * Stops without a photo show a neutral woven placeholder (role="img") of the same size.
+ */
+import { Picture } from 'astro:assets';
+import FactText from './FactText.astro';
+import type { JourneyStopImage } from '../../lib/journey-stops';
+import { imageFocus, journeyImage, pictureWidths } from '../../lib/journey-images';
+
+interface Props {
+  label: string;
+  /** Fact_Registry ids shown for this stop (at least one). */
+  factIds: readonly string[];
+  image?: JourneyStopImage;
+}
+
+const { label, factIds, image } = Astro.props;
+const meta = image ? journeyImage(image.key) : undefined;
+// Card is about 78vw (max 19rem) on phones, 42% of the row on tablets, about a quarter of the shell on desktop.
+const SIZES = '(min-width: 72rem) 19rem, (min-width: 64rem) 26vw, (min-width: 40rem) 42vw, min(78vw, 19rem)';
+---
+
+<li class="stop">
+  <div class="stop-media">
+    {
+      image && meta ? (
+        <Picture
+          src={meta}
+          alt={image.alt}
+          formats={['avif', 'webp']}
+          fallbackFormat="webp"
+          widths={pictureWidths(meta, [320, 480, 640, 800])}
+          sizes={SIZES}
+          width={meta.width}
+          height={meta.height}
+          loading="lazy"
+          decoding="async"
+          class="stop-img"
+          style={`object-position: ${imageFocus(image.key)}`}
+          data-journey-image={image.key}
+        />
+      ) : (
+        <div class="stop-placeholder" role="img" aria-label={`Image coming soon: ${label}`}>
+          <span class="stop-placeholder-text" aria-hidden="true">
+            Image coming soon
+          </span>
+        </div>
+      )
+    }
+    <span class="stop-badge" aria-hidden="true"></span>
+  </div>
+  <details open>
+    <summary>{label}</summary>
+    <div class="stop-body">
+      {
+        factIds.map((id) => (
+          <p class="stop-fact">
+            <FactText id={id} />
+          </p>
+        ))
+      }
+    </div>
+  </details>
+</li>
+
+<style>
+  .stop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    counter-increment: journey-stop;
+  }
+
+  .stop-media {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--c-warm-oat);
+  }
+
+  .stop-media :global(picture),
+  .stop-media :global(.stop-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .stop-media :global(.stop-img) {
+    object-fit: cover;
+  }
+
+  /* Gentle zoom on hover or keyboard focus within the card; off under reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .stop-media :global(.stop-img) {
+      transition: transform 400ms ease;
+    }
+
+    .stop:hover .stop-media :global(.stop-img),
+    .stop:focus-within .stop-media :global(.stop-img) {
+      transform: scale(1.05);
+    }
+  }
+
+  /* Neutral woven placeholder: warp and weft lines over oat, no photo. */
+  .stop-placeholder {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    padding: var(--space-4);
+    background-color: var(--c-warm-oat);
+    background-image:
+      repeating-linear-gradient(0deg, rgb(107 88 68 / 0.1) 0 2px, transparent 2px 6px),
+      repeating-linear-gradient(90deg, rgb(107 88 68 / 0.08) 0 2px, transparent 2px 6px),
+      linear-gradient(160deg, var(--c-linen-cream), var(--c-flax-beige));
+  }
+
+  .stop-placeholder-text {
+    padding: var(--space-1) var(--space-3);
+    border-radius: 999px;
+    background: var(--c-off-white);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--c-raw-umber);
+  }
+
+  .stop-badge {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-lg);
+    background: var(--c-off-white);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    line-height: 1;
+    color: var(--color-accent-text);
+  }
+
+  .stop-badge::before {
+    content: counter(journey-stop, decimal-leading-zero);
+  }
+
+  details {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--space-3) var(--space-1) 0;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem; /* 44 px target */
+    list-style: none;
+    cursor: pointer;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::marker {
+    content: '';
+  }
+
+  summary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  .stop-body {
+    padding-top: var(--space-1);
+  }
+
+  .stop-fact {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .stop-fact + .stop-fact {
+    margin-top: var(--space-3);
+  }
+</style>

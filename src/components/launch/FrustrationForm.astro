@@ -1,0 +1,373 @@
+---
+/**
+ * Biggest clothing frustration (Requirements 10.1, 10.2, 21.2, 21.3, 21.5, 22.2).
+ *
+ * A real <form method="post" action="/api/frustration">. The endpoint takes JSON with a Turnstile
+ * token, so the form only works with JavaScript; the <noscript> note says so. The island
+ * (task 16.8) finds the form by `data-frustration-form` and uses these hooks:
+ *   [data-frustration-form]  the form
+ *   [data-other-field]       wrapper of the "other" text input. Starts `hidden`; the island shows
+ *                            it while the "other" chip is ticked.
+ *   [data-submit]            the submit button. Starts `hidden`; the island reveals it.
+ *   [data-live-region]       role="status" region for success and error text
+ *   [data-turnstile]         empty mount point for the Turnstile widget
+ * Field names: `chips` (checkbox, one per chip, value = chip id) and `otherText` (max 200).
+ */
+import { Picture } from 'astro:assets';
+import stitching from '../../assets/journey/stitching.png';
+import {
+  FRUSTRATION_FIELDS,
+  FRUSTRATION_IDS,
+  NOSCRIPT_NOTE,
+  OTHER_TEXT_MAX_LENGTH,
+  frustrationOptions,
+} from '../../lib/launch-forms';
+
+const options = frustrationOptions();
+---
+
+<section class="frustration" data-section="frustration" id="frustration" aria-labelledby="frustration-h">
+  <div class="panel">
+  <div class="panel-photo">
+    <Picture
+      src={stitching}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
+      widths={[480, 768, 1080]}
+      sizes="(min-width: 60rem) 26rem, 100vw"
+      loading="lazy"
+      decoding="async"
+      class="panel-img"
+    />
+  </div>
+  <div class="panel-body">
+  <p class="eyebrow">07 — Your voice</p>
+  <h2 id="frustration-h">What frustrates you about the clothes you buy?</h2>
+  <p class="frustration-intro">
+    Tick as many as apply. You do not need to give a name, an email or a number to answer.
+  </p>
+
+  <form
+    method="post"
+    action="/api/frustration"
+    class="frustration-form"
+    data-frustration-form
+    novalidate
+  >
+    <fieldset class="chips">
+      <legend>Your biggest clothing frustrations</legend>
+      <div class="chip-grid">
+        {
+          options.map((o) => (
+            <div class="chip">
+              <input
+                type="checkbox"
+                id={o.id}
+                name={FRUSTRATION_FIELDS.chips}
+                value={o.value}
+                aria-controls={o.value === 'other' ? FRUSTRATION_IDS.otherField : undefined}
+              />
+              <label for={o.id}>
+                <span class="chip-mark" aria-hidden="true" />
+                <span class="chip-text">{o.label}</span>
+              </label>
+            </div>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="other-field" id={FRUSTRATION_IDS.otherField} data-other-field hidden>
+      <label for={FRUSTRATION_IDS.otherInput}>Tell us more (optional)</label>
+      <input
+        type="text"
+        id={FRUSTRATION_IDS.otherInput}
+        name={FRUSTRATION_FIELDS.otherText}
+        maxlength={OTHER_TEXT_MAX_LENGTH}
+        autocomplete="off"
+        aria-describedby="frustration-other-hint"
+      />
+      <p class="hint" id="frustration-other-hint">Up to {OTHER_TEXT_MAX_LENGTH} characters. Please leave out names and contact details.</p>
+    </div>
+
+    <div data-turnstile></div>
+
+    <button type="submit" class="submit" data-submit hidden>Send my answer</button>
+
+    <noscript>
+      <p class="noscript-note">{NOSCRIPT_NOTE}</p>
+    </noscript>
+
+    <p class="live-region" role="status" aria-live="polite" data-live-region></p>
+  </form>
+  </div>
+  </div>
+</section>
+
+<style>
+  .frustration {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    padding: var(--space-section, var(--space-10)) var(--space-4);
+  }
+
+  .panel {
+    display: grid;
+    overflow: hidden;
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card, 14px);
+    box-shadow: var(--shadow-card, var(--shadow-soft));
+  }
+
+  .panel-photo {
+    min-width: 0;
+    background: var(--color-surface);
+  }
+
+  .panel-photo :global(.panel-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .panel-body {
+    min-width: 0;
+    padding: var(--space-6) var(--space-5);
+  }
+
+  @media (min-width: 60rem) {
+    .panel {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    }
+
+    .panel-photo :global(.panel-img) {
+      aspect-ratio: auto;
+      min-height: 100%;
+    }
+
+    .panel-body {
+      padding: var(--space-8);
+    }
+  }
+
+  .eyebrow {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  h2 {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .frustration-intro {
+    margin: 0 0 var(--space-5);
+    color: var(--color-text-muted);
+  }
+
+  fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+
+  legend {
+    padding: 0;
+    margin-bottom: var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .chip {
+    position: relative;
+  }
+
+  /* The native checkbox stays in the page and keeps focus; it is only made transparent. */
+  .chip input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .chip label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-tight);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color var(--transition), color var(--transition);
+  }
+
+  .chip label:hover {
+    background: var(--c-warm-oat);
+  }
+
+  /* A tick shape is the second signal, so selection never rests on colour alone. */
+  .chip-mark {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    position: relative;
+  }
+
+  .chip input:checked + label {
+    background: var(--color-olive, #3b3a2b);
+    border-color: var(--color-olive, #3b3a2b);
+    color: var(--c-linen-cream, #f3ece0);
+    font-weight: 600;
+  }
+
+  .chip input:checked + label .chip-mark {
+    background: var(--c-linen-cream, #f3ece0);
+    border-color: var(--c-linen-cream, #f3ece0);
+  }
+
+  .chip input:checked + label .chip-mark::after {
+    content: '';
+    position: absolute;
+    left: 0.3rem;
+    top: 0.12rem;
+    width: 0.25rem;
+    height: 0.5rem;
+    border: solid var(--color-olive, #3b3a2b);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .chip input:focus-visible + label {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .other-field {
+    margin-top: var(--space-4);
+  }
+
+  .other-field[hidden] {
+    display: none;
+  }
+
+  .other-field label {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-size: var(--fs-small);
+    font-weight: 600;
+  }
+
+  .other-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: var(--radius-lg);
+  }
+
+  .other-field input:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .hint {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .submit {
+    margin-top: var(--space-5);
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--space-2) var(--space-6);
+    background: var(--color-accent-text, #8f5233);
+    color: var(--c-off-white, #faf6ef);
+    border: 1px solid var(--color-accent-text, #8f5233);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition);
+  }
+
+  .submit:hover {
+    background: var(--color-olive, #3b3a2b);
+    border-color: var(--color-olive, #3b3a2b);
+  }
+
+  .submit:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .submit[hidden] {
+    display: none;
+  }
+
+  .submit[aria-disabled='true'] {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .noscript-note {
+    margin: var(--space-3) 0 0;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius);
+    font-size: var(--fs-small);
+    color: var(--color-text);
+  }
+
+  .live-region {
+    margin: var(--space-3) 0 0;
+    min-height: 1.5em;
+    font-size: var(--fs-small);
+    color: var(--color-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chip label,
+    .submit {
+      transition: none;
+    }
+  }
+</style>

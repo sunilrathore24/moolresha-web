@@ -1,0 +1,79 @@
+---
+/**
+ * Aim_Statement (Requirements 4.7, 11A.2). Ordinary copy, not a Fact: no FactText, no
+ * Claim_Label, no `.fact` ancestor or descendant. The visible label "Our aim" marks it as an aim.
+ * Copy comes from src/content/story/story.yaml. The thread line is decorative (CSS only).
+ */
+import { getEntry } from 'astro:content';
+import { aimBody } from '../../lib/journey-stops';
+
+const story = await getEntry('story', 'story');
+if (!story) {
+  throw new Error('Missing story entry. Add src/content/story/story.yaml.');
+}
+const { aimLabel, aimStatement } = story.data;
+const body = aimBody(aimLabel, aimStatement);
+---
+
+<p class="aim" data-aim><strong>{aimLabel}</strong><span class="aim-sep">: </span><span class="aim-body">{body}</span></p>
+
+<style>
+  .aim {
+    position: relative;
+    max-width: 46rem;
+    margin: var(--space-10, 4rem) auto 0;
+    padding-top: var(--space-6, 2rem);
+    text-align: center;
+    font-family: var(--font-serif);
+    font-size: clamp(1.5rem, 1.15rem + 1.5vw, 2.25rem);
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--color-text);
+  }
+
+  /* Decorative thread: a short line with a small loop-like dot at its centre. */
+  .aim::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 6rem;
+    height: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, transparent, var(--color-accent, #b5714f) 30%, var(--color-accent, #b5714f) 70%, transparent);
+  }
+
+  .aim::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    transform: translateX(-50%);
+    border: 1px solid var(--color-accent, #b5714f);
+    border-radius: 50%;
+    background: var(--color-bg);
+  }
+
+  .aim strong {
+    display: block;
+    margin-bottom: var(--space-2, 0.5rem);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small, 0.875rem);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  /* The colon keeps "Our aim: ..." intact for text readers; visually the label sits on its own line. */
+  .aim-sep {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>

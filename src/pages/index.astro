@@ -1,350 +1,53 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+/**
+ * Launch_Page (Requirements 2.1, 2.2, 2.3, 22.1).
+ *
+ * Sections, in the order Requirement 2.1 fixes (PAGE_SECTIONS in
+ * src/content/config/allow-lists.ts). Each component carries its own
+ * `data-section` and an `id` equal to it, so the header anchors (/#journey,
+ * /#money, /#concepts, /#results) and the Hero call to action (#concepts)
+ * resolve. The footer comes from BaseLayout. Never add a second `data-section`
+ * here (Content_Check CC-15).
+ *
+ * Order: hero, journey, money, price-layers, concepts, why, beyond-label, trends,
+ * frustration, interest, results, footer.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/launch/Hero.astro';
+import ResearchNotice from '../components/launch/ResearchNotice.astro';
+import CottonJourney from '../components/launch/CottonJourney.astro';
+import MoneyBreakdown from '../components/launch/MoneyBreakdown.astro';
+import PriceLayers from '../components/launch/PriceLayers.astro';
+import ConceptsSection from '../components/launch/ConceptsSection.astro';
+import WhyItMatters from '../components/launch/WhyItMatters.astro';
+import BeyondTheLabel from '../components/launch/BeyondTheLabel.astro';
+import Trends from '../components/launch/Trends.astro';
+import FrustrationForm from '../components/launch/FrustrationForm.astro';
+import InterestForm from '../components/launch/InterestForm.astro';
+import ResultsView from '../components/launch/ResultsView.astro';
 
-// Homepage v1 (increment 3). Static, no dead links.
-// Content is education-first — no product, no pricing, no "buy".
-
-const fibres = [
-  {
-    name: "Linen",
-    blurb: "From a blue-flowered flax field to the shirt on your back.",
-    href: "/fibre-stories",
-    image: "/images/fibre-linen.webp",
-  },
-  {
-    name: "Cotton",
-    blurb: "Why two shirts both labelled 100% cotton can feel worlds apart.",
-    href: "/fibre-stories",
-    image: "/images/fibre-cotton.webp",
-  },
-  {
-    name: "Blends",
-    blurb: "A blend isn't 'less' — it's a different fabric. When to choose one.",
-    href: "/comparisons",
-    image: "/images/fibre-blends.webp",
-  },
-];
-
-const journey = [
-  "Source",
-  "Fibre",
-  "Yarn",
-  "Fabric",
-  "Garment",
-  "You",
-];
+const title = 'MoolResha: a cotton shirt research project';
+const description =
+  'MoolResha is a research project, not a shop. See how a cotton shirt is made and priced, and tell us what you think of five design ideas.';
 ---
 
-<BaseLayout title="MoolResha — Closer to the Root.">
-  <!-- HERO -->
-  <section class="hero">
-    <div class="container prose">
-      <p class="eyebrow">MoolResha — Closer to the Root.</p>
-      <h1>Know What You Wear.</h1>
-      <p class="lede">
-        Learn to read any clothing label, judge any fabric, and choose for
-        yourself — even if you never buy from us.
-      </p>
-      <div class="hero-actions">
-        <a class="btn" href="/fibre-stories">Start with fibres</a>
-        <a class="btn btn-ghost" href="/about">Why we do this</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- EXPLORE FIBRES -->
-  <section class="section container">
-    <header class="section-head">
-      <h2>Explore fibres</h2>
-      <p>Trace a material from its root to the garment in your wardrobe.</p>
-    </header>
-    <ul class="card-grid">
-      {
-        fibres.map((f) => (
-          <li>
-            <a class="card" href={f.href}>
-              <span
-                class="card-thumb"
-                style={`background-image:url('${f.image}')`}
-                role="img"
-                aria-label={`${f.name} fibre`}
-              />
-              <span class="card-body">
-                <h3>{f.name}</h3>
-                <p>{f.blurb}</p>
-                <span class="card-link">Read the story &rarr;</span>
-              </span>
-            </a>
-          </li>
-        ))
-      }
-    </ul>
-  </section>
-
-  <!-- LEARN FABRIC -->
-  <section class="section section-alt">
-    <div class="container prose">
-      <h2>Learn the fabric</h2>
-      <p>
-        A label tells you composition — <em>100% Linen</em>, <em>180 GSM</em>,
-        <em>60 Lea</em>. It rarely tells you about the yarn, the weave, the
-        finish, or how the garment will feel and age. Fabric School breaks down
-        what each spec means, and just as importantly, what it leaves out.
-      </p>
-      <p>
-        <a href="/fabric-school">Open Fabric School &rarr;</a>
-      </p>
-    </div>
-  </section>
-
-  <!-- FIBRE JOURNEY -->
-  <section class="section container">
-    <header class="section-head">
-      <h2>The fibre journey</h2>
-      <p>Every garment has a root. We follow it, both directions.</p>
-    </header>
-    <ol class="journey" aria-label="Source to you, and back">
-      {
-        journey.map((step, i) => (
-          <li>
-            <span class="journey-step">{step}</span>
-            {i < journey.length - 1 && (
-              <span class="journey-arrow" aria-hidden="true">
-                &rarr;
-              </span>
-            )}
-          </li>
-        ))
-      }
-    </ol>
-    <p class="journey-note">
-      Source &rarr; Fibre &rarr; Yarn &rarr; Fabric &rarr; Garment &rarr; You —
-      and back again when you learn to read a garment in reverse.
-    </p>
-  </section>
-
-  <!-- PHILOSOPHY -->
-  <section class="section section-alt">
-    <div class="container prose philosophy">
-      <p class="eyebrow">Our philosophy</p>
-      <blockquote>
-        Don't just learn what a fabric is. Learn to understand it, compare it,
-        judge where it belongs, and decide whether it's right for you.
-      </blockquote>
-      <p>
-        MoolResha is here to make you a more informed clothing buyer. No hype,
-        no "premium" for its own sake — just what's true, so you can choose with
-        confidence anywhere you shop.
-      </p>
-      <p><a href="/about">More about what we stand for &rarr;</a></p>
-    </div>
-  </section>
+<BaseLayout title={title} description={description}>
+  <Hero><ResearchNotice /></Hero>
+  <CottonJourney />
+  <MoneyBreakdown />
+  <PriceLayers />
+  <ConceptsSection />
+  <WhyItMatters />
+  <BeyondTheLabel />
+  <Trends />
+  <FrustrationForm />
+  <InterestForm />
+  <ResultsView />
 </BaseLayout>
 
-<style>
-  /* HERO */
-  .hero {
-    padding-block: var(--space-12) var(--space-10);
-    /* Warm gradient fallback shows until home-hero.webp is added; the photo
-       then layers behind, with a light scrim on the left for headline contrast. */
-    background:
-      linear-gradient(
-        90deg,
-        rgba(247, 242, 233, 0.92) 0%,
-        rgba(247, 242, 233, 0.75) 40%,
-        rgba(247, 242, 233, 0.15) 100%
-      ),
-      linear-gradient(180deg, var(--c-warm-oat) 0%, var(--color-bg) 100%);
-    background-size: cover;
-    background-position: center right;
-  }
-
-  /* When the hero image exists, this rule stacks it under the scrim. Browsers
-     that 404 the image simply fall back to the gradients above. */
-  .hero {
-    background-image:
-      linear-gradient(
-        90deg,
-        rgba(247, 242, 233, 0.92) 0%,
-        rgba(247, 242, 233, 0.72) 42%,
-        rgba(247, 242, 233, 0.12) 100%
-      ),
-      url("/images/home-hero.webp");
-    background-color: var(--c-warm-oat);
-  }
-
-  .eyebrow {
-    font-size: var(--fs-small);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-    margin-bottom: var(--space-3);
-  }
-
-  .hero h1 {
-    font-size: var(--fs-display);
-  }
-
-  .lede {
-    font-size: 1.25rem;
-    color: var(--color-text-muted);
-    margin-top: var(--space-4);
-    max-width: 34rem;
-  }
-
-  .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-top: var(--space-6);
-  }
-
-  .btn {
-    display: inline-block;
-    background: var(--color-accent);
-    color: var(--c-off-white);
-    text-decoration: none;
-    padding: var(--space-3) var(--space-5);
-    border-radius: var(--radius);
-    font-size: 0.95rem;
-    transition: background var(--transition);
-  }
-
-  .btn:hover {
-    background: var(--color-accent-soft);
-    color: var(--c-off-white);
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-  }
-
-  .btn-ghost:hover {
-    background: var(--color-surface);
-    color: var(--color-text);
-  }
-
-  /* SECTIONS */
-  .section {
-    padding-block: var(--space-10);
-  }
-
-  .section-alt {
-    background: var(--color-surface);
-  }
-
-  .section-head {
-    max-width: var(--content-width);
-    margin-bottom: var(--space-6);
-  }
-
-  .section-head p {
-    color: var(--color-text-muted);
-    margin-top: var(--space-2);
-  }
-
-  /* CARD GRID */
-  .card-grid {
-    list-style: none;
-    padding: 0;
-    display: grid;
-    gap: var(--space-5);
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  }
-
-  .card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    text-decoration: none;
-    color: var(--color-text);
-    transition:
-      transform var(--transition),
-      border-color var(--transition);
-  }
-
-  .card:hover {
-    transform: translateY(-2px);
-    border-color: var(--color-accent-soft);
-  }
-
-  /* Square thumbnail. Warm-oat fallback shows until the image is added. */
-  .card-thumb {
-    display: block;
-    aspect-ratio: 1 / 1;
-    background-color: var(--c-warm-oat);
-    background-size: cover;
-    background-position: center;
-  }
-
-  .card-body {
-    display: block;
-    padding: var(--space-5);
-  }
-
-  .card p {
-    color: var(--color-text-muted);
-    margin-top: var(--space-2);
-  }
-
-  .card-link {
-    display: inline-block;
-    margin-top: var(--space-4);
-    color: var(--color-accent);
-    font-size: 0.95rem;
-  }
-
-  /* JOURNEY */
-  .journey {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-  }
-
-  .journey li {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .journey-step {
-    display: inline-block;
-    background: var(--c-warm-oat);
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    padding: var(--space-2) var(--space-4);
-    font-family: var(--font-serif);
-    font-size: 1.05rem;
-  }
-
-  .journey-arrow {
-    color: var(--color-accent-soft);
-  }
-
-  .journey-note {
-    margin-top: var(--space-5);
-    color: var(--color-text-muted);
-    font-size: var(--fs-small);
-    max-width: var(--content-width);
-  }
-
-  /* PHILOSOPHY */
-  .philosophy blockquote {
-    font-family: var(--font-serif);
-    font-size: var(--fs-h3);
-    line-height: var(--lh-heading);
-    border-left: 3px solid var(--color-accent);
-    padding-left: var(--space-5);
-    margin-block: var(--space-4) var(--space-5);
-    color: var(--color-text);
-  }
-</style>
+<script>
+  import '../islands/events-island';
+  import '../islands/feedback-island';
+  import '../islands/results-island';
+  import '../islands/interest-island';
+</script>

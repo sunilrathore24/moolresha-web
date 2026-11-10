@@ -1,0 +1,60 @@
+# Concept 4. Placeholder copy: the founder finalises the wording.
+# Target ranges and "We'll test" rows only. Exact GSM and yarn count appear only
+# after the mill confirms them and a FACT entry backs them (Requirement 8C.6).
+id: mens-relaxed-pant
+order: 4
+featured: false
+name: "Men's relaxed cotton pant"
+laterProduct: false
+marketScanId: mens-relaxed-pant
+views:
+  kind: render
+  alt:
+    01-front: "Men's relaxed cotton pant, front view, on a hanger, showing a flat waistband, side pockets and a straight leg"
+    02-front-three-quarter: "Men's relaxed cotton pant, front three-quarter view, on a hanger, showing the waistband, pocket opening and relaxed leg"
+    03-side: "Men's relaxed cotton pant, side view, on a hanger, showing the side seam, pocket and a straight hem"
+    04-back-three-quarter: "Men's relaxed cotton pant, back three-quarter view, on a hanger, showing the back yoke and a single back pocket"
+    05-back: "Men's relaxed cotton pant, back view, on a hanger, showing the waistband, a back pocket and an even hem"
+    06-inside: "Men's relaxed cotton pant, inside view, turned out to show the waistband lining, pocket bags and seam finish"
+    07-fabric-closeup: "Men's relaxed cotton pant, fabric close-up of a plain cotton twill weave with even, tight threads"
+    08-on-model: "Men's relaxed cotton pant worn by a model, on a model cropped at the waist and below the knee, with an untucked shirt"
+fabricNotes:
+  composition:
+    - { fibre: cotton, percent: 100 }
+  weave: "Cotton twill"
+  weight: "Mid weight (target range, to be confirmed with our mill)"
+  handFeel: "Smooth and slightly firm, easing with wear"
+  softness: "Aimed at a soft hand feel; we will check it after repeated washes"
+  care: "Machine wash cold, dry in shade, warm iron"
+quality:
+  - { row: fibre, label: Target, text: "100% cotton, no blended fibres" }
+  - row: yarn
+    label: Target
+    text: "Cotton yarn, count to be confirmed with our mill"
+    range: { kind: count, min: 20, max: 40 }
+  - row: fabric
+    label: Target
+    text: "Twill weave, mid weight"
+    range: { kind: gsm, min: 160, max: 200 }
+  - { row: on_your_skin, label: Target, text: "Smooth hand feel with a relaxed fit that moves with you" }
+  - row: shrinkage
+    label: WeWillTest
+    text: "Pre-washed to limit shrinkage"
+    test:
+      what: "length and width after five home washes"
+      publish: "the measurements, garment by garment"
+  - row: after_a_year
+    label: WeWillTest
+    text: "Colour, pilling and seams over time"
+    test:
+      what: "colour, pilling and seams after repeated washes"
+      publish: "photos after each round of washing"
+  - { row: care, label: Target, text: "Machine wash cold, dry in shade" }
+priceBands:
+  - { kind: under, id: mrp-under-1000, upper: 1000 }
+  - { kind: range, id: mrp-1000-1499, lower: 1000, upper: 1499 }
+  - { kind: range, id: mrp-1500-1999, lower: 1500, upper: 1999 }
+  - { kind: range, id: mrp-2000-2499, lower: 2000, upper: 2499 }
+  - { kind: range, id: mrp-2500-2999, lower: 2500, upper: 2999 }
+  - { kind: over, id: mrp-3000-plus, lower: 3000 }
+colours: [flax, clay, meadow, indigo_dusk, chalk_white]

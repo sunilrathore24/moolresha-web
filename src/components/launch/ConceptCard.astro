@@ -1,0 +1,332 @@
+---
+/**
+ * Concept_Card (Requirements 2.2, 7.1, 8.1, 8.2, 8.6, 8.7, 8.8). One Concept with its
+ * Angle_Viewer, Fabric_Notes, Quality_Card, feedback form and Market_Price_Context.
+ *
+ * Order inside the card (Requirement 8.8, 7.5):
+ *   1. name and "Concept, not for sale"
+ *   2. AngleViewer (one per colour, behind Colour_Swatches, when the Concept has
+ *      colour-scoped photography — see `conceptColourViews`; otherwise exactly one,
+ *      unchanged from before)
+ *   3. FabricNotes ("Fabric & Fibre")
+ *   4. ConstructionNotes ("Comfort & Construction"), only when the Concept has one
+ *   5. QualityCard + VerifiedResults ("Quality & Care", below the other folds)
+ *   6. ConceptFeedbackForm (holds fieldset[data-price-question])
+ *   7. MarketPriceContext (after the price question, collapsed `<details>`)
+ *
+ * Layout: on wide screens the Angle_Viewer sits in the left column (about 55%) and the
+ * rest in the right column; on narrow screens the viewer comes first. Each fold is a
+ * native `<details class="cc-fold" open>` so a visitor can fold it away; they start open
+ * so every link inside stays in the Tab order, and their content is always in the HTML
+ * for Content_Check.
+ *
+ * Root: `<article data-concept-card data-concept-id="<id>">`. Content_Check CC-11,
+ * CC-12, CC-16 and CC-18 find the card through these attributes. The Angle_Viewer
+ * inside also carries `data-concept-id`, so rules must select `[data-concept-card]`.
+ * The `id` (`concept-<id>`) is what the design lab tabs point at.
+ *
+ * `scan` is the output of `toPublicMarketScan(...)` only. The card never receives the
+ * raw market scan.
+ *
+ * No buy, add-to-cart, pre-order or launch-price wording, and no MoolResha price.
+ */
+import type { ConceptData } from '../../lib/concept-schema';
+import type { PublicMarketScan } from '../../lib/market-scan';
+import { conceptColourViews, conceptExtraPhotos, conceptMaterialCards } from '../../lib/concept-images';
+import { colourPanelId } from '../../lib/colour-panel-id';
+import AngleViewer from './AngleViewer.astro';
+import ColourSwatches from './ColourSwatches.astro';
+import ConceptFeedbackForm from './ConceptFeedbackForm.astro';
+import ConstructionNotes from './ConstructionNotes.astro';
+import FabricNotes from './FabricNotes.astro';
+import MarketPriceContext from './MarketPriceContext.astro';
+import QualityCard from './QualityCard.astro';
+import VerifiedResults from './VerifiedResults.astro';
+
+interface Props {
+  concept: ConceptData;
+  /** Public projection of this Concept's market scan. */
+  scan: PublicMarketScan;
+  /** Position of the Concept on the page (0 for the first card). */
+  conceptIndex: number;
+  /** True when the first card sits inside the first viewport. False on the v1 homepage. */
+  firstCardAboveFold: boolean;
+}
+
+const { concept, scan, conceptIndex, firstCardAboveFold } = Astro.props;
+const headingId = `concept-${concept.id}-h`;
+const number = String(conceptIndex + 1).padStart(2, '0');
+
+// Only populated for a Concept with real colour-scoped photography (today: mens-cotton-shirt).
+const colourViews = conceptColourViews[concept.id] ?? {};
+const materialCards = conceptMaterialCards[concept.id] ?? {};
+const extraPhotosByColour = conceptExtraPhotos[concept.id] ?? {};
+const colourPanels = concept.colours
+  .filter((c) => c in colourViews)
+  .map((colour) => ({
+    colour,
+    views: colourViews[colour],
+    materialCard: materialCards[colour],
+    extraPhotos: extraPhotosByColour[colour],
+  }));
+const hasColourPhotos = colourPanels.length > 1;
+---
+
+<article
+  class:list={['concept-card', { 'concept-card-featured': concept.featured }]}
+  id={`concept-${concept.id}`}
+  data-concept-card
+  data-concept-id={concept.id}
+  aria-labelledby={headingId}
+>
+  <header class="cc-header">
+    <p class="cc-status">
+      <span class="cc-num">Concept {number}</span>
+      <span class="cc-dot" aria-hidden="true">·</span>
+      <span class="cc-tag">Concept, not for sale</span>
+      {concept.productCode && <span class="cc-code">{concept.productCode}</span>}
+      {concept.laterProduct && <span class="cc-later">Planned for a later release</span>}
+    </p>
+    <h3 id={headingId} class="cc-name">{concept.name}</h3>
+  </header>
+
+  <div class="cc-media">
+    {
+      hasColourPhotos ? (
+        <div data-colour-swatches>
+          <ColourSwatches conceptId={concept.id} colours={colourPanels.map((p) => p.colour)} />
+          {colourPanels.map((p) => (
+            // No `hidden` here: every panel stays visible without JavaScript (the no-JS
+            // fallback is "scroll through every colour"). `colour-swatches.ts` hides
+            // all but one once it runs.
+            <div data-colour-panel={p.colour} id={colourPanelId(concept.id, p.colour)}>
+              <AngleViewer
+                concept={concept}
+                views={p.views}
+                materialCard={p.materialCard}
+                extraPhotos={p.extraPhotos}
+                conceptIndex={conceptIndex}
+                firstCardAboveFold={firstCardAboveFold}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <AngleViewer concept={concept} conceptIndex={conceptIndex} firstCardAboveFold={firstCardAboveFold} />
+      )
+    }
+  </div>
+
+  <div class="cc-body">
+    <details class="cc-fold" open>
+      <summary class="cc-fold-summary">Fabric &amp; Fibre</summary>
+      <div class="cc-fold-body">
+        <FabricNotes fabricNotes={concept.fabricNotes} conceptId={concept.id} />
+      </div>
+    </details>
+
+    {
+      concept.construction && (
+        <details class="cc-fold" open>
+          <summary class="cc-fold-summary">Comfort &amp; Construction</summary>
+          <div class="cc-fold-body">
+            <ConstructionNotes construction={concept.construction} conceptId={concept.id} />
+          </div>
+        </details>
+      )
+    }
+
+    <details class="cc-fold" open>
+      <summary class="cc-fold-summary">Quality &amp; Care</summary>
+      <div class="cc-fold-body">
+        <QualityCard quality={concept.quality} conceptId={concept.id} />
+        <VerifiedResults conceptId={concept.id} />
+      </div>
+    </details>
+
+    <ConceptFeedbackForm concept={concept} />
+
+    <MarketPriceContext scan={scan} />
+  </div>
+</article>
+
+<style>
+  .concept-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'media'
+      'header'
+      'body';
+    gap: var(--space-5);
+    min-width: 0;
+    padding: var(--space-4);
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card, 14px);
+    box-shadow: var(--shadow-card, var(--shadow-soft));
+    scroll-margin-top: calc(var(--header-height, 4.5rem) + var(--space-4));
+  }
+
+  .concept-card[hidden] {
+    display: none;
+  }
+
+  .cc-header {
+    grid-area: header;
+    min-width: 0;
+  }
+
+  .cc-media {
+    grid-area: media;
+    min-width: 0;
+  }
+
+  .cc-body {
+    grid-area: body;
+    min-width: 0;
+  }
+
+  @media (min-width: 60rem) {
+    .concept-card {
+      grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        'media header'
+        'media body';
+      gap: var(--space-4) var(--space-8);
+      padding: var(--space-6);
+    }
+
+    .cc-media {
+      align-self: start;
+    }
+  }
+
+  .cc-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label, 0.75rem);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: var(--lh-body);
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  .cc-dot {
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  /* Text carries the meaning; no colour-only signal. */
+  .cc-tag {
+    white-space: nowrap;
+  }
+
+  .cc-later {
+    padding: 0 var(--space-2);
+    border: 1px dashed var(--c-raw-umber);
+    border-radius: 999px;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+  }
+
+  .cc-code {
+    padding: 0 var(--space-2);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 999px;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  .cc-name {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  /* ---- Collapsible sections ---- */
+  .cc-fold {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cc-fold:last-of-type {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .cc-fold-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 48px;
+    padding: var(--space-2) 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .cc-fold-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Plus / minus sign: a shape cue for the open state. */
+  .cc-fold-summary::after {
+    content: '+';
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 50%;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .cc-fold[open] > .cc-fold-summary::after {
+    content: '\2212';
+  }
+
+  .cc-fold-summary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .cc-fold-body {
+    padding-bottom: var(--space-4);
+  }
+
+  /* The summary names the part, so the inner heading is kept for screen readers only. */
+  .cc-fold-body :global(.fn-heading),
+  .cc-fold-body :global(.qc-heading),
+  .cc-fold-body :global(.cn-heading) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .cc-fold-body :global(.fabric-notes),
+  .cc-fold-body :global(.quality-card),
+  .cc-fold-body :global(.construction-notes) {
+    margin: 0;
+  }
+</style>

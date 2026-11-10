@@ -1,0 +1,12 @@
+# Drafted by AI research (no live web source available this session). Still MoolResha estimate /
+# verifyFlag:true by design — a human should attach a dated source before this is upgraded to a
+# sourced FACT and published.
+id: journey-ginning
+label: MoolResha estimate
+text: "Ginning is the first step after harvest: raw seed cotton is fed through a gin that pulls the fibre (lint) away from the seed. The lint goes on to spinning; the seed is pressed separately for cottonseed oil and meal."
+assumptions:
+  - "Standard description of the ginning process (mechanically separating lint from seed), consistent across general textile-industry references. No India-specific statistic or brand claim is made here."
+strength: UNVERIFIED
+lastChecked: "2026-11-08"
+verifyFlag: true
+section: journey

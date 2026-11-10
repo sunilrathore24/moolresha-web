@@ -1,0 +1,20 @@
+# Verified 2026-11-09 by direct navigation to the organisation's own report page (not a
+# search snippet): https://changingmarkets.org/report/spinning-greenwash/. The study is a
+# lab test of 51 garments from five major fashion brands, commissioned by the
+# Changing Markets Foundation and carried out by the Microplastic Research Group at
+# Çukurova University. A separate, peer-reviewed paper (Gao et al., 2024, ScienceDirect)
+# reports a closely matching finding, but its exact figures were behind a paywall this
+# session, so it is not cited directly here — only this directly-read source is.
+# verifyFlag kept true: a single commissioned study, not yet independently replicated in a
+# published journal, so a human should re-check before this is treated as settled.
+id: beyond-polyester-microfibre-shedding
+label: FACT
+text: "A study commissioned by the Changing Markets Foundation, testing garments from five major fashion brands, found that recycled polyester released about 55% more microfibres on washing than virgin polyester, and that the particles it shed were smaller, making them travel further."
+source:
+  name: "Changing Markets Foundation, commissioning the Microplastic Research Group at Çukurova University"
+  url: "https://changingmarkets.org/report/spinning-greenwash/"
+  date: "December 2025"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: true
+section: beyond-label

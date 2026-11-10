@@ -1,0 +1,60 @@
+# Concept 3 (a later product). Placeholder copy: the founder finalises the wording.
+# Target ranges and "We'll test" rows only. Exact GSM and yarn count appear only
+# after the mill confirms them and a FACT entry backs them (Requirement 8C.6).
+id: mens-linen-shirt
+order: 3
+featured: false
+name: "Men's 100% linen shirt"
+laterProduct: true
+marketScanId: mens-linen-shirt
+views:
+  kind: render
+  alt:
+    01-front: "Men's 100% linen shirt, front view, on a hanger, showing a relaxed collar and a plain button placket"
+    02-front-three-quarter: "Men's 100% linen shirt, front three-quarter view, on a hanger, showing the collar, placket and natural drape"
+    03-side: "Men's 100% linen shirt, side view, on a hanger, showing the sleeve seam and a slightly curved hem"
+    04-back-three-quarter: "Men's 100% linen shirt, back three-quarter view, on a hanger, showing a plain yoke and the shoulder seam"
+    05-back: "Men's 100% linen shirt, back view, on a hanger, showing a plain yoke and an even hem"
+    06-inside: "Men's 100% linen shirt, inside view, turned out to show the seam finish, the collar facing and the placket"
+    07-fabric-closeup: "Men's 100% linen shirt, fabric close-up of an open plain weave with the slub texture typical of linen"
+    08-on-model: "Men's 100% linen shirt worn by a model, on a model cropped at the chin, sleeves rolled twice, untucked"
+fabricNotes:
+  composition:
+    - { fibre: linen, percent: 100 }
+  weave: "Plain weave with a visible slub texture"
+  weight: "Light to mid weight (target range, to be confirmed with our mill)"
+  handFeel: "Dry and textured, softening with washing"
+  softness: "Linen starts crisper than cotton and softens with washing; we will check how it feels after repeated washes"
+  care: "Machine wash cold on a gentle cycle, dry in shade, iron damp if you want a smooth finish"
+quality:
+  - { row: fibre, label: Target, text: "100% linen, no blended fibres" }
+  - row: yarn
+    label: Target
+    text: "Linen yarn, count to be confirmed with our mill"
+    range: { kind: count, min: 20, max: 40 }
+  - row: fabric
+    label: Target
+    text: "Plain weave, light to mid weight with a slub texture"
+    range: { kind: gsm, min: 120, max: 160 }
+  - { row: on_your_skin, label: Target, text: "Dry, airy hand feel that breathes in warm weather" }
+  - row: shrinkage
+    label: WeWillTest
+    text: "Pre-washed to limit shrinkage"
+    test:
+      what: "length and width after five home washes"
+      publish: "the measurements, garment by garment"
+  - row: after_a_year
+    label: WeWillTest
+    text: "Colour, creasing and seams over time"
+    test:
+      what: "colour, pilling and seams after repeated washes"
+      publish: "photos after each round of washing"
+  - { row: care, label: Target, text: "Machine wash cold on a gentle cycle, dry in shade" }
+priceBands:
+  - { kind: under, id: mls-under-2000, upper: 2000 }
+  - { kind: range, id: mls-2000-2499, lower: 2000, upper: 2499 }
+  - { kind: range, id: mls-2500-2999, lower: 2500, upper: 2999 }
+  - { kind: range, id: mls-3000-3499, lower: 3000, upper: 3499 }
+  - { kind: range, id: mls-3500-3999, lower: 3500, upper: 3999 }
+  - { kind: over, id: mls-4000-plus, lower: 4000 }
+colours: [flax, clay, meadow, indigo_dusk, chalk_white]

@@ -1,0 +1,417 @@
+---
+/**
+ * Where your money goes (Requirements 5.1 to 5.6, 21.4).
+ *
+ * - The <h2> is the Lead_Message, read from src/content/story/story.yaml (Requirement 5.5).
+ * - The bar chart and the table are built from the shares stated in the Fact_Registry entry
+ *   `money-tshirt-breakdown`; no number is typed in this file. Every value label is a `.fact`
+ *   element carrying that entry's `data-fact-id`, so Content_Check CC-09 sees no free-standing
+ *   numbers.
+ * - The chart is a real list: each row has the component name and its value as text, and a
+ *   decorative bar (aria-hidden) whose length is the share of the whole price. Colour is never
+ *   the only signal (Requirement 21.4). The <table> carries the same values (Requirement 5.3)
+ *   inside a <details>; it is always in the HTML.
+ * - When the listed shares do not cover the whole price, a note says so; no number is invented.
+ * - The full fact sentence follows through FactText, which adds the Claim_Label and the
+ *   Source_Link with name and date (Requirement 5.2). The worker share is also a FactText
+ *   (Requirement 5.6).
+ *
+ * Layout: the same "mini hero" banner as Price_Layers — eyebrow, heading and intro sit over
+ * the cotton photo, crisp up top with a gradient scrim darkening only the lower band the text
+ * sits in. Kept visually identical to Price_Layers (same scrim, same banner shape) so the two
+ * sections read as one consistent pattern, not two different treatments back to back.
+ */
+import { getEntry } from 'astro:content';
+import { Picture } from 'astro:assets';
+import FactText from './FactText.astro';
+import LastUpdated from './LastUpdated.astro';
+import { getFact } from '../../lib/facts';
+import { barWidth, parseShares, sharesLeaveRemainder } from '../../lib/money-breakdown';
+import { journeyImage, pictureWidths } from '../../lib/journey-images';
+
+const BREAKDOWN_FACT_ID = 'money-tshirt-breakdown';
+const WORKER_SHARE_FACT_ID = 'money-worker-share';
+/** Bar tones in order; cycles if the fact ever lists more shares. */
+const TONES = ['terracotta', 'clay', 'sage', 'umber', 'flax'] as const;
+
+const story = await getEntry('story', 'story');
+if (!story) {
+  throw new Error('Missing story entry. Add src/content/story/story.yaml.');
+}
+const { leadMessage } = story.data;
+
+const breakdown = await getFact(BREAKDOWN_FACT_ID);
+const shares = parseShares(breakdown.text);
+const hasRemainder = sharesLeaveRemainder(shares);
+const tone = (i: number) => TONES[i % TONES.length];
+const photo = journeyImage('cotton-pile');
+---
+
+<section class="money" data-section="money" id="money" aria-labelledby="money-h">
+  <div class="money-banner">
+    <Picture
+      src={photo}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
+      widths={pictureWidths(photo, [480, 768, 1080, 1280])}
+      sizes="(min-width: 72rem) 70rem, 100vw"
+      width={photo.width}
+      height={photo.height}
+      loading="lazy"
+      decoding="async"
+      class="money-banner-img"
+    />
+    <div class="money-banner-scrim" aria-hidden="true"></div>
+    <div class="money-banner-content">
+      <p class="money-label eyebrow">Where the money goes</p>
+      <h2 id="money-h">{leadMessage}</h2>
+      <p class="money-intro">
+        A garment's price usually adds up materials, making, transport, the brand, the retailer and taxes. Sourcing
+        abroad is one factor among these, not the whole story.
+      </p>
+    </div>
+  </div>
+
+  <div class="money-card">
+    <div class="money-main">
+      <h3 class="money-example">What a shirt's price is made of</h3>
+      <p class="money-example-sub">
+        An illustration of how a T-shirt's retail price typically splits between the retailer, the brand, materials
+        and transport. The exact split moves with the market and the piece; the source is in the citation below.
+      </p>
+
+      {
+        shares.length > 0 && (
+          <>
+            <ul class="chart" aria-label="Share of the retail price, by component">
+              {shares.map((s, i) => (
+                <li class="chart-row">
+                  <span class="chart-label">{s.label}</span>
+                  <span class="chart-value">
+                    <span class="fact" data-fact-id={BREAKDOWN_FACT_ID}>{s.display}</span>
+                  </span>
+                  <span class="chart-track" aria-hidden="true">
+                    <span class={`chart-bar tone-${tone(i)}`} style={`width: ${barWidth(s.percent)}%`} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {hasRemainder && (
+              <p class="money-note">The source lists these components only. Other components are not shown here.</p>
+            )}
+
+            <details class="money-table">
+              <summary>See the numbers as a table</summary>
+              <table class="shares">
+                <caption>Share of the retail price of a T-shirt, by component</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Component</th>
+                    <th scope="col">Share of the retail price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shares.map((s) => (
+                    <tr>
+                      <th scope="row">{s.label}</th>
+                      <td>
+                        <span class="fact" data-fact-id={BREAKDOWN_FACT_ID}>{s.display}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </>
+        )
+      }
+
+      <div class="money-facts">
+        <p class="money-source"><FactText id={BREAKDOWN_FACT_ID} /></p>
+        <p class="money-source"><FactText id={WORKER_SHARE_FACT_ID} /></p>
+      </div>
+
+      <LastUpdated factIds={[BREAKDOWN_FACT_ID, WORKER_SHARE_FACT_ID]} />
+    </div>
+  </div>
+</section>
+
+<style>
+  .money {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    /* No top padding: the banner sits flush with the section's top edge, full width. */
+    padding: 0 var(--space-4) var(--space-section);
+  }
+
+  /* ---- Banner: a "mini hero", identical treatment to Price_Layers. Crisp photo up top, a
+     gradient scrim darkens only the lower band the heading and intro sit in. ---- */
+  .money-banner {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    min-height: clamp(20rem, 50vw, 28rem);
+    border-radius: var(--radius-card);
+    background: var(--c-warm-oat);
+  }
+
+  .money-banner :global(.money-banner-img) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .money-banner-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 22%,
+      rgb(20 17 12 / 0.48) 40%,
+      rgb(20 17 12 / 0.75) 65%,
+      rgb(20 17 12 / 0.92) 100%
+    );
+  }
+
+  .money-banner-content {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-6) var(--space-5);
+    color: var(--color-on-hero);
+  }
+
+  .money-label {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-on-hero);
+  }
+
+  .money-banner-content h2 {
+    margin: 0;
+    max-width: 22ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 400;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-on-hero);
+    text-shadow: 0 1px 24px rgb(20 17 12 / 0.35);
+  }
+
+  .money-intro {
+    margin: var(--space-3) 0 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-on-hero);
+  }
+
+  @media (min-width: 56rem) {
+    .money-banner-content {
+      max-width: 40rem;
+      padding: var(--space-8);
+    }
+  }
+
+  /* ---- Card ---- */
+  .money-card {
+    margin-top: var(--space-8);
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .money-main {
+    min-width: 0;
+    padding: var(--space-6) var(--space-5);
+  }
+
+  @media (min-width: 56rem) {
+    .money-main {
+      padding: var(--space-8);
+    }
+  }
+
+  .money-example {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .money-example-sub,
+  .money-note,
+  .money-source {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .money-example-sub {
+    margin-top: var(--space-1);
+    color: var(--color-text-muted);
+  }
+
+  .money-note {
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Bar chart ---- */
+  .chart {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-5) 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chart-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .chart-label {
+    min-width: 0;
+  }
+
+  .chart-value {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    line-height: 1.1;
+    color: var(--color-text);
+  }
+
+  .chart-track {
+    grid-column: 1 / -1;
+    display: block;
+    height: 0.75rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--c-warm-oat);
+  }
+
+  .chart-bar {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    border-radius: 999px;
+  }
+
+  .tone-terracotta {
+    background: var(--c-terracotta);
+  }
+
+  .tone-clay {
+    background: var(--c-clay);
+  }
+
+  .tone-sage {
+    background: var(--c-sage);
+  }
+
+  .tone-umber {
+    background: var(--c-raw-umber);
+  }
+
+  .tone-flax {
+    background: var(--c-flax-beige);
+  }
+
+  /* ---- Table in a details ---- */
+  .money-table {
+    margin: 0 0 var(--space-5);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .money-table summary {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-accent-text);
+  }
+
+  .money-table summary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  .shares {
+    width: 100%;
+    margin: 0 0 var(--space-4);
+    border-collapse: collapse;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .shares caption {
+    padding: 0 0 var(--space-2);
+    text-align: left;
+    color: var(--color-text-muted);
+  }
+
+  .shares th,
+  .shares td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+  }
+
+  .shares thead th {
+    border-bottom: 2px solid var(--c-raw-umber);
+    font-weight: 600;
+  }
+
+  .shares tbody th {
+    font-weight: 400;
+  }
+
+  .money-facts {
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .money-facts .money-source {
+    font-size: var(--fs-small);
+  }
+
+  .money-facts .money-source:last-child {
+    margin-bottom: 0;
+  }
+</style>

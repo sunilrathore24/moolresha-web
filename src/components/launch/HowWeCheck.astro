@@ -1,0 +1,122 @@
+---
+/**
+ * "How we check this" (Requirement 8C.9). Rendered once, after the last Concept_Card
+ * inside the Concepts section. Every Quality_Card links here with `#how-we-check`,
+ * so the id must exist exactly once on the page (Content_Check CC-18).
+ *
+ * ⚠️ founder copy: the wording below is a draft for the founder to finalise.
+ * Keep it free of exclamation marks, superlatives, commerce words, health claims,
+ * brand names, and exact GSM or yarn counts.
+ */
+import { HOW_WE_CHECK_ID } from '../../lib/quality-card-view';
+import ClaimLabel from './ClaimLabel.astro';
+---
+
+<section class="how-we-check" id={HOW_WE_CHECK_ID} aria-labelledby="how-we-check-h">
+  <h3 id="how-we-check-h" class="hwc-heading">How we check this</h3>
+  <p class="hwc-intro">Each line of a Quality card carries one tag. The tag tells you how sure we are.</p>
+  <dl class="hwc-list">
+    <div class="hwc-row">
+      <dt><ClaimLabel label="FACT" /></dt>
+      <dd>Checked against a published source. The link shows who said it and when.</dd>
+    </div>
+    <div class="hwc-row">
+      <dt><span class="hwc-tag hwc-tag-target">Target</span></dt>
+      <dd>
+        What we're asking our mill for. It isn't confirmed until we test the fabric, so we show a
+        range, not one exact number.
+      </dd>
+    </div>
+    <div class="hwc-row">
+      <dt><span class="hwc-tag hwc-tag-test">We'll test</span></dt>
+      <dd>
+        Something we'll measure ourselves, such as shrinkage or colour after washing. We'll publish
+        the results and photos, whatever they show.
+      </dd>
+    </div>
+  </dl>
+</section>
+
+<style>
+  .how-we-check {
+    margin-block: var(--space-8) 0;
+    padding: var(--space-6) var(--space-5);
+    border-radius: var(--radius-card, 14px);
+    background: var(--color-surface);
+    /* Keep the heading clear of any sticky header when jumped to. */
+    scroll-margin-top: var(--space-8);
+  }
+
+  .hwc-heading {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .hwc-intro {
+    margin: 0 0 var(--space-4);
+    max-width: var(--content-width);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .hwc-list {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  .hwc-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    background: var(--color-card, #fbf7f0);
+    border-radius: var(--radius-lg);
+  }
+
+  .hwc-row dt {
+    margin: 0;
+  }
+
+  .hwc-row dd {
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  @media (min-width: 48rem) {
+    .hwc-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Same look as the Quality card tags: text plus an underline style, never colour alone. */
+  .hwc-tag {
+    font-size: var(--fs-small);
+    font-weight: 600;
+    font-style: italic;
+    line-height: var(--lh-body);
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .hwc-tag-target {
+    text-decoration: underline dashed;
+    text-underline-offset: 0.2em;
+  }
+
+  .hwc-tag-test {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+
+</style>

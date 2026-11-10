@@ -1,0 +1,255 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { loadPrivacy } from "../lib/privacy-schema";
+import { NOTICE_VERSION } from "../lib/notice-version";
+
+// Privacy_Notice (Requirement 13). Everything shown here comes from
+// src/content/config/privacy.yaml. Placeholder values carry the visible
+// marker "⚠️ founder and lawyer to confirm" until they are signed off.
+const privacy = loadPrivacy();
+
+if (privacy.version !== NOTICE_VERSION) {
+  throw new Error(
+    `NOTICE_VERSION (${NOTICE_VERSION}) does not match privacy.yaml#version (${privacy.version}). ` +
+      "Update src/lib/notice-version.ts.",
+  );
+}
+
+const lastUpdatedDisplay = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+}).format(new Date(`${privacy.lastUpdated}T00:00:00Z`));
+
+const { grievance, responseTimes, withdrawal, deletion } = privacy;
+---
+
+<BaseLayout
+  title="Privacy notice — MoolResha"
+  description="What data this website collects, why, who handles it, how long we keep it, and how to withdraw consent, ask for deletion or make a complaint."
+>
+  <article class="privacy container prose" data-privacy-notice>
+    <header>
+      <h1>Privacy notice</h1>
+      <p class="meta">
+        Version <span data-notice-version>{privacy.version}</span>. Last updated
+        <time datetime={privacy.lastUpdated} data-last-updated>{lastUpdatedDisplay}</time>.
+      </p>
+      <p>{privacy.intro}</p>
+      <nav aria-label="On this page">
+        <ul class="toc">
+          <li><a href="#what-we-collect">What we collect and why</a></li>
+          <li><a href="#who-handles-it">Who handles it for us</a></li>
+          <li><a href="#withdraw-consent">Withdraw consent</a></li>
+          <li><a href="#delete-data">Ask us to delete your data</a></li>
+          <li><a href="#response-times">How fast we reply</a></li>
+          <li><a href="#grievance-contact">Grievance Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <section id="what-we-collect" aria-labelledby="what-we-collect-h" data-privacy-section="data-items">
+      <h2 id="what-we-collect-h">What we collect and why</h2>
+      <p>
+        This is the full list. We collect nothing else, and we use each item
+        only for the purpose written next to it.
+      </p>
+      <div class="table-wrap" role="region" aria-label="Data items collected" tabindex="0">
+        <table>
+          <caption class="visually-hidden">
+            Data items, their purpose, where they are stored and how long they
+            are kept
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Data item</th>
+              <th scope="col">Purpose</th>
+              <th scope="col">Where it is stored</th>
+              <th scope="col">How long we keep it</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              privacy.dataItems.map((item) => (
+                <tr data-data-item={item.id}>
+                  <th scope="row">
+                    {item.name}
+                    <span class="detail">{item.detail}</span>
+                    {item.personal ? (
+                      <span class="tag">Personal data, only if you choose to give it</span>
+                    ) : null}
+                  </th>
+                  <td>{item.purpose}</td>
+                  <td>{item.storedIn}</td>
+                  <td>{item.retention}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Your answers about the concepts and frustrations are anonymous unless
+        you fill in the interest form and tick the box that lets us link your
+        contact details to your answers. If you do not tick that box, your
+        contact details are kept apart from your answers.
+      </p>
+    </section>
+
+    <section id="who-handles-it" aria-labelledby="who-handles-it-h" data-privacy-section="processors">
+      <h2 id="who-handles-it-h">Who handles it for us</h2>
+      <p>
+        These services process data on our behalf. We do not sell your data and
+        we do not share it with anyone else.
+      </p>
+      <ul class="processors">
+        {
+          privacy.processors.map((p) => (
+            <li data-processor={p.name}>
+              <strong>{p.name}.</strong> {p.does}
+              <span class="detail">What it receives: {p.receives}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section id="withdraw-consent" aria-labelledby="withdraw-consent-h" data-privacy-section="withdrawal">
+      <h2 id="withdraw-consent-h">Withdraw consent</h2>
+      <p>{withdrawal.summary}</p>
+      <ol>
+        {withdrawal.steps.map((s) => <li>{s}</li>)}
+      </ol>
+    </section>
+
+    <section id="delete-data" aria-labelledby="delete-data-h" data-privacy-section="deletion">
+      <h2 id="delete-data-h">Ask us to delete your data</h2>
+      <p>{deletion.summary}</p>
+      <ol>
+        {deletion.steps.map((s) => <li>{s}</li>)}
+      </ol>
+      <p>{deletion.anonymousNote}</p>
+    </section>
+
+    <section id="response-times" aria-labelledby="response-times-h" data-privacy-section="response-times">
+      <h2 id="response-times-h">How fast we reply</h2>
+      <p data-response-times>{responseTimes.note}</p>
+      <p>This applies to withdrawal requests, deletion requests and complaints.</p>
+    </section>
+
+    <section id="grievance-contact" aria-labelledby="grievance-contact-h" data-privacy-section="grievance">
+      <h2 id="grievance-contact-h">{grievance.label}</h2>
+      <p>
+        For any question or complaint about your data, write to the {grievance.label}:
+      </p>
+      <p class="contact">
+        {grievance.organisation}<br />
+        <a href={`mailto:${grievance.email}`} data-grievance-email>{grievance.email}</a>
+      </p>
+      <p class="detail">{grievance.note}</p>
+    </section>
+
+    <p><a href="/">&larr; Back home</a></p>
+  </article>
+</BaseLayout>
+
+<style>
+  .privacy {
+    padding-block: var(--space-8) var(--space-10);
+  }
+  .privacy h2 {
+    margin-top: var(--space-8);
+  }
+  .privacy .meta {
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+  .privacy .toc {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .privacy ol,
+  .privacy .processors {
+    margin-top: var(--space-4);
+    padding-left: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .privacy .processors {
+    list-style: disc;
+  }
+  .privacy .detail {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+    font-weight: normal;
+  }
+  .privacy .tag {
+    display: inline-block;
+    margin-top: var(--space-2);
+    padding: 0 var(--space-2);
+    font-size: var(--fs-small);
+    font-weight: normal;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+  .privacy .contact {
+    font-size: var(--fs-h4);
+  }
+  .table-wrap {
+    margin-block: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+  .table-wrap:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  .privacy table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-small);
+  }
+  /* Only scroll when the columns genuinely don't fit (narrow phones); desktop and tablet
+     widths wrap the cell text instead, so no scrollbar shows where there is room. */
+  @media (max-width: 40rem) {
+    .table-wrap {
+      overflow-x: auto;
+    }
+    .privacy table {
+      min-width: 40rem;
+    }
+  }
+  .privacy th,
+  .privacy td {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .privacy thead th {
+    background: var(--color-surface);
+  }
+  .privacy tbody th {
+    font-weight: 600;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

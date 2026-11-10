@@ -1,0 +1,12 @@
+# ⚠️ verify: confirm the press release date and wording before publishing.
+id: journey-warehousing-distribution
+label: FACT
+text: "The Government of India's PM MITRA scheme aims to bring the textile value chain together in one place to reduce logistics costs."
+source:
+  name: "PIB"
+  url: "https://pib.gov.in/PressReleasePage.aspx?PRID=2202867"
+  date: "date to confirm"
+strength: STRONG
+lastChecked: "2026-11-07"
+verifyFlag: true
+section: journey

@@ -1,0 +1,62 @@
+---
+// Image_Placeholder (Requirement 8B.9). Not an AI render, so no Render_Label.
+import { Image } from 'astro:assets';
+import { comingSoonImage } from '../../lib/coming-soon-image';
+import type { ViewBase } from '../../lib/concept-views';
+import { frameAspectRatio, placeholderLabel, PLACEHOLDER_TEXT } from '../../lib/image-placeholder';
+
+interface Props {
+  conceptName: string;
+  view: ViewBase;
+  /** Size of the Concept's first present view; 4 / 5 when omitted. */
+  frame?: { width: number; height: number };
+}
+
+const { conceptName, view, frame } = Astro.props;
+const label = placeholderLabel(conceptName, view);
+const ratio = frameAspectRatio(frame);
+---
+
+{
+  comingSoonImage ? (
+    <div class="av-placeholder av-placeholder-img" style={`aspect-ratio: ${ratio}`}>
+      <Image src={comingSoonImage} alt={label} width={comingSoonImage.width} height={comingSoonImage.height} />
+    </div>
+  ) : (
+    <div class="av-placeholder" role="img" aria-label={label} style={`aspect-ratio: ${ratio}`}>
+      <span aria-hidden="true">{PLACEHOLDER_TEXT}</span>
+    </div>
+  )
+}
+
+<style>
+  .av-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    text-align: center;
+    padding: var(--space-4);
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* The real graphic's own aspect ratio rarely matches the frame's, so object-fit: contain
+     (set by each caller, e.g. AngleViewer.astro's .av-frame) letterboxes it — bars either side
+     or top/bottom. Those bars need to read as "this box's own backdrop", not a mismatched
+     colour of their own, so this variant is unpadded, unbordered and transparent: whatever
+     earthy/ivory background the caller's own box already has (the stage, the thumbnail, the
+     slide) shows straight through instead of a second, different background underneath. */
+  .av-placeholder-img {
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+</style>

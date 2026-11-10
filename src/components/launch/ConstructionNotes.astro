@@ -1,0 +1,94 @@
+---
+/**
+ * Comfort & construction notes: a Concept's fit description plus a bullet
+ * list of construction details (pockets, buttons, embroidery, and so on).
+ *
+ * Optional on purpose (`Concept.construction` is an optional schema field):
+ * only a Concept with real copy renders this fold at all (see ConceptCard.astro).
+ */
+import type { ConstructionNotesData } from '../../lib/concept-schema';
+
+interface Props {
+  construction: ConstructionNotesData;
+  /** Used to build unique heading ids. */
+  conceptId?: string;
+}
+
+const { construction, conceptId } = Astro.props;
+const headingId = conceptId ? `cn-${conceptId}` : undefined;
+---
+
+<section class="construction-notes" data-construction-notes aria-labelledby={headingId}>
+  <h3 id={headingId} class="cn-heading">Comfort &amp; construction</h3>
+  <dl class="cn-list">
+    <div class="cn-row">
+      <dt>Fit</dt>
+      <dd>{construction.fit}</dd>
+    </div>
+  </dl>
+  <ul class="cn-details">
+    {construction.details.map((d) => <li>{d}</li>)}
+  </ul>
+</section>
+
+<style>
+  .construction-notes {
+    margin-block: var(--space-5);
+  }
+
+  .cn-heading {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .cn-list {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+  }
+
+  .cn-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 8.5rem) 1fr;
+    gap: var(--space-1) var(--space-4);
+    padding-block: var(--space-2);
+  }
+
+  .cn-row dt {
+    font-size: var(--fs-label, 0.75rem);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.9;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .cn-row dd {
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .cn-details {
+    margin: 0;
+    padding-left: 1.2em;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  @media (max-width: 30rem) {
+    .cn-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+</style>

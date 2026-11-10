@@ -1,0 +1,85 @@
+---
+/**
+ * Results_View shell (Requirements 16.1 to 16.4, 22.3).
+ *
+ * Server-rendered placeholder only. The island (task 16.6) finds `[data-results-root]` and fills it
+ * with text-only output built from GET /api/results, using textContent, never innerHTML.
+ * Without JavaScript the <noscript> note names the raw-numbers address. It is plain text, not an
+ * <a href>, because /api/results is a Pages Function and is not a file in dist, so scripts/link-check.ts
+ * (Requirement 2.6) would report it as a broken link.
+ *
+ * Hooks for the island:
+ *   [data-results-root]   container to fill. Holds the placeholder text until then.
+ *   [data-live-region]    role="status" region for "Results unavailable right now" and similar
+ */
+---
+
+<section class="results" data-section="results" id="results" aria-labelledby="results-h">
+  <h2 id="results-h">What others have said so far</h2>
+  <p class="results-intro">
+    Totals only. No answers from any one person are shown.
+  </p>
+
+  <div class="results-root" data-results-root>
+    <p class="results-placeholder">Results load here.</p>
+  </div>
+
+  <noscript>
+    <p class="noscript-note">
+      Results need JavaScript to display here. The raw totals are served at the address
+      <code>/api/results</code>.
+    </p>
+  </noscript>
+
+  <p class="live-region" role="status" aria-live="polite" data-live-region></p>
+</section>
+
+<style>
+  .results {
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-4);
+  }
+
+  h2 {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .results-intro {
+    margin: 0 0 var(--space-5);
+    color: var(--color-text-muted);
+  }
+
+  .results-root {
+    min-height: 6rem;
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .results-placeholder {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .noscript-note {
+    margin: var(--space-3) 0 0;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-accent);
+    font-size: var(--fs-small);
+    color: var(--color-text);
+  }
+
+  .live-region {
+    margin: var(--space-3) 0 0;
+    min-height: 1.5em;
+    font-size: var(--fs-small);
+    color: var(--color-text);
+  }
+</style>

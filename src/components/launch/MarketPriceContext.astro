@@ -1,0 +1,112 @@
+---
+/**
+ * Market_Price_Context for one Concept (Requirements 7.1, 7.5, 7.6, 7.7, 7.8, 7.10, 7.13).
+ *
+ * It receives ONLY the output of `toPublicMarketScan(scan)`: the range, the
+ * Claim_Label and the method note. It never sees the raw scan, so brands, URLs and
+ * evidence cannot be printed by mistake.
+ *
+ * Server HTML works without JavaScript: a native <details>, collapsed (no `open`,
+ * no `hidden`), so a visitor without JS opens it by choice, below the price question.
+ * Content_Check CC-16 reads: `details.market-context`, `data-market-for` equal to
+ * the card's Concept id, `<summary>` text "See what similar pieces cost".
+ *
+ * Every number (the rupee range, the listing count, the dates) sits inside the one
+ * `.fact` span (CC-09). A market scan is not a Fact_Registry entry, so the span has no
+ * `data-fact-id` (CC-02, CC-03, CC-17 look ids up and would treat an unknown id as unsourced).
+ *
+ * STABLE HOOKS FOR THE FEEDBACK ISLAND (task 16.6, `market-reveal.ts`):
+ *   details.market-context[data-market-for="<conceptId>"]
+ *                          one per Concept_Card, after fieldset[data-price-question].
+ *   [data-reveal]          starts "pending". Island sets "hidden" (plus the `hidden`
+ *                          attribute) while the Concept's price question is unanswered,
+ *                          and "shown" (remove `hidden`, set `open`) after a stored
+ *                          Price_Band or Price_Skip.
+ *   summary                "See what similar pieces cost"; native, keyboard-operable.
+ *   .fact                  the range plus Claim_Label plus method note.
+ */
+import type { PublicMarketScan } from '../../lib/market-scan';
+import { MARKET_SUMMARY, MARKET_VARIES_NOTE, marketRangeText, methodNoteText } from '../../lib/market-context';
+import ClaimLabel from './ClaimLabel.astro';
+
+interface Props {
+  /** The output of `toPublicMarketScan(scan)`. Nothing else. */
+  scan: PublicMarketScan;
+}
+
+const { scan } = Astro.props;
+---
+
+<details class="market-context" data-market-for={scan.conceptId} data-reveal="pending">
+  <summary class="mc-summary">{MARKET_SUMMARY}</summary>
+  <div class="mc-body">
+    <span class="fact mc-fact">
+      <span class="mc-range">{marketRangeText(scan)}</span>{' '}<ClaimLabel label={scan.label} />
+      <span class="mc-method" data-evidence="method-note">
+        <span class="mc-method-title">Method:</span>{' '}{methodNoteText(scan.methodNote)}
+      </span>
+    </span>
+    <p class="mc-note">{MARKET_VARIES_NOTE}</p>
+  </div>
+</details>
+
+<style>
+  .market-context {
+    margin-top: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-accent, #b5714f);
+    border-radius: var(--radius-card, 14px);
+    background: var(--color-card, #fbf7f0);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  /* `hidden` set by the island must win over any display value. */
+  .market-context[hidden] {
+    display: none;
+  }
+
+  .mc-summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    font-weight: 600;
+    color: var(--color-accent-text, #8f5233);
+    cursor: pointer;
+  }
+
+  .mc-summary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .mc-body {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+
+  .mc-range {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 500;
+  }
+
+  .mc-method {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .mc-method-title {
+    font-weight: 600;
+  }
+
+  .mc-note {
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+</style>

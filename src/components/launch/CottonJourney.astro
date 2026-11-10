@@ -1,0 +1,243 @@
+---
+/**
+ * Cotton journey section (Requirements 4.1 to 4.7, 1.7). An ordered list of eight stops,
+ * then the Aim_Statement rendered as the next element sibling of the </ol>, so adjacency
+ * is guaranteed (the arrow controls sit before the list, never between it and the aim).
+ *
+ * Layout: one horizontal, scroll-snapping row of tall photo cards at every width. The <ol> is
+ * the scroll container; it is focusable (tabindex="0") with an aria-label, so arrow keys
+ * scroll it. A step line with one dot per card runs above the cards, drawn by each card's
+ * pseudo-elements so it scrolls with the row and adds no page text.
+ * Without JavaScript every card and fact is in the HTML and reachable by scrolling; the
+ * prev/next buttons are `hidden` until src/islands/journey-scroll.ts wires them up (desktop only).
+ */
+import JourneyStop from './JourneyStop.astro';
+import AimStatement from './AimStatement.astro';
+import LastUpdated from './LastUpdated.astro';
+import { JOURNEY_STOPS, journeyFactIds } from '../../lib/journey-stops';
+---
+
+<section class="journey section" data-section="journey" id="journey" aria-labelledby="journey-h">
+  <div class="journey-head section-head">
+    <div>
+      <p class="journey-label section-label eyebrow">01 — The journey</p>
+      <h2 id="journey-h">From a field to a finished thread.</h2>
+    </div>
+    <div class="journey-intro-wrap">
+      <p class="journey-intro section-intro">
+        Follow a fibre through the people, processes and places that turn it into a garment. Scroll or swipe
+        along the row to see each stage.
+      </p>
+      <div class="journey-controls" data-journey-controls hidden>
+        <button type="button" class="journey-arrow" data-journey-prev aria-controls="journey-stops" aria-label="Previous stages">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </button>
+        <button type="button" class="journey-arrow" data-journey-next aria-controls="journey-stops" aria-label="Next stages">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <path d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <ol class="stops" id="journey-stops" tabindex="0" aria-label="Stops on the cotton journey, scrolls sideways">
+    {JOURNEY_STOPS.map((s) => <JourneyStop label={s.label} factIds={s.factIds} image={s.image} />)}
+  </ol>
+  <AimStatement />
+  <LastUpdated factIds={journeyFactIds()} />
+</section>
+
+<script>
+  // Prev/next arrows for the journey row (progressive enhancement, desktop only).
+  import '../../islands/journey-scroll';
+</script>
+
+<style>
+  .journey {
+    max-width: var(--wide-width);
+    margin: 0 auto;
+    padding: var(--space-section) var(--space-4);
+    overflow-x: clip; /* only the row scrolls, never the page */
+  }
+
+  /* ---- Header (fallback for the global .section-head / .eyebrow) ---- */
+  .journey-head {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-6);
+  }
+
+  .journey-label {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  h2 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 400;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+
+  .journey-intro {
+    margin: 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .journey-controls {
+    display: none;
+  }
+
+  @media (min-width: 56rem) {
+    .journey-head {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      align-items: end;
+      gap: var(--space-10);
+    }
+
+    .journey-controls:not([hidden]) {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+  }
+
+  .journey-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    transition:
+      background-color var(--transition),
+      color var(--transition);
+  }
+
+  .journey-arrow svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .journey-arrow:hover {
+    background: var(--color-accent-text);
+    border-color: var(--color-accent-text);
+    color: var(--c-off-white);
+  }
+
+  .journey-arrow[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: default;
+    background: var(--color-bg);
+    border-color: var(--c-raw-umber);
+    color: var(--color-text);
+  }
+
+  .journey-arrow:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* ---- The row ---- */
+  .stops {
+    --stop-gap: var(--space-4);
+    counter-reset: journey-stop;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(78vw, 19rem);
+    gap: var(--stop-gap);
+    margin: 0 calc(-1 * var(--space-4));
+    padding: var(--space-6) var(--space-4) var(--space-4);
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--space-4);
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-flax-beige) transparent;
+  }
+
+  .stops:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: -3px;
+    border-radius: var(--radius-card);
+  }
+
+  .stops > :global(li) {
+    scroll-snap-align: start;
+  }
+
+  /* Step line: a dot above each card and a hairline running on to the next card. */
+  .stops > :global(li)::before {
+    content: '';
+    position: absolute;
+    top: calc(-1 * var(--space-5) - 4px);
+    left: var(--space-4);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    z-index: 1;
+  }
+
+  .stops > :global(li)::after {
+    content: '';
+    position: absolute;
+    top: calc(-1 * var(--space-5));
+    left: var(--space-4);
+    width: calc(100% + var(--stop-gap));
+    height: 1px;
+    background: var(--c-flax-beige);
+  }
+
+  .stops > :global(li:last-child)::after {
+    width: calc(100% - var(--space-4));
+  }
+
+  @media (min-width: 40rem) {
+    .stops {
+      grid-auto-columns: 42%;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .stops {
+      --stop-gap: var(--space-5);
+      /* Three and a half cards in view, so the row visibly continues. */
+      grid-auto-columns: calc((100% - 3 * var(--stop-gap)) / 3.5);
+      margin: 0;
+      padding-inline: 0;
+      scroll-padding-inline: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .stops {
+      scroll-behavior: smooth;
+    }
+  }
+</style>

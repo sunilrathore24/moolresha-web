@@ -1,0 +1,12 @@
+# Source: research plan §O (PIB, applies from 22 Sep 2025).
+id: gst-cliff-2025
+label: FACT
+text: "Readymade garments priced up to ₹2,500 per piece attract 5% GST; above ₹2,500 per piece, 18%."
+source:
+  name: "PIB"
+  url: "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/sep/doc2025917639401.pdf"
+  date: "September 2025"
+strength: STRONG
+lastChecked: "2026-11-07"
+verifyFlag: false
+section: price-layers

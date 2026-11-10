@@ -1,0 +1,103 @@
+---
+/**
+ * Colour_Swatches: the swatch row that picks which colour's Angle_Viewer panel is
+ * visible inside a Concept_Card. Just the swatches: the caller (`ConceptCard.astro`)
+ * wraps this *and* the `[data-colour-panel]`s it points at in one shared
+ * `[data-colour-swatches]` root, which is what `src/islands/colour-swatches.ts`
+ * enhances — both pieces must be inside the same root for the island to find them.
+ *
+ * Without JavaScript every swatch is a plain in-page anchor to its panel's id,
+ * and every panel stays visible, one after another.
+ */
+import { PALETTE_LABELS, PALETTE_SWATCH } from '../../lib/feedback-form';
+import { colourPanelId } from '../../lib/colour-panel-id';
+import type { PaletteColour } from '../../content/config/allow-lists';
+
+interface Props {
+  conceptId: string;
+  colours: readonly PaletteColour[];
+}
+
+const { conceptId, colours } = Astro.props;
+---
+
+<div class="colour-swatches" aria-label="Colour">
+  <p class="cs-label">Colour</p>
+  <div class="cs-list" role="group" aria-label="Choose a colour">
+    {
+      colours.map((c) => (
+        <a
+          href={`#${colourPanelId(conceptId, c)}`}
+          class="cs-swatch"
+          data-colour-swatch={c}
+          aria-pressed="false"
+        >
+          <span class="cs-chip" style={`background-color: ${PALETTE_SWATCH[c]}`} aria-hidden="true" />
+          <span class="cs-name">{PALETTE_LABELS[c]}</span>
+        </a>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .colour-swatches {
+    margin-bottom: var(--space-3);
+  }
+
+  .cs-label {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .cs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .cs-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .cs-swatch[aria-pressed='true'] {
+    border-color: var(--color-accent-text);
+    background: var(--color-surface);
+  }
+
+  .cs-swatch:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .cs-chip {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    flex: none;
+  }
+
+  .cs-name {
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+  }
+</style>
+
+<script>
+  import '../../islands/colour-swatches';
+</script>

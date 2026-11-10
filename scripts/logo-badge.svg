@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <!-- MoolResha "MR + thread" monogram. Small, unique corner mark: an MR
+       ligature with a single thread line stitching through it, on a soft
+       terracotta disc. Sits bottom-right to cover the AI watermark. -->
+  <defs>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="3.5" flood-color="#2c2620" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- disc backing -->
+  <circle cx="90" cy="90" r="76" fill="#b5714f" filter="url(#soft)" />
+  <circle cx="90" cy="90" r="76" fill="none" stroke="#faf6ef" stroke-opacity="0.55" stroke-width="2" />
+
+  <!-- MR monogram -->
+  <text x="90" y="104" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif" font-size="72"
+        font-weight="600" letter-spacing="-2" fill="#faf6ef">MR</text>
+
+  <!-- thread: a dashed stitch line weaving across the monogram, with a needle
+       eye loop at the start -->
+  <g stroke="#faf6ef" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M34 118 C 70 100, 110 136, 146 116"
+          stroke-dasharray="7 6" opacity="0.9" />
+    <!-- thread tail curling off -->
+    <path d="M146 116 q 12 -2 14 -12" opacity="0.9" />
+  </g>
+  <!-- needle-eye loop -->
+  <circle cx="34" cy="118" r="4.5" fill="none" stroke="#faf6ef" stroke-width="2.4" />
+</svg>

@@ -6,14 +6,20 @@ import Footer from "../components/Footer.astro";
 interface Props {
   title: string;
   description?: string;
+  /** Adds `<meta name="robots" content="noindex">`. Used by the Hub_Pages. */
+  noindex?: boolean;
 }
 
 const {
   title,
   description = "Know what you wear. Learn to read any clothing label, judge any fabric, and choose for yourself.",
+  noindex = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
+// Social share preview image. Degrades to no image (not a broken-image icon) on any
+// platform until /public/images/og-image.jpg is added — see docs/image-prompts.md.
+const ogImage = new URL("/images/og-image.jpg", Astro.site).href;
 ---
 
 <!doctype html>
@@ -22,14 +28,25 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Marks scripting as available before first paint, so the header can switch to its
+         JS layout (fixed overlay bar, mobile menu button) without a flash. -->
+    <script is:inline>document.documentElement.classList.add("js");</script>
 
     <!-- Open Graph (expanded into full SEO in a later increment) -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
     <title>{title}</title>
   </head>

@@ -1,0 +1,14 @@
+# ⚠️ verify: NGO estimate. Confirm the chart date and values before publishing.
+# 2026-11-09: dropped "European"/"EUR 29" — see money-tshirt-breakdown.yaml for why. No
+# India-specific equivalent of this breakdown was found.
+id: journey-retail
+label: FACT
+text: "In a widely cited breakdown, about 60% of a T-shirt's retail price went to the retailer (store, staff, rent and tax)."
+source:
+  name: "Statista, citing Clean Clothes Campaign"
+  url: "https://www.statista.com/chart/34514/breakdown-of-the-retail-price-of-a-t-shirt/"
+  date: "date to confirm"
+strength: MODERATE
+lastChecked: "2026-11-09"
+verifyFlag: true
+section: journey
