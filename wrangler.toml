@@ -18,6 +18,12 @@ PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAAF8W3qyYtT11wcKg"
 # testing to the handful of verified recipient numbers, but swap this (not the access token or
 # code) when moving to a real dedicated production number later.
 WHATSAPP_PHONE_NUMBER_ID = "1425348240664160"
+# TEMPORARY: using Meta's built-in pre-approved "hello_world" sample template (language en_US)
+# to test the pipeline end-to-end while the real "interest_confirmation"-style template is still
+# in review. Swap both of these to the real template's name and approved language once it clears
+# review — nothing else needs to change.
+WHATSAPP_TEMPLATE_NAME = "hello_world"
+WHATSAPP_TEMPLATE_LANGUAGE = "en_US"
 
 # D1 database "moolresha_feedback", created via the dashboard and bound to both the
 # Production and Preview environments there (same database for both — there is no

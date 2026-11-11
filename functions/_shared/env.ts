@@ -13,4 +13,7 @@ export interface Env {
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
+  // Template's approved language code, e.g. "en" or "en_US" — must match exactly what the
+  // template was approved under in WhatsApp Manager. Defaults to "en" if unset (whatsapp.ts).
+  WHATSAPP_TEMPLATE_LANGUAGE?: string;
 }

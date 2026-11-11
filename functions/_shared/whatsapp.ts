@@ -18,7 +18,13 @@ import type { Env } from './env';
 export const WHATSAPP_API_VERSION = 'v21.0';
 export const WHATSAPP_TIMEOUT_MS = 5000;
 
-export type WhatsappEnv = Pick<Env, 'WHATSAPP_ACCESS_TOKEN' | 'WHATSAPP_PHONE_NUMBER_ID' | 'WHATSAPP_TEMPLATE_NAME'>;
+export type WhatsappEnv = Pick<
+  Env,
+  'WHATSAPP_ACCESS_TOKEN' | 'WHATSAPP_PHONE_NUMBER_ID' | 'WHATSAPP_TEMPLATE_NAME' | 'WHATSAPP_TEMPLATE_LANGUAGE'
+>;
+
+/** Used when WHATSAPP_TEMPLATE_LANGUAGE is unset. Must match the template's approved language exactly. */
+export const DEFAULT_TEMPLATE_LANGUAGE = 'en';
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -78,7 +84,7 @@ export async function sendWhatsappConfirmation(
     type: 'template',
     template: {
       name: env.WHATSAPP_TEMPLATE_NAME,
-      language: { code: 'en' },
+      language: { code: env.WHATSAPP_TEMPLATE_LANGUAGE ?? DEFAULT_TEMPLATE_LANGUAGE },
     },
   };
 

@@ -63,6 +63,20 @@ describe('sendWhatsappConfirmation', () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
+  it('defaults the template language to "en" when WHATSAPP_TEMPLATE_LANGUAGE is unset', async () => {
+    const { fn, calls } = mockFetch(() => jsonResponse(200));
+    await sendWhatsappConfirmation('+919812345678', waEnv, fn);
+    expect(JSON.parse(String(calls[0].init.body)).template.language).toEqual({ code: 'en' });
+  });
+
+  it('uses WHATSAPP_TEMPLATE_LANGUAGE when set, e.g. for the built-in hello_world template', async () => {
+    const { fn, calls } = mockFetch(() => jsonResponse(200));
+    const helloWorldEnv = { ...waEnv, WHATSAPP_TEMPLATE_NAME: 'hello_world', WHATSAPP_TEMPLATE_LANGUAGE: 'en_US' };
+    await sendWhatsappConfirmation('+919812345678', helloWorldEnv, fn);
+    const body = JSON.parse(String(calls[0].init.body));
+    expect(body.template).toEqual({ name: 'hello_world', language: { code: 'en_US' } });
+  });
+
   it('treats 200 as sent', async () => {
     const { fn } = mockFetch(() => jsonResponse(200));
     const r = await sendWhatsappConfirmation('+919812345678', waEnv, fn);
