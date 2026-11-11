@@ -11,6 +11,13 @@
  *   4. The `interest_submitted` event.
  *   5. MailerLite for a consented email. A MailerLite failure never fails the request: the status
  *      goes to `interest.ml_sync` and the body carries `emailConfirmation`.
+ *   6. WhatsApp Business Cloud API for a consented phone (whatsapp.ts). Same best-effort shape as
+ *      step 5: never fails the request, body carries `whatsappConfirmation`. Silently skipped
+ *      ('skipped' in the response) until WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID /
+ *      WHATSAPP_TEMPLATE_NAME are all provisioned as Cloudflare secrets — see whatsapp.ts.
+ *      Unlike MailerLite's `ml_sync`, there is currently no `wa_sync` D1 column / retry path: a
+ *      failed send is only logged, not retried. Add one (mirroring saveInterestWithConsents +
+ *      setInterestMlSync) if delivery reliability becomes a concern once this is live.
  *
  * Which consents are recorded: one row for each consent the visitor ticked (granted = 1), in the
  * order email, whatsapp, link, adult. An unticked box writes no row (design: "one row per consent
@@ -33,6 +40,7 @@ import {
 } from '../_shared/db';
 import { log } from '../_shared/log';
 import { subscribeToMailerLite } from '../_shared/mailerlite';
+import { sendWhatsappConfirmation } from '../_shared/whatsapp';
 import {
   createWriteHandler,
   utmOrEmpty,
@@ -139,16 +147,32 @@ export async function storeInterest(data: InterestData, ctx: StoreContext): Prom
     log('event_count_failed', { route: 'interest', errorClass: err instanceof Error ? err.name : typeof err });
   }
 
-  if (email === null) return {};
+  const response: Record<string, unknown> = {};
 
-  const result = await subscribeToMailerLite(email, data.size ?? null, ctx.env, ctx.fetchImpl);
-  try {
-    await setInterestMlSync(db, interestId, result.mlSync, ctx.nowIso);
-  } catch (err) {
-    // The row stays 'pending', which is the state the admin retry script picks up.
-    log('ml_sync_update_failed', { route: 'interest', errorClass: err instanceof Error ? err.name : typeof err });
+  if (email !== null) {
+    const result = await subscribeToMailerLite(email, data.size ?? null, ctx.env, ctx.fetchImpl);
+    try {
+      await setInterestMlSync(db, interestId, result.mlSync, ctx.nowIso);
+    } catch (err) {
+      // The row stays 'pending', which is the state the admin retry script picks up.
+      log('ml_sync_update_failed', { route: 'interest', errorClass: err instanceof Error ? err.name : typeof err });
+    }
+    response.emailConfirmation = result.ok ? 'sent' : 'delayed';
   }
-  return { emailConfirmation: result.ok ? 'sent' : 'delayed' };
+
+  // Best-effort, same as the MailerLite call above: a WhatsApp failure never fails the request.
+  // `waSync: 'not_configured'` (no WHATSAPP_* secrets set yet) surfaces as 'skipped', not an
+  // error, so this stays a silent no-op until the feature is actually provisioned.
+  if (phone !== null) {
+    const waResult = await sendWhatsappConfirmation(phone, ctx.env, ctx.fetchImpl);
+    if (waResult.waSync === 'failed' || waResult.waSync === 'pending') {
+      log('wa_send_failed', { route: 'interest', waSync: waResult.waSync });
+    }
+    response.whatsappConfirmation =
+      waResult.waSync === 'sent' ? 'sent' : waResult.waSync === 'not_configured' ? 'skipped' : 'delayed';
+  }
+
+  return response;
 }
 
 /** Builds the handler. Tests pass `deps`; Pages uses `onRequest` below. */

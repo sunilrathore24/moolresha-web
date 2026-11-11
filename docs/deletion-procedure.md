@@ -4,6 +4,8 @@ For the Admin. Use this when a request to delete data or withdraw consent arrive
 
 It deletes one person's email, WhatsApp number, consent records and any feedback linked to them, in D1 and at MailerLite. Feedback that was never linked to contact details is anonymous and cannot be traced to a person, so it stays. The Privacy_Notice says this.
 
+Unlike email, we do not hold a separate WhatsApp contact list anywhere to "forget" — Meta's WhatsApp Business Platform only receives a number at the moment we send a confirmation message (`functions/_shared/whatsapp.ts`), so deleting the D1 row (steps 2-4 below) is the whole WhatsApp-side deletion. The one confirmation message already sent is subject to Meta's own retention policy, outside our control — say so in the reply (step 7).
+
 `scripts/delete-person.ts` only prints. It does not open the database, run any delete or call the network. You run the printed commands yourself.
 
 ## Response times
@@ -87,4 +89,4 @@ Do not record the email address, phone number, `anon_id` or any message text. �
 
 ## 7. Reply to the requester
 
-Reply from the grievance mailbox, inside the time in the table above. Say what was deleted (contact details, consent records and linked feedback), that MailerLite completes its deletion within 30 days, and that feedback never linked to contact details cannot be traced to them and so remains.
+Reply from the grievance mailbox, inside the time in the table above. Say what was deleted (contact details, consent records and linked feedback), that MailerLite completes its deletion within 30 days, that any WhatsApp confirmation message already sent is subject to Meta's own retention policy and outside our control, and that feedback never linked to contact details cannot be traced to them and so remains.

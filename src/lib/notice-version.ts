@@ -9,4 +9,4 @@
  * `tests/unit/privacy.test.ts` and `src/pages/privacy.astro` both fail the
  * build when the two differ.
  */
-export const NOTICE_VERSION = '0.1';
+export const NOTICE_VERSION = '0.2';

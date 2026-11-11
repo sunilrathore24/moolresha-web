@@ -47,6 +47,7 @@ export function interestNotice(privacy: PrivacyData, noticeVersion: string): Int
     purpose: 'To send you the results of this research and updates about the launch.',
     processors:
       'Your email address goes to MailerLite, our email provider, which first sends you a confirmation email. ' +
+      "Your WhatsApp number goes to Meta's WhatsApp Business Platform, which sends you a confirmation message. " +
       'Everything else is stored with Cloudflare, which hosts this site.',
     retention,
     withdraw:

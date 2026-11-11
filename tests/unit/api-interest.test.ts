@@ -18,7 +18,13 @@ const PHONE_RAW = '+91 98123-45678';
 const PHONE = '+919812345678';
 const NOW = new Date('2026-11-10T10:00:00.000Z');
 
-const env = (db: D1Like): Env =>
+const WHATSAPP_ENV = {
+  WHATSAPP_ACCESS_TOKEN: 'test-wa-token',
+  WHATSAPP_PHONE_NUMBER_ID: 'wa-phone-1',
+  WHATSAPP_TEMPLATE_NAME: 'interest_confirmation',
+};
+
+const env = (db: D1Like, over: Partial<Env> = {}): Env =>
   ({
     DB: db,
     TURNSTILE_SECRET: 'test-secret',
@@ -26,6 +32,7 @@ const env = (db: D1Like): Env =>
     ADMIN_BEARER_SECRET: 'test-admin',
     IDENTITY_SALT_SEED: 'test-salt-seed',
     ML_GROUP_ID: 'group-1',
+    ...over,
   }) as unknown as Env;
 
 const turnstileOk = () =>
@@ -35,15 +42,18 @@ const turnstileFail = () =>
 
 type MlBehaviour = () => Response | Promise<Response>;
 
-/** Routes Turnstile and MailerLite calls to separate behaviours. Nothing reaches the network. */
-function mockFetch(opts: { turnstile?: () => Response; ml?: MlBehaviour } = {}) {
+/** Routes Turnstile, MailerLite and WhatsApp calls to separate behaviours. Nothing reaches the network. */
+function mockFetch(opts: { turnstile?: () => Response; ml?: MlBehaviour; wa?: MlBehaviour } = {}) {
   return vi.fn(async (url: string, _init?: RequestInit) => {
     if (url.includes('mailerlite')) return (opts.ml ?? (() => new Response('{}', { status: 200 })))();
+    if (url.includes('graph.facebook.com')) return (opts.wa ?? (() => new Response('{}', { status: 200 })))();
     return (opts.turnstile ?? turnstileOk)();
   });
 }
 
 const mlCalls = (f: ReturnType<typeof mockFetch>) => f.mock.calls.filter(([u]) => String(u).includes('mailerlite'));
+const waCalls = (f: ReturnType<typeof mockFetch>) =>
+  f.mock.calls.filter(([u]) => String(u).includes('graph.facebook.com'));
 
 const interestBody = (over: Record<string, unknown> = {}) => ({
   anonId: ANON_A,
@@ -107,12 +117,12 @@ afterEach(() => {
   db.close();
 });
 
-function interest(over: PipelineDeps = {}) {
+function interest(over: PipelineDeps = {}, envOver: Partial<Env> = {}) {
   const fetchImpl = over.fetchImpl ?? mockFetch();
   const handler = createInterestHandler({ db, fetchImpl, now: () => NOW, ...over });
   return {
     fetchImpl: fetchImpl as ReturnType<typeof mockFetch>,
-    call: (req: Request) => handler({ request: req, env: env(over.db ?? db) }),
+    call: (req: Request) => handler({ request: req, env: env(over.db ?? db, envOver) }),
   };
 }
 
@@ -140,7 +150,7 @@ describe('POST /api/interest: what is stored', () => {
     expect(eventCount(db, 'interest_submitted')).toBe(1);
   });
 
-  it('WhatsApp only: stores the normalised phone, no email, and makes no MailerLite call', async () => {
+  it('WhatsApp only, feature not provisioned: stores the phone, skips the confirmation, makes no MailerLite call', async () => {
     const { call, fetchImpl } = interest();
     const body = interestBody({
       email: undefined,
@@ -149,11 +159,42 @@ describe('POST /api/interest: what is stored', () => {
     });
     const res = await call(post(body));
     expect(res.status).toBe(200);
-    expect(((await res.json()) as Record<string, unknown>).emailConfirmation).toBeUndefined();
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json.emailConfirmation).toBeUndefined();
+    expect(json.whatsappConfirmation).toBe('skipped'); // no WHATSAPP_* secrets set in this test's env
 
     expect(interestRows(db)[0]).toMatchObject({ email: null, phone: PHONE, ml_sync: 'none' });
     expect(mlCalls(fetchImpl)).toHaveLength(0);
+    expect(waCalls(fetchImpl)).toHaveLength(0);
     expect(eventCount(db, 'interest_submitted')).toBe(1);
+  });
+
+  it('WhatsApp only, feature provisioned: sends the confirmation and reports it sent', async () => {
+    const { call, fetchImpl } = interest({}, WHATSAPP_ENV);
+    const body = interestBody({
+      email: undefined,
+      size: undefined,
+      consents: { email: false, whatsapp: true, link: false, adult: true },
+    });
+    const res = await call(post(body));
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json.whatsappConfirmation).toBe('sent');
+
+    expect(waCalls(fetchImpl)).toHaveLength(1);
+    const [, init] = waCalls(fetchImpl)[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({ to: '919812345678' });
+  });
+
+  it('WhatsApp confirmation failure never fails the request, and email is unaffected', async () => {
+    const fetchImpl = mockFetch({ wa: () => new Response('{}', { status: 500 }) });
+    const { call } = interest({ fetchImpl }, WHATSAPP_ENV);
+    const body = interestBody({ consents: { email: true, whatsapp: true, link: false, adult: true } });
+    const res = await call(post(body));
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json.emailConfirmation).toBe('sent');
+    expect(json.whatsappConfirmation).toBe('delayed');
   });
 
   it('size only: stores a row with no contact data, no consent rows and no MailerLite call', async () => {

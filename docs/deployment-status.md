@@ -108,6 +108,81 @@ deployed and serving real traffic.
 - `docs/launch-checklist.md` review dates (blocks `PUBLIC_LAUNCH=true` only, not the current state).
 - No PR was opened; all work has gone straight to `main` by request.
 
+## 7. WhatsApp confirmation on the Interest form — code ready, waiting on Meta credentials
+
+**What exists now:** when someone submits the **Interest form** (`InterestForm.astro` → `/api/interest`
+— *not* the anonymous concept-feedback form, which deliberately has no contact fields) with an
+email, MailerLite's double opt-in already sends a free confirmation email automatically. That part
+needed no new code.
+
+**New this session, not yet live:** a parallel WhatsApp confirmation, sent via Meta's free
+WhatsApp Business Cloud API when a phone number is given with consent. Code is written and tested,
+but **inert in production** until the Meta-side setup is done and its 3 secrets are set — until
+then `sendWhatsappConfirmation` returns `not_configured` and no network call is made.
+
+- `functions/_shared/whatsapp.ts` — the Cloud API client (`POST .../messages`, template-based),
+  mirrors `mailerlite.ts`'s best-effort shape exactly: never throws, never fails the visitor's
+  request, status feeds `whatsappConfirmation: 'sent' | 'delayed' | 'skipped'` in the response.
+- `functions/api/interest.ts` — wired in next to the existing MailerLite call (`storeInterest`).
+- `functions/_shared/env.ts` — added 3 **optional** vars: `WHATSAPP_ACCESS_TOKEN`,
+  `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME`. Unset = feature off.
+- Consent copy updated to disclose the automatic message (previously it only said the number was
+  "stored... for manual updates"): `InterestForm.astro`'s WhatsApp checkbox label,
+  `src/lib/interest-notice.ts`'s processors line, and `privacy.yaml` (new "Meta (WhatsApp Business
+  Platform)" processor entry, updated `contact-whatsapp` data item, updated deletion-procedure
+  text). **`privacy.yaml#version` bumped `0.1` → `0.2`** (and `src/lib/notice-version.ts` to
+  match) because the disclosure changed — anyone who already consented is recorded against `0.1`.
+- `tests/unit/whatsapp.test.ts` (new) and `tests/unit/api-interest.test.ts` (extended) cover it.
+  `npm test` and `npm run build` both pass clean (only the 3 pre-existing flaky/stale failures
+  noted in §6 remain).
+- There is deliberately **no `wa_sync` D1 column / retry path yet** (unlike MailerLite's
+  `ml_sync`) — a failed send is only logged, not retried. Add one later (mirroring
+  `saveInterestWithConsents` + `setInterestMlSync`) if delivery reliability becomes a concern.
+
+**Progress as of this push:**
+1. ✅ Meta app created, WhatsApp product added, free **test phone number** obtained
+   (`+1 555-173-6513`, Phone Number ID `1425348240664160` — committed to `wrangler.toml`'s
+   `[vars]` as `WHATSAPP_PHONE_NUMBER_ID`, since it's an identifier, not a secret).
+2. ✅ Payment method added to the Meta account (required by Meta for any business-initiated
+   message, regardless of whether you stay under the free monthly allowance — **the confirmation
+   message itself is a business-initiated "utility" send, which Meta's own account screen states
+   is NOT covered by the 1,000-free-messages allowance; that allowance only covers replies sent
+   after a user messages first**. So each confirmation send likely costs a small real amount —
+   the user chose to accept that rather than add the extra complexity of a "user messages us
+   first" redesign. If this ever needs revisiting, see this session's chat log for the "tap a
+   WhatsApp link to open a free reply window" alternative that was scoped but not built.)
+3. ✅ Permanent access token generated and set as the Cloudflare secret `WHATSAPP_ACCESS_TOKEN`
+   (Production + Preview) — never committed to the repo.
+4. ⬜ **Template still pending** — a Utility-category template was being created in WhatsApp
+   Manager (body text drafted in this session's chat log, includes a `https://moolresha.com` link
+   and a "Visit Moolresha" website button) but its exact **name** was never given back, and
+   `WHATSAPP_TEMPLATE_NAME` is not yet set anywhere. **Until that's set, `sendWhatsappConfirmation`
+   stays `not_configured` (silent no-op) even though the other two values are now live.** Get the
+   approved template's exact name from the user, add it to `wrangler.toml`'s `[vars]` next to
+   `WHATSAPP_PHONE_NUMBER_ID`, then a real send can be tested.
+5. ⬜ For real (non-test) traffic later: a dedicated phone number not currently active on
+   WhatsApp/WhatsApp Business consumer apps, plus full Meta Business verification — then swap
+   `WHATSAPP_PHONE_NUMBER_ID`, no code change.
+
+**Separately, email sender branding (not part of the WhatsApp work, but done the same session):**
+- MailerLite sending-domain authentication for `moolresha.com` was in progress (DKIM/SPF/verification
+  records being added in Cloudflare DNS) — check it completed.
+- Cloudflare Email Routing was set up: `support@moolresha.com` → forwards to the user's personal inbox.
+- **Still open, deliberately deferred:** replying *as* `support@moolresha.com` from the personal
+  inbox doesn't work via Email Routing alone (it only forwards inbound mail, there's no outbound
+  SMTP relay behind it) — Gmail's "Send mail as" needs either real SMTP credentials from an actual
+  mailbox (e.g. Zoho Mail's free tier) or accepting a "via gmail.com" tag from using Gmail's own
+  servers unauthenticated for that domain. User chose to park this for later; for now, replies to
+  `support@` go out from the personal address as-is, which still works, just isn't branded.
+- **Still open:** the "congratulations, you're subscribed" welcome email (the email equivalent of
+  the WhatsApp confirmation) is not configured yet — needs a MailerLite **Automation**
+  (trigger: subscriber joins/confirms the group → action: send the welcome email). Only the
+  double-opt-in *confirmation request* email exists today (unchanged, already live from before
+  this session).
+
+This push **does** go live on `main` (auto-deploys) at the user's explicit request. The WhatsApp
+send itself remains inert (`not_configured`) until the template name above is filled in.
+
 ## 6. Quick commands
 
 ```bash

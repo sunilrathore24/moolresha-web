@@ -9,8 +9,8 @@
 # and the Grievance_Contact address below are PLACEHOLDERS. Each one carries the
 # marker text so it cannot be missed. Remove the marker only after sign-off.
 
-version: "0.1"
-lastUpdated: "2026-11-07"
+version: "0.2"
+lastUpdated: "2026-11-11"
 
 intro: >-
   MoolResha is a research project, not a shop. This page says what we collect
@@ -66,8 +66,8 @@ dataItems:
   - id: contact-whatsapp
     name: "WhatsApp number (optional)"
     detail: "Only if you fill in the interest form and tick the WhatsApp consent."
-    purpose: "Close updates such as fit tests and launch day"
-    storedIn: "Cloudflare D1 database"
+    purpose: "A confirmation message when you submit, and close updates such as fit tests and launch day"
+    storedIn: "Cloudflare D1 database and Meta's WhatsApp Business Platform (to send the confirmation message)"
     retention: "Until you withdraw consent. ⚠️ founder and lawyer to confirm"
     personal: true
     placeholder: true
@@ -127,7 +127,7 @@ processors:
     does: >-
       Hosts this website, runs the form endpoints, stores the database, and
       provides the cookieless visit counts.
-    receives: "Everything in the table above except email delivery."
+    receives: "Everything in the table above except email and WhatsApp message delivery."
   - name: "Cloudflare Turnstile"
     does: >-
       Checks that a form is sent by a person and not by a bot. It runs when you
@@ -138,6 +138,13 @@ processors:
       Stores your email address and sends the confirmation email and any later
       emails, only if you give email consent.
     receives: "Your email address, only if you tick the email consent."
+  - name: "Meta (WhatsApp Business Platform)"
+    does: >-
+      Sends the WhatsApp confirmation message, only if you give WhatsApp
+      consent. We do not keep a separate contact list with Meta the way we do
+      with MailerLite: it only receives your number at the moment we send you
+      a message.
+    receives: "Your WhatsApp number, only if you tick the WhatsApp consent."
 
 withdrawal:
   summary: >-
@@ -154,7 +161,7 @@ deletion:
   steps:
     - "Write to the Grievance Contact below and say what you want deleted."
     - "We will ask you to confirm you control the email address or number. For an email address we reply to it. For a WhatsApp number we ask you to message us from it."
-    - "We delete the data from our database and from MailerLite, then tell you it is done."
+    - "We delete the data from our database and from MailerLite, then tell you it is done. We do not hold a separate WhatsApp contact list to delete from; the one confirmation message already sent is subject to Meta's own retention policy, which is outside our control."
   anonymousNote: >-
     Answers that were never linked to your contact details are anonymous. We
     cannot tell which answers are yours, so we cannot find or delete them

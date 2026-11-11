@@ -1,10 +1,12 @@
 # Cloudflare Pages configuration. No secrets belong in this file.
-# Secrets (TURNSTILE_SECRET, MAILERLITE_API_KEY, ADMIN_BEARER_SECRET, IDENTITY_SALT_SEED)
-# are set with `wrangler pages secret put <NAME>` or in the Cloudflare dashboard.
-# Once a project has this file, the dashboard's "Variables and secrets" only accepts
+# Secrets (TURNSTILE_SECRET, MAILERLITE_API_KEY, ADMIN_BEARER_SECRET, IDENTITY_SALT_SEED,
+# WHATSAPP_ACCESS_TOKEN) are set with `wrangler pages secret put <NAME>` or in the Cloudflare
+# dashboard. Once a project has this file, the dashboard's "Variables and secrets" only accepts
 # Secret-typed entries — plain variables must live here instead. PUBLIC_TURNSTILE_SITE_KEY
 # is Turnstile's public site key (designed to be embedded client-side, not a secret;
-# the matching TURNSTILE_SECRET stays a dashboard Secret), so it belongs here.
+# the matching TURNSTILE_SECRET stays a dashboard Secret), so it belongs here. Same reasoning
+# for WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_TEMPLATE_NAME: identifiers, not secrets — the
+# matching WHATSAPP_ACCESS_TOKEN stays a dashboard Secret (functions/_shared/whatsapp.ts).
 
 name = "moolresha-web"
 pages_build_output_dir = "dist"
@@ -12,6 +14,10 @@ compatibility_date = "2026-11-11" # date of the first real Pages deploy (Cloudfl
 
 [vars]
 PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAAF8W3qyYtT11wcKg"
+# WhatsApp Business Cloud API. Currently Meta's free TEST number (+1 555-173-6513) — fine for
+# testing to the handful of verified recipient numbers, but swap this (not the access token or
+# code) when moving to a real dedicated production number later.
+WHATSAPP_PHONE_NUMBER_ID = "1425348240664160"
 
 # D1 database "moolresha_feedback", created via the dashboard and bound to both the
 # Production and Preview environments there (same database for both — there is no
