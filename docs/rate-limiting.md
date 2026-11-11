@@ -22,7 +22,7 @@ There is no like, subscribe or comment endpoint in the current build. The earlie
 ## 2. Layers, cheapest first
 
 1. **Cloudflare edge.** Built-in DDoS protection, plus Bot Fight Mode and WAF rules configured in the dashboard. No code. `⚠️ confirm` which rules are switched on; the repo does not record this.
-2. **Method, Origin, Content-Type and body-size checks** (`pipeline.ts`). Wrong method gives `405`, a missing or disallowed Origin gives `403 origin_not_allowed`, a non-JSON body gives `415`, an oversized body gives `413`. Allowed origins are `https://www.moolresha.com` and, when set, `PREVIEW_ORIGIN`.
+2. **Method, Origin, Content-Type and body-size checks** (`pipeline.ts`). Wrong method gives `405`, a missing or disallowed Origin gives `403 origin_not_allowed`, a non-JSON body gives `415`, an oversized body gives `413`. Allowed origins are `https://moolresha.com`, `https://www.moolresha.com` and, when set, `PREVIEW_ORIGIN`.
 3. **Rate limit** (this document). Runs before validation and Turnstile, so a flood costs one D1 write and no Turnstile `siteverify` call.
 4. **Validation, then Turnstile, then the endpoint's own write.** Zod allow-list validation (`400`), Turnstile (`403 bot_check_failed`), then the D1 write.
 

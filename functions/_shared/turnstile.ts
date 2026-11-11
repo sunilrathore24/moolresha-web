@@ -3,8 +3,12 @@ import type { Env } from './env';
 export const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export const TURNSTILE_TIMEOUT_MS = 5000;
 
-/** Production hostname. Preview hostnames come from env.PREVIEW_ORIGIN. */
-export const PRODUCTION_HOSTNAMES: readonly string[] = ['www.moolresha.com'];
+/**
+ * Production hostnames. Both the apex (the actual Cloudflare Pages custom domain) and
+ * `www` are listed, matching origin.ts and the Turnstile widget's configured hostnames.
+ * Preview hostnames come from env.PREVIEW_ORIGIN.
+ */
+export const PRODUCTION_HOSTNAMES: readonly string[] = ['moolresha.com', 'www.moolresha.com'];
 
 /**
  * The Turnstile verifier needs the secret, plus the optional preview origin

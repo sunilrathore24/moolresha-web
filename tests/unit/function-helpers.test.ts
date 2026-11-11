@@ -20,18 +20,20 @@ const req = (headers: Record<string, string> = {}, method = "POST") =>
   new Request("https://www.moolresha.com/api/feedback", { method, headers });
 
 describe("origin", () => {
-  it("allows the production and preview origins", () => {
+  it("allows the apex, www and preview origins", () => {
     const set = ALLOWED_ORIGINS(env);
+    expect(set.has("https://moolresha.com")).toBe(true);
     expect(set.has("https://www.moolresha.com")).toBe(true);
     expect(set.has("https://feature-x.moolresha-web.pages.dev")).toBe(true);
   });
 
-  it("ignores an unset PREVIEW_ORIGIN", () => {
+  it("ignores an unset PREVIEW_ORIGIN, keeping just the apex and www", () => {
     const set = ALLOWED_ORIGINS({ IDENTITY_SALT_SEED: "x" } as unknown as Env);
-    expect([...set]).toEqual(["https://www.moolresha.com"]);
+    expect([...set]).toEqual(["https://moolresha.com", "https://www.moolresha.com"]);
   });
 
-  it("returns null for an allowed origin", () => {
+  it("returns null for the apex or the www origin", () => {
+    expect(checkOrigin(req({ Origin: "https://moolresha.com" }), env)).toBeNull();
     expect(checkOrigin(req({ Origin: "https://www.moolresha.com" }), env)).toBeNull();
   });
 
