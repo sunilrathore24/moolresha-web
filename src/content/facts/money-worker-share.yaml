@@ -1,4 +1,7 @@
-# ⚠️ verify: worker share must stay a labelled, sourced Fact (Requirement 5.6).
+# Verified 2026-11-11 by direct navigation to the Statista chart page (not a search snippet).
+# It states: "factory workers receive less than one percent of the price of a T-shirt produced
+# in Bangladesh" (by Felix Richter, Statista, citing the Clean Clothes Campaign, published
+# 22 May 2025). Matches this entry exactly.
 # 2026-11-09: "the same European example" → "the same breakdown", matching money-tshirt-breakdown.
 id: money-worker-share
 label: FACT
@@ -6,8 +9,8 @@ text: "In the same breakdown, under 1% of the price went to factory workers."
 source:
   name: "Statista, citing Clean Clothes Campaign"
   url: "https://www.statista.com/chart/34514/breakdown-of-the-retail-price-of-a-t-shirt/"
-  date: "date to confirm"
+  date: "22 May 2025"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: money

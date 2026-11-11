@@ -1,4 +1,7 @@
-# ⚠️ verify: NGO estimate. Confirm the chart date and values before publishing.
+# Verified 2026-11-11 by direct navigation to the Statista chart page (not a search snippet).
+# It states: "The largest part of the final sales price, almost 60 percent, ends up with
+# retailers in the form of store profit, staff, rent and sales tax" (by Felix Richter, Statista,
+# citing the Clean Clothes Campaign, published 22 May 2025). Matches this entry exactly.
 # 2026-11-09: dropped "European"/"EUR 29" — see money-tshirt-breakdown.yaml for why. No
 # India-specific equivalent of this breakdown was found.
 id: journey-retail
@@ -7,8 +10,8 @@ text: "In a widely cited breakdown, about 60% of a T-shirt's retail price went t
 source:
   name: "Statista, citing Clean Clothes Campaign"
   url: "https://www.statista.com/chart/34514/breakdown-of-the-retail-price-of-a-t-shirt/"
-  date: "date to confirm"
+  date: "22 May 2025"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: journey

@@ -1,12 +1,16 @@
-# ⚠️ verify: trade-press report of a vendor study. Confirm the exact figures and publication date.
+# Verified 2026-11-11 by direct navigation to the Apparel Resources article (not a search
+# snippet, published 5 November 2026, reporting a retail-analytics study of Sep-Oct 2026
+# orders). It states: "Average festive discounts increased to 46% in 2026 from 34% in 2025,
+# with nearly half of all orders placed at discounts exceeding 50%." Figures and wording match
+# exactly.
 id: money-festive-discounts
 label: INDUSTRY CLAIM
 text: "A 2026 festive-season report found an average discount of 46% on online fashion, with nearly half of orders at over 50% off."
 source:
   name: "Apparel Resources"
   url: "https://apparelresources.com/business-news/retail/50-festive-online-fashion-orders-priced-rs-1000-report/"
-  date: "2026"
+  date: "5 November 2026"
 strength: MODERATE
-lastChecked: "2026-11-07"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: money

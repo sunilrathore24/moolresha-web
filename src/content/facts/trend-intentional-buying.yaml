@@ -1,12 +1,16 @@
-# ⚠️ verify: confirm the ~40% figure and wording against the press release.
+# Verified 2026-11-11 by direct navigation to the Deloitte India press release (not a search
+# snippet, published 28 January 2026). It states: "close to 40 percent of consumers having
+# tried new fashion brands in the past year. This openness to experimentation is largely
+# driven by trusted recommendations, social influence and attractive price points." Matches
+# this entry's figure and wording.
 id: trend-intentional-buying
 label: INDUSTRY CLAIM
 text: "The same Deloitte India survey reports that about 40% of respondents tried a new fashion brand in the past year, mostly through trusted recommendations."
 source:
   name: "Deloitte India"
   url: "https://www.deloitte.com/in/en/about/press-room/accessible-premium-reshapes-indias-fashion-market.html"
-  date: "January 2026"
+  date: "28 January 2026"
 strength: MODERATE
-lastChecked: "2026-11-07"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: trends

@@ -1,12 +1,18 @@
-# ⚠️ verify: confirm the publication title, year and exact wording before publishing. Stitching abroad is one factor among several (Requirement 4.3).
+# Verified 2026-11-11 by direct navigation to the World Bank Open Knowledge Repository page
+# (not a search snippet). Publication: "The Textile-Clothing Value Chain in India and
+# Bangladesh: How Appropriate Policies Can Promote (or Inhibit) Trade and Investment" (Kabir,
+# Singh, Ferrantino; Policy Research Working Paper No. 8731; February 2019). Its abstract
+# states: "India specializes in the upstream segment, supplying such intermediate inputs as
+# silk, cotton, yarn, and fabrics to Bangladesh. Bangladesh specializes in the downstream
+# final apparel segment." Title, year and wording match.
 id: journey-stitching
 label: FACT
 text: "The World Bank describes India as the upstream yarn and fabric supplier to Bangladesh's apparel sector."
 source:
   name: "World Bank"
   url: "https://openknowledge.worldbank.org/entities/publication/9bbc6705-0471-5ac4-929d-ab5f887cbc95"
-  date: "date to confirm"
+  date: "February 2019"
 strength: STRONG
-lastChecked: "2026-11-07"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: journey

@@ -1,12 +1,24 @@
-# ⚠️ verify: confirm the figures and publication date against the article.
+# Verified 2026-11-11 by direct navigation to the Apparel Resources article (not a search
+# snippet, published 5 November 2026, reporting a retail-analytics study of Sep-Oct 2026
+# orders). It states: "50% of online fashion orders in India during September and October 2026
+# were priced below Rs 1,000... products priced above Rs 3,000 accounted for just 11.8% of
+# orders but contributed more than 41% of total sales value." The 11.8%/41% figures match
+# exactly.
+# 2026-11-11: switched the cited source from Fortune India to Apparel Resources, and corrected
+# "50.1%" to "about 50%". Fortune India's own article carries an explicit AI-generation
+# disclaimer and only ever says "50%"/"half" — nowhere does it say "50.1%", so that figure in
+# the original entry was unsupported by its own cited source. Apparel Resources (not
+# AI-labelled) reports the same underlying study and the same 11.8%/41% figures, so it replaces
+# Fortune India as the source for this entry; money-festive-discounts.yaml cites the same
+# article for the discount figures.
 id: trend-split-market
 label: INDUSTRY CLAIM
-text: "In festive 2026, 50.1% of online fashion orders were under ₹1,000, while orders above ₹3,000 (11.8% of orders) made up over 41% of order value."
+text: "In festive 2026, about 50% of online fashion orders were under ₹1,000, while orders above ₹3,000 (11.8% of orders) made up over 41% of order value."
 source:
-  name: "Fortune India"
-  url: "https://www.fortuneindia.com/business-news/half-of-festive-fashion-orders-below-1000-as-indian-shoppers-prioritise-value/168679"
-  date: "2026"
+  name: "Apparel Resources"
+  url: "https://apparelresources.com/business-news/retail/50-festive-online-fashion-orders-priced-rs-1000-report/"
+  date: "5 November 2026"
 strength: MODERATE
-lastChecked: "2026-11-07"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: trends

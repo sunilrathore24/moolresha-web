@@ -1,3 +1,8 @@
+# Re-verified 2026-11-11 by direct navigation to the Financial Express article (not a search
+# snippet, dated October 10, 2026 22:13 IST — matches). Confirmed both quoted sentences appear
+# verbatim in the full article body. verifyFlag now cleared — it had been left on by oversight
+# after the 2026-11-09 verification below.
+#
 # Verified 2026-11-09: swapped from Livemint to Financial Express. The Livemint piece
 # ("Are Indian men dressing sexier?") never mentions "hybrid," "dress code" or "office" at
 # all — checked the full article text. This Financial Express article does support the claim
@@ -13,6 +18,6 @@ source:
   url: "https://www.financialexpress.com/life/lifestyle/slaying-at-work-with-ikat-ajrakh/4358296/"
   date: "10 October 2026"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: trends

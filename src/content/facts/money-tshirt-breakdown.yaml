@@ -1,4 +1,8 @@
-# ⚠️ verify: confirm every share and the chart date against the source before building the chart (Requirement 5.1).
+# Verified 2026-11-11 by direct navigation to the Statista chart page (not a search snippet).
+# It states: "almost 60 percent, ends up with retailers... The next largest shares are brand
+# profit and material costs, each at 12 percent of the final price and transport costs at
+# 8 percent" (by Felix Richter, Statista, citing the Clean Clothes Campaign, published
+# 22 May 2025). Every share and the chart date match exactly.
 # 2026-11-09: dropped "European"/"EUR 29" from the sentence — our audience is Indian and the
 # geography was leading the headline without adding anything they could act on. The source is
 # still the same (genuinely European) study; its name, url and date below are the honest trail
@@ -10,8 +14,8 @@ text: "In a widely cited breakdown of a T-shirt's retail price, about 60% of the
 source:
   name: "Statista, citing Clean Clothes Campaign"
   url: "https://www.statista.com/chart/34514/breakdown-of-the-retail-price-of-a-t-shirt/"
-  date: "date to confirm"
+  date: "22 May 2025"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: money

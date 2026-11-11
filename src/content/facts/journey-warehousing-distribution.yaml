@@ -1,12 +1,16 @@
-# ⚠️ verify: confirm the press release date and wording before publishing.
+# Verified 2026-11-11 by direct navigation to the PIB press release (not a search snippet,
+# posted 12 Dec 2025). It states the PM MITRA Scheme "aims to develop large scale and
+# integrated world class industrial facilities... to help Indian textiles industry to build
+# scale, reduce logistics costs and improve its competitiveness" via "the creation of a modern
+# and integrated textile value chain at one location." Wording and date match.
 id: journey-warehousing-distribution
 label: FACT
 text: "The Government of India's PM MITRA scheme aims to bring the textile value chain together in one place to reduce logistics costs."
 source:
   name: "PIB"
   url: "https://pib.gov.in/PressReleasePage.aspx?PRID=2202867"
-  date: "date to confirm"
+  date: "12 December 2025"
 strength: STRONG
-lastChecked: "2026-11-07"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: journey

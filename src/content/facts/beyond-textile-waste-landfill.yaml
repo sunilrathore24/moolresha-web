@@ -1,3 +1,10 @@
+# Re-verified 2026-11-11 by direct navigation to the UNEP story page (not a search snippet;
+# meta published-date 2025-04-04, matches). It states verbatim: "Studies suggest that every
+# year, 92 million tonnes of textile waste are generated worldwide and each second the
+# equivalent of a garbage truck full of clothing is incinerated or dumped in a landfill."
+# Matches this entry exactly, "studies suggest" framing included. verifyFlag now cleared — it
+# had been left on by oversight after the 2026-11-09 verification below.
+#
 # Verified 2026-11-09 by direct navigation to the UNEP story page (not a search snippet):
 # https://www.unep.org/en/news-and-stories/story/zero-waste-day-shines-light-fashion-and-textiles.
 # UNEP itself attributes the 92-million-tonne figure to "studies" (primarily Global Fashion
@@ -13,6 +20,6 @@ source:
   url: "https://www.unep.org/en/news-and-stories/story/zero-waste-day-shines-light-fashion-and-textiles"
   date: "4 April 2025"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: beyond-label

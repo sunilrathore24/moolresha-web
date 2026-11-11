@@ -1,3 +1,10 @@
+# Re-verified 2026-11-11 by direct navigation to the WWD/Sourcing Journal article (not a
+# search snippet): confirmed the caption "Two-thirds of Gen Z consumers say cotton is their
+# favorite fiber or fabric to wear, according to the Cotton Incorporated 2024 Lifestyle
+# Monitor™ Survey" and body text "cotton is the favorite fiber or fabric to wear among 66
+# percent of Gen Z consumers," with authenticity/sustainability named as the driver. verifyFlag
+# now cleared — it had been left on by oversight after the 2026-11-09 verification below.
+#
 # Verified 2026-11-09: swapped to the WWD/Sourcing Journal write-up, which is the one that
 # actually reports the Gen Z-specific cut of this data — its own photo caption reads "Two-thirds
 # of Gen Z consumers say cotton is their favorite fiber or fabric to wear, according to the
@@ -13,6 +20,6 @@ source:
   url: "https://wwd.com/sourcing-journal/lifestyle-monitor/why-gen-z-prefers-natural-fibers-cotton-incorporated-1238850635/"
   date: "April 21, 2025"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: why

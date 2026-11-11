@@ -1,3 +1,12 @@
+# Re-verified 2026-11-11 by direct navigation to the FashionBeans article (not a search
+# snippet, dated 19 October 2026 — matches). Confirmed "Relaxed Tailoring" (Trend 02), "Earth
+# Tones" (Trend 03), linen/natural fabrics (Trend 04), and a trouser trend described as sitting
+# "comfortably between slim and oversized" (Trend 05, "Straight-Leg Trousers") — a reasonable
+# paraphrase as "relaxed-fit trousers" for an INDUSTRY CLAIM. "Breathable" is not a literal
+# word in the piece but is a fair characterisation of the linen/cotton fabrics it names.
+# verifyFlag now cleared — it had been left on by oversight after the 2026-11-09 verification
+# below.
+#
 # Verified 2026-11-09: opened the source and confirmed every element of the claim is in it —
 # "Relaxed Tailoring" (Trend 02), "Earth Tones" (Trend 03), linen/natural fabrics (Trend 04),
 # relaxed trousers (Trend 05). The previous source (Financial Express) was swapped out: that
@@ -11,6 +20,6 @@ source:
   url: "https://www.fashionbeans.com/article/menswear-reset-2026-style-trends/"
   date: "19 October 2026"
 strength: MODERATE
-lastChecked: "2026-11-09"
-verifyFlag: true
+lastChecked: "2026-11-11"
+verifyFlag: false
 section: trends
