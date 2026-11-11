@@ -4,13 +4,15 @@
 
 name = "moolresha-web"
 pages_build_output_dir = "dist"
-compatibility_date = "2025-01-01" # ⚠️ confirm: set to the date of the first deploy
+compatibility_date = "2026-11-11" # date of the first real Pages deploy (Cloudflare's own project default)
 
-# D1 database "moolresha_feedback". The binding name is `DB` because functions/_shared/env.ts
+# D1 database "moolresha_feedback", created via the dashboard and bound to both the
+# Production and Preview environments there (same database for both — there is no
+# separate preview database). The binding name is `DB` because functions/_shared/env.ts
 # reads `env.DB`. The database is addressed by name in `wrangler d1 execute moolresha_feedback`.
 [[d1_databases]]
 binding = "DB"
 database_name = "moolresha_feedback"
-database_id = "00000000-0000-0000-0000-000000000000" # placeholder: replace after `wrangler d1 create moolresha_feedback`
-preview_database_id = "00000000-0000-0000-0000-000000000000" # placeholder
+database_id = "33200dce-af1a-429e-acca-2bc273d4f9c7"
+preview_database_id = "33200dce-af1a-429e-acca-2bc273d4f9c7"
 migrations_dir = "migrations"
