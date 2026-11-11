@@ -36,7 +36,18 @@ CREATE TABLE interest (
   anon_id     TEXT UNIQUE,                          -- NULL unless linked = 1
   linked      INTEGER NOT NULL DEFAULT 0 CHECK (linked IN (0,1)),
   email       TEXT UNIQUE,
-  phone       TEXT UNIQUE CHECK (phone IS NULL OR phone GLOB '+91[6-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'),
+  -- Not a single GLOB with nine repeated [0-9] groups: Cloudflare D1's SQLite rejects that
+  -- exact pattern at runtime with "LIKE or GLOB pattern too complex" (confirmed against the
+  -- real database; the local test double has no such limit, so this was never caught by the
+  -- unit tests). substr()/printf() checks the same shape (+91, then 6-9, then 9 more digits)
+  -- without any GLOB repetition.
+  phone       TEXT UNIQUE CHECK (
+                phone IS NULL OR (
+                  length(phone) = 13
+                  AND substr(phone, 1, 4) GLOB '+91[6-9]'
+                  AND printf('%09d', CAST(substr(phone, 5) AS INTEGER)) = substr(phone, 5)
+                )
+              ),
   size        TEXT CHECK (size IS NULL OR size IN ('xs','s','m','l','xl','xxl','prefer_not')),
   ml_sync     TEXT NOT NULL DEFAULT 'none' CHECK (ml_sync IN ('none','pending','sent','failed')),
   utm_source  TEXT NOT NULL DEFAULT '', utm_medium TEXT NOT NULL DEFAULT '', utm_campaign TEXT NOT NULL DEFAULT '',
