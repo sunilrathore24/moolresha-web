@@ -4,9 +4,10 @@
  * Order after the shared pipeline checks (Origin, JSON, 16 KB cap, rate limit, strict schema):
  *   1. `noticeVersion` must equal `NOTICE_VERSION`, else `409 notice_outdated` (before Turnstile).
  *   2. Turnstile (pipeline).
- *   3. D1 write: the interest row and one consent row per ticked consent in one batch
- *      (`saveInterestWithConsents`). Email is stored only with email consent, the phone only with
- *      WhatsApp consent (the schema refuses anything else), and `anon_id` only with link consent.
+ *   3. D1 write: the interest row first (`RETURNING id`, own round trip), then one consent row per
+ *      ticked consent bound to that literal id (`saveInterestWithConsents`). Email is stored only
+ *      with email consent, the phone only with WhatsApp consent (the schema refuses anything
+ *      else), and `anon_id` only with link consent.
  *   4. The `interest_submitted` event.
  *   5. MailerLite for a consented email. A MailerLite failure never fails the request: the status
  *      goes to `interest.ml_sync` and the body carries `emailConfirmation`.
@@ -16,7 +17,7 @@
  * given"). A later withdrawal is a new row with granted = 0 (migrations/0001_init.sql).
  *
  * A size-only submission has no email or phone to key the row on, so it is written here with its own
- * statements (still one batch, with the event).
+ * statements, following the same two-round-trip, literal-id pattern.
  *
  * Logging: only event names, route and error classes. Never emails, phones, tokens or anonymous ids.
  */
@@ -49,23 +50,23 @@ const MAX_BODY_BYTES = 16 * 1024;
 const CONSENT_ORDER: readonly ConsentType[] = ['email', 'whatsapp', 'link', 'adult'];
 
 // Size-only rows (no email, no phone). Constant SQL, values only through bind().
+// RETURNING id: see db.ts's saveInterestWithConsents for why the consent rows below are bound to
+// this literal value rather than a subquery — a subquery here would have the same production-only
+// failure as the one that was silently dropping every interest submission.
 const SQL_SIZE_ONLY_UNLINKED = `
 INSERT INTO interest (anon_id, linked, email, phone, size, ml_sync, utm_source, utm_medium, utm_campaign, created_at, updated_at)
-VALUES (NULL, 0, NULL, NULL, ?1, 'none', ?2, ?3, ?4, ?5, ?5)`;
+VALUES (NULL, 0, NULL, NULL, ?1, 'none', ?2, ?3, ?4, ?5, ?5)
+RETURNING id`;
 
 const SQL_SIZE_ONLY_LINKED = `
 INSERT INTO interest (anon_id, linked, email, phone, size, ml_sync, utm_source, utm_medium, utm_campaign, created_at, updated_at)
 VALUES (?1, 1, NULL, NULL, ?2, 'none', ?3, ?4, ?5, ?6, ?6)
-ON CONFLICT (anon_id) DO UPDATE SET size = excluded.size, updated_at = excluded.updated_at`;
+ON CONFLICT (anon_id) DO UPDATE SET size = excluded.size, updated_at = excluded.updated_at
+RETURNING id`;
 
-// Runs in the same batch (one transaction) right after the insert above.
-const SQL_CONSENT_FOR_LINKED = `
+const SQL_SIZE_ONLY_CONSENT = `
 INSERT INTO consents (interest_id, consent_type, granted, notice_version, recorded_at)
-VALUES ((SELECT id FROM interest WHERE anon_id = ?1), ?2, 1, ?3, ?4)`;
-
-const SQL_CONSENT_FOR_LATEST = `
-INSERT INTO consents (interest_id, consent_type, granted, notice_version, recorded_at)
-VALUES ((SELECT MAX(id) FROM interest), ?1, 1, ?2, ?3)`;
+VALUES (?1, ?2, 1, ?3, ?4)`;
 
 /** 409 when the visitor's page carries an older Privacy_Notice version. */
 export function checkNoticeVersion(data: InterestData): Response | null {
@@ -76,24 +77,27 @@ function ticked(data: InterestData): ConsentInput[] {
   return CONSENT_ORDER.filter((t) => data.consents[t] === true).map((type) => ({ type, granted: true }));
 }
 
-function sizeOnlyStatements(
+/**
+ * Inserts the size-only interest row (own round trip, `RETURNING id`), then returns the consent
+ * statements bound to that literal id, ready to batch with the event-count statement. Not fully
+ * atomic with the caller's batch — see db.ts's saveInterestWithConsents for why that is an
+ * acceptable, documented trade-off.
+ */
+async function insertSizeOnly(
   db: D1Like,
   data: InterestData,
   consents: readonly ConsentInput[],
   ctx: StoreContext,
-): D1PreparedStatementLike[] {
+): Promise<D1PreparedStatementLike[]> {
   const utm = utmOrEmpty(data.utm);
   const size = data.size ?? null;
   const linked = data.consents.link === true;
-  const insert = linked
+  const row = await (linked
     ? db.prepare(SQL_SIZE_ONLY_LINKED).bind(data.anonId, size, utm.source, utm.medium, utm.campaign, ctx.nowIso)
-    : db.prepare(SQL_SIZE_ONLY_UNLINKED).bind(size, utm.source, utm.medium, utm.campaign, ctx.nowIso);
-  const consentStatements = consents.map((c) =>
-    linked
-      ? db.prepare(SQL_CONSENT_FOR_LINKED).bind(data.anonId, c.type, NOTICE_VERSION, ctx.nowIso)
-      : db.prepare(SQL_CONSENT_FOR_LATEST).bind(c.type, NOTICE_VERSION, ctx.nowIso),
-  );
-  return [insert, ...consentStatements];
+    : db.prepare(SQL_SIZE_ONLY_UNLINKED).bind(size, utm.source, utm.medium, utm.campaign, ctx.nowIso)
+  ).first<{ id: number }>();
+  if (row === null) throw new Error('size-only interest upsert returned no id');
+  return consents.map((c) => db.prepare(SQL_SIZE_ONLY_CONSENT).bind(row.id, c.type, NOTICE_VERSION, ctx.nowIso));
 }
 
 export async function storeInterest(data: InterestData, ctx: StoreContext): Promise<Record<string, unknown>> {
@@ -107,8 +111,9 @@ export async function storeInterest(data: InterestData, ctx: StoreContext): Prom
     eventIncrementStatement(db, { day: ctx.day, event: EVENT, utm });
 
   if (email === null && phone === null) {
-    // Size only: interest row, consent rows and the event in one batch.
-    await db.batch([...sizeOnlyStatements(db, data, consents, ctx), eventStatement()]);
+    // Size only: interest row first (own round trip), then its consent rows and the event together.
+    const consentStatements = await insertSizeOnly(db, data, consents, ctx);
+    await db.batch([...consentStatements, eventStatement()]);
     return {};
   }
 

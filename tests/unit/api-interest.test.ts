@@ -425,12 +425,14 @@ describe('POST /api/interest: rejections store nothing', () => {
   });
 
   it('503 storage_unavailable when the D1 write fails, with no MailerLite call and nothing stored', async () => {
-    const failing: D1Like = {
-      prepare: (sql) => db.prepare(sql),
-      batch: async () => {
-        throw new Error('D1_ERROR: daily limit exceeded');
-      },
+    // The interest upsert runs on its own (RETURNING id), before any db.batch() call, so a mock
+    // that only breaks batch() would let that first write through. Break every operation, the way
+    // a real D1 outage (or the daily limit) would.
+    const fail = async () => {
+      throw new Error('D1_ERROR: daily limit exceeded');
     };
+    const failingStatement = { bind: () => failingStatement, run: fail, all: fail, first: fail };
+    const failing: D1Like = { prepare: () => failingStatement, batch: fail };
     const fetchImpl = mockFetch();
     const { call } = interest({ db: failing, fetchImpl });
     const res = await call(post(interestBody()));

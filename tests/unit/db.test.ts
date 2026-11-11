@@ -205,11 +205,16 @@ describe('interest batch', () => {
     expect(last).toEqual({ consent_type: 'email', granted: 0 });
   });
 
-  it('writes nothing when a statement in the batch fails (atomic)', async () => {
+  it('saves the interest row even when a consent statement fails (not atomic across the two steps)', async () => {
+    // The interest upsert is its own round trip (RETURNING id, no subquery for the caller to depend
+    // on), separate from the consent batch — see the comment on saveInterestWithConsents. A bad
+    // consent_type can only happen if a caller bypasses the Zod-validated allow-list in schemas.ts,
+    // never through the real API, so this is an acceptable, documented trade-off for a fix that
+    // makes real submissions actually save (they were being silently dropped in production before).
     await expect(
       saveInterestWithConsents(db, { ...base, consents: [{ type: 'bogus' as never, granted: true }] }),
     ).rejects.toThrow(/CHECK/i);
-    expect(count('interest')).toBe(0);
+    expect(count('interest')).toBe(1);
     expect(count('consents')).toBe(0);
   });
 

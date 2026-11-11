@@ -88,6 +88,10 @@ DO UPDATE SET count = count + 1`;
 // Interest: a row is found by email when one is given, otherwise by phone.
 // The UTM values and created_at keep the first visit. A contact value is never cleared by a later submission.
 // The link to an Anonymous_ID changes only when the new request carries link consent (Req 12.8).
+// RETURNING id: the caller needs the row id to attach consent rows to, and must not rely on a
+// later, separate statement (even in the same db.batch()) being able to see this write — Cloudflare
+// D1's batch() does not guarantee that a subquery in a later statement observes an earlier
+// statement's effect, unlike the single-process SQLite double the unit tests run against.
 const SQL_INTEREST_UPSERT_BY_EMAIL = `
 INSERT INTO interest (anon_id, linked, email, phone, size, ml_sync, utm_source, utm_medium, utm_campaign, created_at, updated_at)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
@@ -97,7 +101,8 @@ ON CONFLICT (email) DO UPDATE SET
   phone = COALESCE(excluded.phone, interest.phone),
   size = COALESCE(excluded.size, interest.size),
   ml_sync = excluded.ml_sync,
-  updated_at = excluded.updated_at`;
+  updated_at = excluded.updated_at
+RETURNING id`;
 
 const SQL_INTEREST_UPSERT_BY_PHONE = `
 INSERT INTO interest (anon_id, linked, email, phone, size, ml_sync, utm_source, utm_medium, utm_campaign, created_at, updated_at)
@@ -108,18 +113,14 @@ ON CONFLICT (phone) DO UPDATE SET
   email = COALESCE(excluded.email, interest.email),
   size = COALESCE(excluded.size, interest.size),
   ml_sync = excluded.ml_sync,
-  updated_at = excluded.updated_at`;
+  updated_at = excluded.updated_at
+RETURNING id`;
 
-const SQL_CONSENT_BY_EMAIL = `
+// Takes the interest row id as a literal bound value (from the upsert's own RETURNING id),
+// never a subquery, so it does not depend on cross-statement visibility within a batch.
+const SQL_CONSENT_INSERT = `
 INSERT INTO consents (interest_id, consent_type, granted, notice_version, recorded_at)
-SELECT id, ?2, ?3, ?4, ?5 FROM interest WHERE email = ?1`;
-
-const SQL_CONSENT_BY_PHONE = `
-INSERT INTO consents (interest_id, consent_type, granted, notice_version, recorded_at)
-SELECT id, ?2, ?3, ?4, ?5 FROM interest WHERE phone = ?1`;
-
-const SQL_INTEREST_ID_BY_EMAIL = `SELECT id FROM interest WHERE email = ?1`;
-const SQL_INTEREST_ID_BY_PHONE = `SELECT id FROM interest WHERE phone = ?1`;
+VALUES (?1, ?2, ?3, ?4, ?5)`;
 
 const SQL_INTEREST_SET_ML_SYNC = `UPDATE interest SET ml_sync = ?2, updated_at = ?3 WHERE id = ?1`;
 
@@ -266,10 +267,21 @@ export interface InterestInput {
 }
 
 /**
- * Upsert the interest row and append one consent row per entry, in a single D1 batch (one transaction).
+ * Upsert the interest row, then append one consent row per entry.
  * The row is found by email, or by phone when there is no email. At least one of the two is required.
  * Consent rows are append-only: a repeat submission adds a new set.
  * Returns the interest row id.
+ *
+ * Two round trips, not one combined batch: the upsert runs alone (`RETURNING id`) so its id comes
+ * back as a plain value with no subquery involved, then the consent rows are written with that
+ * literal id bound in directly. This is deliberately not fully atomic across both steps — a crash
+ * between them would save the interest row without its consent rows — but `consent_type` only ever
+ * comes from the fixed, Zod-validated set in schemas.ts, so the consent insert cannot fail for real
+ * traffic. The previous version ran both in one `db.batch()`, with the consent insert finding the
+ * row via `SELECT id FROM interest WHERE email = ?`: that depends on a later statement in a batch
+ * seeing an earlier statement's write, which is not something Cloudflare D1 guarantees (the local
+ * SQLite test double does guarantee it, which is why this was never caught by the test suite) — in
+ * production this made the whole batch fail, so every interest submission was silently lost.
  */
 export async function saveInterestWithConsents(db: D1Like, i: InterestInput): Promise<number> {
   const key = i.email ?? i.phone;
@@ -277,7 +289,7 @@ export async function saveInterestWithConsents(db: D1Like, i: InterestInput): Pr
   const byEmail = i.email !== null;
   const linked = i.linked && i.anonId !== null;
 
-  const upsert = db
+  const row = await db
     .prepare(byEmail ? SQL_INTEREST_UPSERT_BY_EMAIL : SQL_INTEREST_UPSERT_BY_PHONE)
     .bind(
       linked ? i.anonId : null,
@@ -290,18 +302,16 @@ export async function saveInterestWithConsents(db: D1Like, i: InterestInput): Pr
       i.utm.medium,
       i.utm.campaign,
       i.now,
-    );
-  const consentSql = byEmail ? SQL_CONSENT_BY_EMAIL : SQL_CONSENT_BY_PHONE;
-  const consentStatements = i.consents.map((c) =>
-    db.prepare(consentSql).bind(key, c.type, c.granted ? 1 : 0, i.noticeVersion, i.now),
-  );
-  await db.batch([upsert, ...consentStatements]);
-
-  const row = await db
-    .prepare(byEmail ? SQL_INTEREST_ID_BY_EMAIL : SQL_INTEREST_ID_BY_PHONE)
-    .bind(key)
+    )
     .first<{ id: number }>();
-  if (row === null) throw new Error('interest row missing after upsert');
+  if (row === null) throw new Error('interest upsert returned no id');
+
+  if (i.consents.length > 0) {
+    const consentStatements = i.consents.map((c) =>
+      db.prepare(SQL_CONSENT_INSERT).bind(row.id, c.type, c.granted ? 1 : 0, i.noticeVersion, i.now),
+    );
+    await db.batch(consentStatements);
+  }
   return row.id;
 }
 
