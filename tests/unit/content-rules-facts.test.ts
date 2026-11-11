@@ -19,11 +19,22 @@ function fact(over: Record<string, unknown> = {}): FactEntry {
   } as FactEntry;
 }
 
-function ctx(over: Partial<CheckContext> = {}, numericAllow: string[] = []): CheckContext {
+function ctx(
+  over: Partial<CheckContext> = {},
+  numericAllow: string[] = [],
+  launchExceptions: string[] = [],
+): CheckContext {
   return {
     facts: [],
     pages: [],
-    wordRules: { restricted: ['x'], superlatives: ['x'], numericAllow, restrictedPhrases: ['x'], healthTerms: ['x'] },
+    wordRules: {
+      restricted: ['x'],
+      superlatives: ['x'],
+      numericAllow,
+      restrictedPhrases: ['x'],
+      healthTerms: ['x'],
+      launchExceptions,
+    },
     ...over,
   } as unknown as CheckContext;
 }
@@ -72,6 +83,18 @@ describe('CC-02 unverified facts', () => {
     expect(v).toHaveLength(1);
     expect(v[0]).toMatchObject({ rule: 'CC-02', target: 'shaky' });
     expect(v[0].detail).toContain('/a/index.html');
+  });
+
+  it('passes a referenced unverified fact whose id is in wordRules.launchExceptions', () => {
+    const pages = [page('<span class="fact" data-fact-id="shaky">x</span>', '/a/index.html')];
+    expect(cc02(ctx({ facts: [unverified], pages }, [], ['shaky']))).toEqual([]);
+  });
+
+  it('does not let one launchExceptions id exempt a different unverified fact', () => {
+    const pages = [page('<span class="fact" data-fact-id="shaky">x</span>', '/a/index.html')];
+    const v = cc02(ctx({ facts: [unverified], pages }, [], ['some-other-id']));
+    expect(v).toHaveLength(1);
+    expect(v[0]).toMatchObject({ rule: 'CC-02', target: 'shaky' });
   });
 
   it('fails strength UNVERIFIED too, and ignores verified facts', () => {

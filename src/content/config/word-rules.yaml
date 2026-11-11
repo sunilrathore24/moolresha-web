@@ -36,3 +36,22 @@ healthTerms:
   - "chemical-free"
   - "non-toxic"
   - "hypo-allergenic" # proposed extra spelling, ⚠️ confirm
+
+# CC-02: fact ids allowed to stay unverified on a published page. Founder-approved launch
+# exception, added 2026-11-11, to be removed once each entry below is sourced (or, for the
+# microfibre study, independently replicated):
+#   - journey-field, journey-ginning, journey-weaving, journey-processing,
+#     why-softness-easy-care: generic "MoolResha estimate" process descriptions with no
+#     external source attached yet.
+#   - beyond-polyester-microfibre-shedding: kept unverified on purpose per its own note (a
+#     single commissioned study, not yet independently replicated).
+# Every other fact referenced by a published page must still pass CC-02 normally — this list
+# does not weaken the rule for anything not named here. Empty at launch; add an entry only
+# with a reason.
+launchExceptions:
+  - "journey-field"
+  - "journey-ginning"
+  - "journey-weaving"
+  - "journey-processing"
+  - "why-softness-easy-care"
+  - "beyond-polyester-microfibre-shedding"

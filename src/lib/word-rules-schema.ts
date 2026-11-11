@@ -38,6 +38,11 @@ export const WordRules = z.strictObject({
   restrictedPhrases: Words,
   /** Health_Term_List (CC-20). */
   healthTerms: Words,
+  /**
+   * Fact ids CC-02 does not flag even when unverified (a dated, named, explicit founder
+   * exception for launch — see word-rules.yaml). May be empty.
+   */
+  launchExceptions: z.array(z.string().trim().min(1)),
 });
 export type WordRulesData = z.output<typeof WordRules>;
 

@@ -58,6 +58,7 @@ function ctxFor(
       numericAllow: [],
       restrictedPhrases: ['made in Bangladesh'],
       healthTerms: ['skin-friendly'],
+      launchExceptions: [],
     },
     pages: htmls.map((h, i) => extractPage(i === 0 ? '/index.html' : `/p${i}.html`, h)),
     distFiles: [],

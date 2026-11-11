@@ -46,8 +46,10 @@ function isUnverified(fact: { strength?: string; verifyFlag?: boolean; text?: st
 
 export const cc02: Rule = (ctx: CheckContext): Violation[] => {
   const out: Violation[] = [];
+  const exceptions = new Set(ctx.wordRules.launchExceptions);
   for (const fact of ctx.facts) {
     if (!isUnverified(fact)) continue;
+    if (exceptions.has(fact.id)) continue;
     const pages = ctx.pages.filter((p) => p.factIds.includes(fact.id)).map((p) => p.path);
     if (pages.length === 0) continue;
     const why = fact.strength === 'UNVERIFIED' ? 'strength UNVERIFIED' : 'flagged "⚠️ verify"';
