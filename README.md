@@ -59,3 +59,9 @@ Concept images go in `src/assets/concepts/<concept-id>/`. In a normal build a mi
 ## Build order
 
 See `SKILL.md` §4 in the companion repo. Foundation → findable/measurable → interactions → fill the library.
+
+## Deployment
+
+The site is live at [moolresha.com](https://moolresha.com) on Cloudflare Pages + D1. For account
+IDs, what's done vs. still open, and two real production bugs worth knowing about before touching
+the dynamic layer, see **`docs/deployment-status.md`** — keep it updated as deployment state changes.
