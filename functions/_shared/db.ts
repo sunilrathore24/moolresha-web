@@ -133,6 +133,16 @@ const SQL_RESULTS_PRIORITIES = `SELECT concept_id, priorities, COUNT(*) AS n FRO
 const SQL_RESULTS_CHANGES = `SELECT concept_id, changes, COUNT(*) AS n FROM concept_feedback WHERE changes <> '' GROUP BY concept_id, changes`;
 const SQL_RESULTS_RESPONSES = `SELECT concept_id, COUNT(*) AS n FROM concept_feedback GROUP BY concept_id`;
 
+// Admin dashboard only (requireAdmin-gated callers): counts and a recent-signups page.
+// No percentages, no public exposure — see functions/api/admin/stats.json.ts.
+const SQL_INTEREST_COUNT = `SELECT COUNT(*) AS n FROM interest`;
+const SQL_INTEREST_RECENT = `
+SELECT email, phone, size, linked, ml_sync, created_at
+FROM interest
+ORDER BY created_at DESC
+LIMIT ?1`;
+const SQL_FRUSTRATION_COUNT = `SELECT COUNT(*) AS n FROM frustration`;
+
 // Column list matches the feedback CSV (Req 17.3): no email or phone.
 const SQL_EXPORT_FEEDBACK = `
 SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
@@ -417,6 +427,38 @@ export function aggregatesFromCounts(c: ResultCounts): Map<ConceptId, ConceptAgg
 
 export async function queryAggregates(db: D1Like): Promise<Map<ConceptId, ConceptAggregate>> {
   return aggregatesFromCounts(await queryResultCounts(db));
+}
+
+// ---------------------------------------------------------------------------
+// Admin dashboard (interest and frustration totals, Req 17.1-style admin-only access)
+// ---------------------------------------------------------------------------
+
+export interface InterestSummaryRow {
+  email: string | null;
+  phone: string | null;
+  size: Size | null;
+  linked: number;
+  ml_sync: string;
+  created_at: string;
+}
+
+/** Total interest (email/WhatsApp signup) rows. Admin-only: see admin-auth.ts. */
+export async function countInterest(db: D1Like): Promise<number> {
+  const row = await db.prepare(SQL_INTEREST_COUNT).first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/** The most recent `limit` interest rows, newest first. Admin-only: carries email/phone (Req 17.3
+ * deliberately does not apply here — that requirement is about the public-facing feedback export). */
+export async function recentInterestSignups(db: D1Like, limit = 200): Promise<InterestSummaryRow[]> {
+  const { results } = await db.prepare(SQL_INTEREST_RECENT).bind(Math.max(1, Math.floor(limit))).all<InterestSummaryRow>();
+  return results;
+}
+
+/** Total frustration-form submissions. Admin-only. */
+export async function countFrustration(db: D1Like): Promise<number> {
+  const row = await db.prepare(SQL_FRUSTRATION_COUNT).first<{ n: number }>();
+  return row?.n ?? 0;
 }
 
 // ---------------------------------------------------------------------------

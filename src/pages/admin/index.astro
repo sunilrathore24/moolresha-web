@@ -1,0 +1,303 @@
+---
+/**
+ * /admin — internal dashboard for the three forms this site collects (concept feedback,
+ * the frustration/opinion form, email/WhatsApp interest signups). Not linked from any nav,
+ * not in the sitemap, `noindex`'d — reachable only by typing the URL.
+ *
+ * No server-side login: the gate is the same one `/api/admin/*` already enforces
+ * (`ADMIN_BEARER_SECRET`, functions/_shared/admin-auth.ts). This page just asks for that
+ * secret once, keeps it in `sessionStorage` (cleared when the tab closes) and sends it as
+ * `Authorization: Bearer <secret>` on every call to `/api/admin/stats.json` — see
+ * `src/islands/admin-dashboard.ts`. If the secret isn't set in the environment yet, every
+ * attempt gets a clear "not unlocked yet" error instead of silently failing.
+ *
+ * All of the actual numbers (totals, per-Concept charts, comments, signups) are rendered
+ * client-side from that one JSON endpoint, which reuses the exact same `queryAggregates` /
+ * `exportFeedbackRowsPaged` the public results endpoint and the CSV exports already use —
+ * nothing here is a second, divergent source of truth.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import {
+  CHANGE_CHIP_LABELS,
+  PALETTE_LABELS,
+  VERDICT_LABELS,
+} from '../../lib/feedback-form';
+import { CONCEPT_SHORT_NAMES } from '../../lib/concept-categories';
+import { PRIORITY_LABELS } from '../../content/config/allow-lists';
+import { bandLabel } from '../../lib/price-bands';
+
+const concepts = (await getCollection('concepts')).map((e) => e.data).sort((a, b) => a.order - b.order);
+
+const conceptOrder = concepts.map((c) => c.id);
+const conceptNames: Record<string, string> = {};
+const priceBandLabels: Record<string, Record<string, string>> = {};
+for (const c of concepts) {
+  conceptNames[c.id] = CONCEPT_SHORT_NAMES[c.id] ?? c.name;
+  const bands: Record<string, string> = {};
+  for (const b of c.priceBands) bands[b.id] = bandLabel(b);
+  priceBandLabels[c.id] = bands;
+}
+
+const labels = {
+  conceptOrder,
+  conceptNames,
+  verdictLabels: VERDICT_LABELS,
+  changeLabels: CHANGE_CHIP_LABELS,
+  colourLabels: PALETTE_LABELS,
+  priorityLabels: PRIORITY_LABELS,
+  priceBandLabels,
+};
+---
+
+<BaseLayout title="Admin dashboard — MoolResha" noindex>
+  <section class="admin" aria-labelledby="admin-h">
+    <h1 id="admin-h">Admin dashboard</h1>
+    <p class="admin-intro">
+      Live totals from the concept feedback, opinion and email-signup forms. Visible only to
+      whoever has the admin passphrase — nothing here is public.
+    </p>
+
+    <form class="admin-unlock" data-admin-unlock>
+      <label for="admin-secret">Admin passphrase</label>
+      <div class="admin-unlock-row">
+        <input id="admin-secret" name="secret" type="password" autocomplete="current-password" required />
+        <button type="submit" data-submit>Unlock</button>
+      </div>
+    </form>
+
+    <p class="admin-status" role="status" aria-live="polite" data-admin-status></p>
+
+    <div class="admin-content" data-admin-content hidden>
+      <div class="admin-bar">
+        <button type="button" class="admin-btn" data-admin-refresh>Refresh</button>
+        <button type="button" class="admin-btn admin-btn-ghost" data-admin-lock>Lock</button>
+      </div>
+
+      <div class="admin-tiles" data-admin-totals></div>
+
+      <div class="admin-concepts" data-admin-concepts></div>
+
+      <section class="admin-table-section" aria-labelledby="admin-comments-h">
+        <h2 id="admin-comments-h">Comments ("Any other thoughts?")</h2>
+        <div data-admin-comments></div>
+      </section>
+
+      <section class="admin-table-section" aria-labelledby="admin-signups-h">
+        <h2 id="admin-signups-h">Email / WhatsApp signups</h2>
+        <div data-admin-signups></div>
+      </section>
+    </div>
+  </section>
+
+  <script type="application/json" id="admin-labels" set:html={JSON.stringify(labels)} />
+</BaseLayout>
+
+<script>
+  import { initAdminDashboard } from '../../islands/admin-dashboard';
+  initAdminDashboard();
+</script>
+
+<style>
+  .admin {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-4) var(--space-12);
+  }
+
+  h1 {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    color: var(--color-text);
+  }
+
+  .admin-intro {
+    margin: 0 0 var(--space-6);
+    max-width: 38rem;
+    color: var(--color-text-muted);
+  }
+
+  .admin-unlock {
+    display: inline-block;
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  /* `display: inline-block` above otherwise outranks the browser's own `[hidden] { display:
+     none }` default (author styles beat the UA stylesheet) — the island sets `form.hidden =
+     true` after a successful unlock, so without this the form would stay visible on top of
+     the now-loaded dashboard. */
+  .admin-unlock[hidden] {
+    display: none;
+  }
+
+  .admin-unlock label {
+    display: block;
+    margin: 0 0 var(--space-2);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .admin-unlock-row {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .admin-unlock-row input {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-body);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 8px);
+    min-width: 14rem;
+  }
+
+  .admin-btn {
+    padding: var(--space-2) var(--space-4);
+    font-family: var(--font-sans);
+    font-size: var(--fs-button, var(--fs-body));
+    font-weight: 600;
+    color: #fff;
+    background: var(--color-accent);
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+  }
+
+  .admin-btn-ghost {
+    color: var(--color-text);
+    background: transparent;
+    border: 1px solid var(--color-border);
+  }
+
+  .admin-status {
+    margin: var(--space-3) 0 0;
+    min-height: 1.4em;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .admin-content {
+    margin-top: var(--space-6);
+  }
+
+  .admin-bar {
+    display: flex;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+  }
+
+  .admin-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--space-3);
+    margin: 0 0 var(--space-7);
+  }
+
+  .admin-concepts {
+    display: grid;
+    gap: var(--space-5);
+    margin: 0 0 var(--space-8);
+  }
+
+  .admin-table-section {
+    margin: 0 0 var(--space-8);
+  }
+
+  .admin-table-section h2 {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    color: var(--color-text);
+  }
+
+  /* Shared by the stat tiles and the per-Concept chart cards — the tone colours are the same
+     light-tint-of-token technique as NavCards.astro / ProductSpecificationGrid.astro. */
+  :global(.admin-tile) {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg, 10px);
+    border: 1px solid transparent;
+    background: rgb(181 113 79 / 0.1);
+    border-color: rgb(181 113 79 / 0.25);
+  }
+
+  :global(.admin-tile-value) {
+    display: block;
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  :global(.admin-tile-label) {
+    display: block;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  :global(.admin-concept-card) {
+    padding: var(--space-5);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  :global(.admin-concept-card h3) {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4, var(--fs-card-title, 1rem));
+    color: var(--color-text);
+  }
+
+  :global(.admin-chart-grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-5);
+  }
+
+  :global(.admin-chart-group h4) {
+    margin: 0 0 var(--space-2);
+    font-size: var(--fs-label);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  :global(.admin-empty) {
+    margin: 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  :global(.admin-table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-small);
+  }
+
+  :global(.admin-table th),
+  :global(.admin-table td) {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+
+  :global(.admin-table th) {
+    font-weight: 700;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  :global(.admin-table-wrap) {
+    overflow-x: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+</style>
