@@ -1,0 +1,112 @@
+---
+/**
+ * Generic accessible tabs (WAI-ARIA Authoring Practices tabs pattern), generalised from
+ * `src/islands/design-lab.ts`'s carousel select()/dots mechanism — same shape, real
+ * role="tab"/"tablist"/"tabpanel" semantics, roving tabindex, Left/Right/Home/End.
+ *
+ * Used by: the concept detail page's Fabric/Comfort/Quality/Testing tabs, and the
+ * Your_Voice page's Share Opinion/Results toggle.
+ *
+ * Without JavaScript every panel is visible, stacked, in document order — the tab buttons
+ * render but do nothing until the island runs (same no-JS stance as every other interactive
+ * component in this codebase: works first, enhances second).
+ *
+ * Hooks:
+ *   [data-tabs]                     root; gets class `tabs-enhanced` once the island runs
+ *   [data-tabs-list]                the tablist (role="tablist")
+ *   button[data-tab-id="<id>"]      one tab button per panel, id matches a panel's data-tab-panel
+ *   [data-tab-panel="<id>"]         one panel per tab; the island sets `hidden` on all but one
+ *
+ * Consumer renders the panels itself (as the default slot) with
+ * `role="tabpanel" data-tab-panel="<id>" id={`panel-<id>`} aria-labelledby={`tab-<id>`}` —
+ * this component only renders the tablist and wraps everything with the island import.
+ */
+export interface TabDef {
+  id: string;
+  label: string;
+}
+
+interface Props {
+  tabs: TabDef[];
+  /** Accessible name for the tablist, e.g. "RootWeave 01 details". */
+  ariaLabel: string;
+  initialId?: string;
+}
+
+const { tabs, ariaLabel, initialId } = Astro.props;
+const selected = initialId ?? tabs[0]?.id;
+---
+
+<div class="tabs" data-tabs>
+  <div role="tablist" aria-label={ariaLabel} class="tabs-list" data-tabs-list>
+    {
+      tabs.map((t) => (
+        <button
+          type="button"
+          role="tab"
+          id={`tab-${t.id}`}
+          aria-controls={`panel-${t.id}`}
+          aria-selected={t.id === selected ? 'true' : 'false'}
+          tabindex={t.id === selected ? 0 : -1}
+          data-tab-id={t.id}
+        >
+          {t.label}
+        </button>
+      ))
+    }
+  </div>
+  <slot />
+</div>
+
+<script>
+  import { initAllTabs } from '../../islands/tabs-island';
+  initAllTabs();
+</script>
+
+<style>
+  .tabs-list {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-4);
+  }
+
+  .tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs-list button {
+    flex: none;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-sans);
+    font-size: var(--fs-nav);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .tabs-list button[aria-selected='true'] {
+    color: var(--color-accent-text);
+    border-bottom-color: var(--color-accent-text);
+  }
+
+  .tabs-list button:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Without JS every panel shows, so give each a visible heading-ish divider instead of hiding
+     the tablist outright (the buttons just won't respond to clicks yet). */
+  :global(html:not(.js)) .tabs-list {
+    display: none;
+  }
+</style>

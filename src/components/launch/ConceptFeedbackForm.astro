@@ -1,55 +1,94 @@
 ---
 /**
  * Concept feedback form (Requirements 9.1 to 9.6, 9.9, 9.11, 9.12, 9.18,
- * 21.3, 21.4). Server-rendered only. The island (task 16.6,
- * `src/islands/feedback-island.ts`) is NOT written here.
+ * 21.3, 21.4). Server-rendered only. The island (src/islands/feedback-island.ts)
+ * is NOT written here.
  *
- * It is a real <form method="post" action="/api/feedback">, so it degrades:
- * without JavaScript the submit button stays hidden and a <noscript> note
- * explains why. A no-JS post gets the server's HTML note.
+ * Redesigned 2026-11, then tightened again the same month after a live screenshot review
+ * showed it running noticeably larger/longer than the reference: compact typography (20px
+ * title, 14px questions, 13px option labels, 14px buttons — all explicit, not the page's
+ * larger inner-page tokens), small plain-text question numbers instead of filled circular
+ * badges, a light "selected" tint (olive border + pale sage fill) instead of a solid dark
+ * fill, a horizontally-scrolling colour row instead of wrapping to two lines, and
+ * PROGRESSIVE DISCLOSURE: only "Would you wear this design?" shows at first; every other
+ * question, the comment field and the submit bar sit inside `.cff-rest[data-progressive]`,
+ * which starts `hidden` and is revealed by the island once a verdict is picked (or
+ * immediately, restoring a session that already had one). All PRE-EXISTING hooks below are
+ * unchanged so feedback-island.ts's existing selectors keep working; `data-progressive` is
+ * the one new hook the island needs for the reveal.
+ *
+ * The page that renders this owns no competing "Share Your Opinion" heading of its own —
+ * this component's <h2> is the only one, so it isn't duplicated above it (a real bug caught
+ * via live screenshot: the old page-level heading on the concept detail page repeated this
+ * component's own title+intro word for word).
+ *
+ * It is a real <form method="post" action="/api/feedback">, so it degrades: without
+ * JavaScript, `.cff-rest` stays hidden (so does the submit button already inside it) and a
+ * <noscript> note explains why — consistent with the pre-existing fact that this form was
+ * already unsubmittable without JS.
  *
  * Content comes from `src/lib/feedback-form.ts` (labels) and the allow-lists.
  * Price_Band radios use `bandLabel` through that module. There is no free-text
- * or numeric price input. The only MoolResha-side figures in this component
- * are the band labels inside fieldset[data-price-question].
+ * or numeric price input beyond the general comment field. The only
+ * MoolResha-side figures in this component are the band labels inside
+ * fieldset[data-price-question].
  *
  * STABLE HOOKS FOR THE ISLAND (do not rename without updating task 16.6):
  *   form[data-feedback-form][data-concept-id="<id>"]
  *                       the form root; one per Concept card.
  *   name="verdict"      radios. Values: would_wear | maybe | not_for_me.
+ *   [data-progressive]  wrapper div, starts `hidden`, around every question after the first,
+ *                       the comment field, [data-turnstile] and the submit bar. The island
+ *                       reveals it once a verdict is picked (or on restore, if one already was).
  *   name="changes"      checkboxes (Change_Chips). One has value="other".
  *   [data-other-field]  wrapper div, starts `hidden`. Island shows it while the
  *                       "other" checkbox is ticked. The checkbox has
  *                       aria-controls pointing at the wrapper id.
  *   name="otherText"    text input inside [data-other-field], maxlength="200".
+ *   name="comment"      general "Any other thoughts?" text input, maxlength="250", always
+ *                       available once [data-progressive] is revealed (not conditional).
+ *   [data-comment-count] live "N" character count, updated by the island.
  *   name="colour"       radios (Palette_Colour). Values from PALETTE.
  *   name="priorities"   checkboxes (Priority_Chips), inside the
  *                       "What matters most to you?" fieldset.
  *   fieldset[data-price-question]
- *                       the price question. Contains the radios and the skip.
+ *                       the price question. Contains the radios; no "Skip this question"
+ *                       button any more (removed per explicit instruction — every band is
+ *                       still genuinely optional at submit time, just no longer has its own
+ *                       UI invitation to skip it). feedback-island.ts's skip-handling code
+ *                       (`button[data-price-skip]`) is untouched and still exercised by its
+ *                       own tests; it is simply never wired to a visible control here now.
  *   name="priceBandId"  radios. Values are the Concept's Price_Band ids.
- *   button[data-price-skip][aria-pressed]
- *                       type="button" "Skip this question", INSIDE the price
- *                       fieldset. Island toggles aria-pressed, clears radios.
- *   button[data-submit] type="submit", starts `hidden`; island reveals it.
+ *   button[data-submit] type="submit", starts `hidden`; island reveals it (independently of,
+ *                       and nested inside, [data-progressive]).
  *   [data-live-region]  role="status" aria-live="polite" message area.
  *   [data-turnstile]    empty container the island fills (no script is loaded here).
  *
  * The island also uses `[data-market-for="<id>"]` on the sibling
  * MarketPriceContext (task 8.7), not this component.
  */
+import { Image, Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import type { PaletteColour } from '../../content/config/allow-lists';
 import type { PriceBand } from '../../lib/price-bands';
 import {
+  COMMENT_LABEL,
+  COMMENT_MAX_LENGTH,
   FIELD_NAMES,
+  FORM_INTRO,
+  FORM_TITLE,
   NOSCRIPT_NOTE,
   OTHER_TEXT_MAX_LENGTH,
   PRICE_QUESTION,
-  PRICE_SKIP_LABEL,
   PRIORITY_QUESTION,
+  SUBMIT_LABEL,
   feedbackFormModel,
   fieldId,
 } from '../../lib/feedback-form';
+import FeedbackIcon from './FeedbackIcon.astro';
+import headerBg from '../../assets/banner/share-your-opinion.png';
+import { conceptColourViews, conceptViews } from '../../lib/concept-images';
+import { CONCEPT_DESIGN_VARIANTS } from '../../lib/concept-design-variants';
 
 interface Props {
   concept: {
@@ -63,10 +102,42 @@ interface Props {
 const { concept } = Astro.props;
 const model = feedbackFormModel(concept.priceBands, concept.colours);
 
+/**
+ * Design variants (today, only womens-coord-set — see concept-design-variants.ts) repurpose
+ * this question into "Which design do you prefer?", per explicit instruction ("these two
+ * options should be there in colour selection instead of"). Each still submits as a real,
+ * valid `name="colour"` value (`feedbackColour`) — no backend change, no new field — so this
+ * is a presentation-only swap of what the existing colour question shows and asks.
+ */
+const designVariants = CONCEPT_DESIGN_VARIANTS[concept.id];
+const designThumbs: Partial<Record<string, ImageMetadata>> = {};
+for (const v of designVariants ?? []) {
+  const views = v.id === 'design-1' ? conceptViews[concept.id] ?? [] : conceptColourViews[concept.id]?.[v.id] ?? [];
+  const front = views.find((view) => view.view === '01-front' && view.status === 'file');
+  if (front && front.status === 'file') designThumbs[v.id] = front.image;
+}
+
 const id = concept.id;
 const otherId = fieldId(id, 'other-field');
 const otherTextId = fieldId(id, FIELD_NAMES.otherText);
+const commentId = fieldId(id, FIELD_NAMES.comment);
+const commentCountId = fieldId(id, 'comment-count');
 const liveId = fieldId(id, 'live');
+
+/**
+ * Real micro-swatch photos (2026-11): a tiny circular crop of the Concept's own
+ * `07-fabric-closeup` shot, per colour — the SAME shot, just a different colourway, rather
+ * than a flat CSS colour fill. Only `mens-cotton-shirt` has colour-scoped photography today
+ * (`src/assets/concepts/mens-cotton-shirt/<colour>/`); every other Concept falls back to the
+ * flat-fill `cff-chip` below exactly as before, so nothing breaks for concepts without
+ * photography yet. The visible colour NAME is still the real signal either way
+ * (Requirement 9.4) — this only changes what sits behind it.
+ */
+const colourPhotos: Partial<Record<string, ImageMetadata>> = {};
+for (const [colour, views] of Object.entries(conceptColourViews[id] ?? {})) {
+  const closeup = views.find((v) => v.view === '07-fabric-closeup' && v.status === 'file');
+  if (closeup && closeup.status === 'file') colourPhotos[colour] = closeup.image;
+}
 ---
 
 <form
@@ -77,20 +148,39 @@ const liveId = fieldId(id, 'live');
   data-concept-id={id}
   aria-label={`Feedback on ${concept.name}`}
 >
-  <p class="cff-intro">Your view</p>
+  <header class="cff-head">
+    <Picture
+      src={headerBg}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
+      widths={[480, 768, 1080]}
+      sizes="(min-width: 56rem) 40rem, 100vw"
+      width={headerBg.width}
+      height={headerBg.height}
+      loading="eager"
+      decoding="async"
+      class="cff-head-bg"
+    />
+    <div class="cff-head-text">
+      <h2 class="cff-title">{FORM_TITLE}</h2>
+      <p class="cff-subtitle">{FORM_INTRO}</p>
+    </div>
+  </header>
 
   <fieldset class="cff-group">
-    <legend class="cff-legend">Would you wear it?</legend>
+    <legend class="cff-legend"><span class="cff-num">01</span>Would you wear this design?</legend>
     <div class="cff-options cff-options-verdict">
       {
         model.verdicts.map((o) => (
-          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.verdict, o.value)}>
+          <label class="cff-choice cff-choice-icon" for={fieldId(id, FIELD_NAMES.verdict, o.value)}>
             <input
               type="radio"
               id={fieldId(id, FIELD_NAMES.verdict, o.value)}
               name={FIELD_NAMES.verdict}
               value={o.value}
             />
+            {o.icon && <FeedbackIcon name={o.icon} />}
             <span class="cff-text">{o.label}</span>
           </label>
         ))
@@ -98,101 +188,212 @@ const liveId = fieldId(id, 'live');
     </div>
   </fieldset>
 
-  <fieldset class="cff-group">
-    <legend class="cff-legend">What would you change? <span class="cff-optional">Optional</span></legend>
-    <div class="cff-options">
+  <div class="cff-rest" data-progressive hidden>
+    <fieldset class="cff-group">
+      <legend class="cff-legend">
+        <span class="cff-num">02</span>What would you change? <span class="cff-optional">Select all that apply</span>
+      </legend>
+      <div class="cff-options cff-options-grid6">
+        {
+          model.changes.map((o) => (
+            <label class="cff-choice cff-choice-icon" for={fieldId(id, FIELD_NAMES.changes, o.value)}>
+              <input
+                type="checkbox"
+                id={fieldId(id, FIELD_NAMES.changes, o.value)}
+                name={FIELD_NAMES.changes}
+                value={o.value}
+                aria-controls={o.value === 'other' ? otherId : undefined}
+              />
+              {o.icon && <FeedbackIcon name={o.icon} />}
+              <span class="cff-text">{o.label}</span>
+            </label>
+          ))
+        }
+      </div>
+      <div class="cff-other" id={otherId} data-other-field hidden>
+        <label class="cff-text-label" for={otherTextId}>Tell us more (up to {OTHER_TEXT_MAX_LENGTH} characters)</label>
+        <input
+          class="cff-input"
+          type="text"
+          id={otherTextId}
+          name={FIELD_NAMES.otherText}
+          maxlength={OTHER_TEXT_MAX_LENGTH}
+          autocomplete="off"
+        />
+      </div>
+    </fieldset>
+
+    <fieldset class="cff-group">
       {
-        model.changes.map((o) => (
-          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.changes, o.value)}>
-            <input
-              type="checkbox"
-              id={fieldId(id, FIELD_NAMES.changes, o.value)}
-              name={FIELD_NAMES.changes}
-              value={o.value}
-              aria-controls={o.value === 'other' ? otherId : undefined}
-            />
-            <span class="cff-text">{o.label}</span>
-          </label>
-        ))
+        designVariants ? (
+          <>
+            <legend class="cff-legend">
+              <span class="cff-num">03</span>Which design do you prefer? <span class="cff-optional">Select one or both</span>
+            </legend>
+            <div
+              class="cff-options cff-options-swatch"
+              style={`grid-template-columns: repeat(${designVariants.length}, minmax(0, 1fr))`}
+            >
+              {
+                designVariants.map((v) => {
+                  const photo = designThumbs[v.id];
+                  return (
+                    <label class="cff-swatch" for={fieldId(id, FIELD_NAMES.colour, v.feedbackColour)}>
+                      {/* Checkboxes, not radios — multi-select, per explicit instruction. The
+                         island still only submits ONE real `colour` value (the first checked;
+                         no backend change), and folds any additional picks' labels (read from
+                         `data-design-label`) into the comment field instead of dropping them —
+                         see feedback-island.ts's `collect()`. */}
+                      <input
+                        type="checkbox"
+                        id={fieldId(id, FIELD_NAMES.colour, v.feedbackColour)}
+                        name={FIELD_NAMES.colour}
+                        value={v.feedbackColour}
+                        data-design-label={v.label}
+                      />
+                      {photo ? (
+                        <Image
+                          src={photo}
+                          alt=""
+                          width={72}
+                          height={72}
+                          class="cff-chip cff-chip-photo"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span class="cff-chip" aria-hidden="true" />
+                      )}
+                      <span class="cff-swatch-name">{v.label}</span>
+                    </label>
+                  );
+                })
+              }
+            </div>
+          </>
+        ) : (
+          <>
+            <legend class="cff-legend">
+              <span class="cff-num">03</span>Which colour do you prefer? <span class="cff-optional">Optional</span>
+            </legend>
+            <div
+              class="cff-options cff-options-swatch"
+              style={`grid-template-columns: repeat(${model.colours.length}, minmax(0, 1fr))`}
+            >
+              {
+                model.colours.map((o) => {
+                  const photo = colourPhotos[o.value];
+                  return (
+                    <label class="cff-swatch" for={fieldId(id, FIELD_NAMES.colour, o.value)}>
+                      <input
+                        type="radio"
+                        id={fieldId(id, FIELD_NAMES.colour, o.value)}
+                        name={FIELD_NAMES.colour}
+                        value={o.value}
+                      />
+                      {photo ? (
+                        <Image
+                          src={photo}
+                          alt=""
+                          width={72}
+                          height={72}
+                          class="cff-chip cff-chip-photo"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span class="cff-chip" style={`background-color: ${o.swatch}`} aria-hidden="true" />
+                      )}
+                      <span class="cff-swatch-name">{o.label}</span>
+                    </label>
+                  );
+                })
+              }
+            </div>
+          </>
+        )
       }
-    </div>
-    <div class="cff-other" id={otherId} data-other-field hidden>
-      <label class="cff-text-label" for={otherTextId}>Tell us more (up to {OTHER_TEXT_MAX_LENGTH} characters)</label>
+    </fieldset>
+
+    <fieldset class="cff-group">
+      <legend class="cff-legend">
+        <span class="cff-num">04</span>{PRIORITY_QUESTION} <span class="cff-optional">Select up to 3</span>
+      </legend>
+      <div class="cff-options cff-options-grid3">
+        {
+          model.priorities.map((o) => (
+            <label class="cff-choice cff-choice-icon cff-choice-row" for={fieldId(id, FIELD_NAMES.priorities, o.value)}>
+              <input
+                type="checkbox"
+                id={fieldId(id, FIELD_NAMES.priorities, o.value)}
+                name={FIELD_NAMES.priorities}
+                value={o.value}
+              />
+              {o.icon && <FeedbackIcon name={o.icon} />}
+              <span class="cff-text">{o.label}</span>
+            </label>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="cff-group" data-price-question>
+      <legend class="cff-legend"><span class="cff-num">05</span>{PRICE_QUESTION}</legend>
+      {/* The pale card background lives on this INNER div, not the fieldset itself: a
+         <legend> straddles its parent fieldset's own border/background box by default (the
+         classic "notched" rendering), which is what made the card look like it was covering
+         half the heading when the background sat directly on the fieldset. Wrapping just the
+         options in their own div sidesteps that entirely — the legend is back in normal flow,
+         fully above the card, with its own clear margin. */}
+      <div class="cff-price">
+        <div
+          class="cff-options cff-options-price"
+          style={`grid-template-columns: repeat(${model.prices.length}, minmax(0, 1fr))`}
+        >
+          {
+            model.prices.map((o) => (
+              <label class="cff-choice" for={fieldId(id, FIELD_NAMES.priceBandId, o.value)}>
+                <input
+                  type="radio"
+                  id={fieldId(id, FIELD_NAMES.priceBandId, o.value)}
+                  name={FIELD_NAMES.priceBandId}
+                  value={o.value}
+                />
+                <span class="cff-text">{o.label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="cff-comment">
+      <label class="cff-text-label cff-comment-label" for={commentId}>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20l1.2-4.3L16.3 4.6a1.7 1.7 0 0 1 2.4 0l.7.7a1.7 1.7 0 0 1 0 2.4L8.3 18.8 4 20Z" />
+        </svg>
+        {COMMENT_LABEL} <span class="cff-optional">Optional</span>
+      </label>
       <input
         class="cff-input"
         type="text"
-        id={otherTextId}
-        name={FIELD_NAMES.otherText}
-        maxlength={OTHER_TEXT_MAX_LENGTH}
+        id={commentId}
+        name={FIELD_NAMES.comment}
+        maxlength={COMMENT_MAX_LENGTH}
         autocomplete="off"
       />
+      <p class="cff-comment-count"><span id={commentCountId} data-comment-count>0</span> / {COMMENT_MAX_LENGTH}</p>
     </div>
-  </fieldset>
 
-  <fieldset class="cff-group">
-    <legend class="cff-legend">Which colour do you prefer? <span class="cff-optional">Optional</span></legend>
-    <div class="cff-options cff-options-swatch">
-      {
-        model.colours.map((o) => (
-          <label class="cff-swatch" for={fieldId(id, FIELD_NAMES.colour, o.value)}>
-            <input
-              type="radio"
-              id={fieldId(id, FIELD_NAMES.colour, o.value)}
-              name={FIELD_NAMES.colour}
-              value={o.value}
-            />
-            <span class="cff-chip" style={`background-color: ${o.swatch}`} aria-hidden="true" />
-            <span class="cff-swatch-name">{o.label}</span>
-          </label>
-        ))
-      }
+    <div data-turnstile></div>
+
+    <div class="cff-submit-bar">
+      <button type="submit" class="cff-btn cff-submit" data-submit hidden>
+        <span>{SUBMIT_LABEL}</span>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 10h13M11 5l5 5-5 5" />
+        </svg>
+      </button>
     </div>
-  </fieldset>
-
-  <fieldset class="cff-group">
-    <legend class="cff-legend">{PRIORITY_QUESTION} <span class="cff-optional">Optional</span></legend>
-    <div class="cff-options">
-      {
-        model.priorities.map((o) => (
-          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.priorities, o.value)}>
-            <input
-              type="checkbox"
-              id={fieldId(id, FIELD_NAMES.priorities, o.value)}
-              name={FIELD_NAMES.priorities}
-              value={o.value}
-            />
-            <span class="cff-text">{o.label}</span>
-          </label>
-        ))
-      }
-    </div>
-  </fieldset>
-
-  <fieldset class="cff-group cff-price" data-price-question>
-    <legend class="cff-legend">{PRICE_QUESTION}</legend>
-    <div class="cff-options">
-      {
-        model.prices.map((o) => (
-          <label class="cff-choice" for={fieldId(id, FIELD_NAMES.priceBandId, o.value)}>
-            <input
-              type="radio"
-              id={fieldId(id, FIELD_NAMES.priceBandId, o.value)}
-              name={FIELD_NAMES.priceBandId}
-              value={o.value}
-            />
-            <span class="cff-text">{o.label}</span>
-          </label>
-        ))
-      }
-    </div>
-    <button type="button" class="cff-btn cff-skip" aria-pressed="false" data-price-skip>
-      {PRICE_SKIP_LABEL}
-    </button>
-  </fieldset>
-
-  <div data-turnstile></div>
-
-  <button type="submit" class="cff-btn cff-submit" data-submit hidden>Send feedback</button>
+  </div>
 
   <noscript><p class="cff-note">{NOSCRIPT_NOTE}</p></noscript>
 
@@ -211,12 +412,63 @@ const liveId = fieldId(id, 'live');
     color: var(--color-text);
   }
 
-  .cff-intro {
+  /* ---- Header: the user's own saved photo (rolled fabric swatches + cotton bolls, calm
+     negative space on its left) as a full banner background, with the title + intro sitting
+     over that calm left area — not a scrim-and-photo hero like the page Hero, since this
+     photo already has a text-safe zone built into its own composition. ---- */
+  /* Full-bleed: the photo spans edge to edge, no rounded corners, no gap from the page's own
+     side padding. A `100vw` + negative-margin breakout was tried first but reserved scrollbar
+     width on some platforms, causing real horizontal overflow (caught live, scrollWidth >
+     clientWidth) — this instead cancels exactly `.cd container`'s own `padding-inline`
+     (the only horizontal padding between this and the viewport edge, confirmed fixed at every
+     breakpoint), which reaches the true edge without ever referencing the viewport itself. The
+     question sections right below stay in normal, padded flow. */
+  .cff-head {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    min-height: 7.5rem;
+    margin-inline: calc(-1 * var(--space-5));
+    border-radius: 0;
+    background: var(--color-surface); /* shows briefly before the image decodes */
+  }
+
+  .cff-head :global(.cff-head-bg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+  }
+
+  .cff-head-text {
+    position: relative;
+    z-index: 1;
+    max-width: 62%;
+    padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  }
+
+  .cff-title {
     margin: 0;
     font-family: var(--font-serif);
-    font-size: var(--fs-h3);
+    font-size: 1.25rem; /* 20px, explicit — smaller than the page's own --fs-h1 (22px) */
+    font-weight: 600;
     line-height: var(--lh-heading);
     color: var(--color-text);
+  }
+
+  .cff-subtitle {
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 40rem) {
+    .cff-head {
+      min-height: 9rem;
+    }
   }
 
   .cff-group {
@@ -226,17 +478,47 @@ const liveId = fieldId(id, 'live');
     min-width: 0;
   }
 
+  /* Subtle separators between questions, instead of large circular numbers. */
+  .cff-rest {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .cff-rest[hidden] {
+    display: none;
+  }
+
+  .cff-rest .cff-group,
+  .cff-comment {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-border);
+  }
+
   .cff-legend {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
     padding: 0;
     margin-bottom: var(--space-3);
-    font-size: var(--fs-small);
+    font-size: var(--fs-body); /* 14px question text */
     font-weight: 600;
     line-height: var(--lh-body);
   }
 
+  /* Small plain-text question number — no circle, no fill, so it reads as a quiet label. */
+  .cff-num {
+    flex: none;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-accent-text);
+  }
+
   .cff-optional {
-    margin-left: var(--space-1);
     font-weight: 400;
+    font-size: var(--fs-label);
     color: var(--color-text-muted);
   }
 
@@ -244,6 +526,43 @@ const liveId = fieldId(id, 'live');
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
+  }
+
+  /* Icon-topped chips: 3-per-row (priorities, verdict) or 6-per-row, all on one line
+     (changes) — the user's reference shows all six Change_Chips on a single row. */
+  .cff-options-grid3,
+  .cff-options-verdict {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+
+  .cff-options-grid6 {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  /* Price bands: however many the Concept has (usually six), always one row, same reference.
+     A label like "₹2,500–2,999" has no space to wrap at, so it needs its own smaller font and
+     an explicit break allowance, or it would just overflow its narrow column. */
+  .cff-options-price {
+    display: grid;
+    gap: 2px;
+  }
+
+  /* Same padding as section 4's row chips, and a small rectangular radius instead of the
+     default full pill — per explicit instruction, not the stadium shape used elsewhere. */
+  .cff-options-price .cff-choice {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius);
+    font-size: 0.625rem; /* 25% bigger than the previous 0.5rem, per explicit instruction */
+    line-height: 1.25;
+    /* `overflow-wrap` only breaks a word mid-character as a last resort, when it genuinely
+     * doesn't fit on its own line (e.g. "₹2,500–2,999", one token with no space) — unlike
+     * `word-break: break-word`, which also splits short words like "Under" that would fit
+     * fine on their own line. That combination is what produced "Und/er" in testing. */
+    overflow-wrap: break-word;
   }
 
   /* ---- Chip: the real input stays in the label, covers it and keeps focus; it is only made transparent ---- */
@@ -267,37 +586,121 @@ const liveId = fieldId(id, 'live');
   .cff-choice {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 44px;
-    min-width: 44px;
-    padding: var(--space-2) var(--space-4);
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
     background: var(--color-card, #fbf7f0);
     border: 1px solid var(--c-raw-umber);
     border-radius: 999px;
-    font-size: var(--fs-small);
+    font-size: var(--fs-small); /* 13px option label */
     line-height: var(--lh-tight);
-    transition: background-color var(--transition), color var(--transition);
+    text-align: center;
+    transition: background-color var(--transition), border-color var(--transition), color var(--transition);
   }
 
-  .cff-options-verdict .cff-choice {
-    padding-inline: var(--space-5);
+  /* Icon-topped variant: a column, icon above label — used for Change_Chips (6-per-row) and
+     Verdict (3-per-row). Shrunk twice now (68px → 56px → this, 44px/16px icons) after a live
+     screenshot still showed it noticeably larger than the reference. */
+  .cff-choice-icon {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-height: 44px;
+    padding: var(--space-1) 1px;
+    border-radius: var(--radius-lg, 10px);
+    text-align: center;
+  }
+
+  /* Row variant (priorities, per the user's reference): icon and label side by side on one
+     line instead of stacked — shorter tiles, and every icon sits at the same height next to
+     its label ("parallel"), rather than floating above differently-wrapped text. */
+  .cff-choice-row.cff-choice-icon {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    min-height: 40px;
+    padding: var(--space-1) var(--space-3);
+    text-align: left;
+  }
+
+  .cff-choice-icon .cff-text {
+    font-size: 0.6875rem;
+    line-height: 1.15;
+  }
+
+  .cff-choice-row .cff-text {
+    font-size: var(--fs-small);
+  }
+
+  /* The 6-per-row grid is tight (6 columns in ~345px on a 393px phone) — same padding as
+     section 4's row chips (explicit instruction), so the icon/label area shrinks a little
+     further to make room for it, rather than the tiles growing and breaking the one-row fit. */
+  .cff-options-grid6 .cff-choice-icon {
+    padding: var(--space-1) var(--space-3);
+  }
+
+  .cff-options-grid6 .cff-text {
+    font-size: 0.55rem;
+    line-height: 1.1;
+    overflow-wrap: break-word;
+  }
+
+  /* Every icon sits in the exact same box regardless of its own path's shape, so icons line
+     up "parallel" across tiles (e.g. Softness's cloud and Breathability's wind-lines read at
+     the same visual height) rather than drifting with each glyph's natural bounds. Smaller
+     again inside the 6-per-row grid, where there is much less room per tile. */
+  .cff-choice-icon :global(svg.feedback-icon) {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  .cff-options-grid6 :global(svg.feedback-icon) {
+    width: 14px;
+    height: 14px;
   }
 
   .cff-choice:hover {
     background: var(--c-warm-oat);
   }
 
-  /* Checked: dark fill, cream text and a tick, so the state never rests on colour alone. */
+  /* Checked: a light sage tint + an olive border + a tick, never colour alone. Replaces an
+     earlier solid dark-olive fill, which read as too heavy/large next to the reference. */
   .cff-choice:has(input:checked) {
-    background: var(--color-olive, #3b3a2b);
-    border-color: var(--color-olive, #3b3a2b);
-    color: var(--c-linen-cream, #f3ece0);
+    background: #e7ecdd; /* light tint of --c-sage, local to this component */
+    border-color: var(--c-sage);
+    color: var(--color-text);
     font-weight: 600;
   }
 
-  .cff-choice:has(input:checked) .cff-text::before {
+  .cff-choice:not(.cff-choice-icon):has(input:checked) .cff-text::before {
     content: '\2713';
     display: inline-block;
     margin-right: var(--space-2);
+    color: var(--color-olive, #3b3a2b);
+  }
+
+  /* Icon-topped checked state: a small tick badge in the corner instead of prefixing the text. */
+  .cff-choice-icon {
+    position: relative;
+  }
+
+  .cff-choice-icon:has(input:checked)::after {
+    content: '\2713';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--c-linen-cream, #f3ece0);
+    color: var(--color-olive, #3b3a2b);
+    font-size: 0.6rem;
+    font-weight: 700;
   }
 
   .cff-choice:has(input:focus-visible),
@@ -306,50 +709,63 @@ const liveId = fieldId(id, 'live');
     outline-offset: 2px;
   }
 
-  /* ---- Colour swatches: a round dot with its name ---- */
+  /* ---- Colour swatches: a grid with exactly one column per colour (the real count is set
+     inline, per Concept — 2, 5 or 6), so all of them always sit on one row at full width with
+     no horizontal scroll, on any Concept, down to the narrowest phones (checked at iPhone 16's
+     393px). Replaces an earlier horizontally-scrolling flex row. */
   .cff-options-swatch {
-    gap: var(--space-2) var(--space-3);
+    display: grid;
+    gap: var(--space-1) 2px;
   }
 
   .cff-swatch {
-    display: inline-flex;
+    display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-1);
-    min-width: 4.25rem;
+    min-width: 0;
     min-height: 44px;
-    padding: var(--space-1);
+    gap: 2px;
+    padding: var(--space-1) 1px;
     border-radius: var(--radius-lg);
   }
 
   .cff-chip {
     display: block;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.0625rem; /* ~25% bigger than the previous 1.625rem — the dynamic per-colour grid
+      sizes its columns from the row's own full width, not from the circle, so this still
+      leaves all six colours on one row (checked at iPhone 16's 393px). */
+    height: 2.0625rem;
     border: 1px solid var(--c-raw-umber);
     border-radius: 50%;
-    box-shadow: 0 0 0 3px var(--color-card, #fbf7f0);
+    box-shadow: 0 0 0 2px var(--color-card, #fbf7f0);
     transition: box-shadow var(--transition);
+  }
+
+  .cff-chip-photo {
+    object-fit: cover;
   }
 
   .cff-swatch:hover .cff-chip {
     box-shadow:
-      0 0 0 3px var(--color-card, #fbf7f0),
-      0 0 0 4px var(--c-raw-umber);
+      0 0 0 2px var(--color-card, #fbf7f0),
+      0 0 0 3px var(--c-raw-umber);
   }
 
   /* Checked: a dark ring around the dot and a bold, underlined name. */
   .cff-swatch:has(input:checked) .cff-chip {
     box-shadow:
-      0 0 0 3px var(--color-card, #fbf7f0),
-      0 0 0 5px var(--color-text);
+      0 0 0 2px var(--color-card, #fbf7f0),
+      0 0 0 4px var(--color-text);
   }
 
   .cff-swatch-name {
-    font-size: var(--fs-label, 0.75rem);
-    line-height: var(--lh-body);
+    width: 100%;
+    font-size: 0.6rem;
+    line-height: 1.15;
     color: var(--color-text);
     text-align: center;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
   .cff-swatch:has(input:checked) .cff-swatch-name {
@@ -373,6 +789,12 @@ const liveId = fieldId(id, 'live');
     font-size: var(--fs-small);
   }
 
+  .cff-comment-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
   .cff-input {
     box-sizing: border-box;
     width: 100%;
@@ -380,6 +802,7 @@ const liveId = fieldId(id, 'live');
     min-height: 44px;
     padding: var(--space-2) var(--space-3);
     font: inherit;
+    font-size: var(--fs-small);
     color: var(--color-text);
     background: var(--color-bg);
     border: 1px solid var(--c-raw-umber);
@@ -391,18 +814,22 @@ const liveId = fieldId(id, 'live');
     outline-offset: 2px;
   }
 
-  /* ---- Price question ---- */
+  /* ---- General comment field (separator comes from the shared .cff-comment rule above) ---- */
+  .cff-comment-count {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+    text-align: right;
+    max-width: 28rem;
+  }
+
+  /* ---- Price question: this card now lives on an inner div, not the fieldset (see the
+     markup comment above it) — the fieldset keeps the normal shared top separator every other
+     question gets; this card only needs its own padding/background/radius. ---- */
   .cff-price {
     padding: var(--space-4);
     background: var(--color-surface);
     border-radius: var(--radius-card, 14px);
-  }
-
-  .cff-price .cff-legend {
-    font-family: var(--font-serif);
-    font-size: var(--fs-h4);
-    font-weight: 400;
-    line-height: var(--lh-heading);
   }
 
   /* ---- Buttons ---- */
@@ -416,7 +843,7 @@ const liveId = fieldId(id, 'live');
     line-height: var(--lh-tight);
     border-radius: 999px;
     cursor: pointer;
-    transition: background-color var(--transition), color var(--transition);
+    transition: background-color var(--transition), color var(--transition), border-color var(--transition);
   }
 
   .cff-btn:focus-visible {
@@ -428,43 +855,27 @@ const liveId = fieldId(id, 'live');
     display: none;
   }
 
-  .cff-skip {
-    margin-top: var(--space-3);
-    padding-inline: var(--space-3);
-    color: var(--color-text);
-    background: transparent;
-    border: 1px solid transparent;
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-  }
-
-  .cff-skip:hover {
-    background: var(--c-warm-oat);
-  }
-
-  /* Pressed: a filled pill and a tick, so it is not colour alone. */
-  .cff-skip[aria-pressed='true'] {
-    background: var(--color-olive, #3b3a2b);
-    color: var(--c-linen-cream, #f3ece0);
-    border-color: var(--color-olive, #3b3a2b);
-    text-decoration: none;
-  }
-
-  .cff-skip[aria-pressed='true']::before {
-    content: '\2713';
-    margin-right: var(--space-2);
+  /* ---- Submit bar: just the one button, full-width, prominent (no Edit, no share icon). ---- */
+  .cff-submit-bar {
+    display: flex;
   }
 
   .cff-submit {
-    align-self: flex-start;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding-block: var(--space-3);
     color: var(--c-off-white, #faf6ef);
-    background: var(--color-accent-text, #8f5233);
-    border: 1px solid var(--color-accent-text, #8f5233);
+    background: var(--color-olive, #3b3a2b);
+    border: 1px solid var(--color-olive, #3b3a2b);
+    font-size: var(--fs-button);
   }
 
   .cff-submit:hover {
-    background: var(--color-olive, #3b3a2b);
-    border-color: var(--color-olive, #3b3a2b);
+    background: var(--color-accent-text, #8f5233);
+    border-color: var(--color-accent-text, #8f5233);
   }
 
   .cff-note,

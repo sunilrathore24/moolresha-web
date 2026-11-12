@@ -315,13 +315,13 @@ describe('interest island: responses', () => {
 });
 
 describe('interest island: share prompt copy button', () => {
-  it('copies a link to the concepts section and confirms it', async () => {
+  it('copies a link to the Design Lab and confirms it', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
     const t = setup();
     t.clickShareCopy();
     await vi.waitFor(() => expect(t.shareStatus()).toBe(MSG_LINK_COPIED));
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('#concepts'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/designs'));
   });
 
   it('shows a fallback message when the clipboard write fails', async () => {

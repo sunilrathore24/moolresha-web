@@ -35,6 +35,10 @@ function displayName(view: string): string {
 /** Crossfade budget in ms (CSS fades over 250 ms). Also caps the wait for decode(). */
 const FADE_MS = 300;
 
+/** Auto-advance interval, when `[data-auto-advance]` is present. Same idea as the homepage
+ * hero carousel: paused by reduced-motion and by hover/focus within the viewer. */
+const AUTO_ADVANCE_MS = 5000;
+
 /** Added to the root once the island has run (e2e waits for this; no visible effect). */
 export const ENHANCED_CLASS = 'av-enhanced';
 
@@ -167,6 +171,34 @@ export function initAngleViewer(root: HTMLElement, env: AngleViewerEnv = {}): bo
   function step(dir: 'next' | 'prev'): void {
     const to = navNeighbour(shown(state), dir);
     if (to) set(goto(state, to as ViewBase | ExtraView));
+  }
+
+  /** Like `step('next')`, but loops back to the first view instead of stopping at the end —
+   * what an auto-advance timer wants, where `step` (manual Left/Right/swipe) should not. */
+  function stepLoop(): void {
+    const to = navNeighbour(shown(state), 'next') ?? navigable[0];
+    if (to) set(goto(state, to as ViewBase | ExtraView));
+  }
+
+  let autoTimer: ReturnType<typeof setInterval> | null = null;
+  if (root.hasAttribute('data-auto-advance') && navigable.length > 1) {
+    const stopAuto = (): void => {
+      if (autoTimer !== null) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+    };
+    const startAuto = (): void => {
+      stopAuto();
+      if (reduced) return;
+      autoTimer = setInterval(stepLoop, AUTO_ADVANCE_MS);
+    };
+    reduceMq?.addEventListener?.('change', () => (reduced ? stopAuto() : startAuto()));
+    root.addEventListener('mouseenter', stopAuto);
+    root.addEventListener('mouseleave', startAuto);
+    root.addEventListener('focusin', stopAuto);
+    root.addEventListener('focusout', startAuto);
+    startAuto();
   }
 
   const expandBtn = root.querySelector<HTMLButtonElement>('[data-av-expand]');

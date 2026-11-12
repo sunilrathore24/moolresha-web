@@ -90,9 +90,18 @@ describe('privacy.astro (source checks)', () => {
   });
 
   it('renders the required sections', () => {
-    for (const s of ['data-items', 'processors', 'withdrawal', 'deletion', 'response-times', 'grievance']) {
+    for (const s of ['data-items', 'processors', 'withdrawal', 'deletion', 'response-times']) {
       expect(page, s).toContain(`data-privacy-section="${s}"`);
     }
+  });
+
+  // The dedicated "Grievance Contact" section was removed (no grievance mailbox exists yet,
+  // same reason the footer's duplicate contact line was removed) — the underlying
+  // `privacy.grievance` schema data is untouched (see the "has withdrawal, deletion..." test
+  // above), only this page's own rendered section is gone.
+  it('no longer renders a dedicated grievance section', () => {
+    expect(page).not.toContain('data-privacy-section="grievance"');
+    expect(page).not.toContain('data-grievance-email');
   });
 
   it('shows the version and last-updated date', () => {

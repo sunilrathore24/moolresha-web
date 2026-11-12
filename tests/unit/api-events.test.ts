@@ -75,10 +75,10 @@ describe('POST /api/events: accepted events', () => {
 
   it('section_reached stores the section and journal_click is counted', async () => {
     const t = setup();
-    expect((await t.post({ event: 'section_reached', section: 'journey' })).status).toBe(204);
+    expect((await t.post({ event: 'section_reached', section: 'design-lab' })).status).toBe(204);
     expect((await t.post({ event: 'journal_click' })).status).toBe(204);
     const rows = t.rows();
-    expect(rows.find((r) => r.event === 'section_reached')).toMatchObject({ section: 'journey', count: 1 });
+    expect(rows.find((r) => r.event === 'section_reached')).toMatchObject({ section: 'design-lab', count: 1 });
     expect(rows.find((r) => r.event === 'journal_click')).toMatchObject({ section: '', count: 1 });
   });
 
@@ -95,9 +95,9 @@ describe('POST /api/events: accepted events', () => {
     await t.post({ event: 'page_view' });
     await t.post({ event: 'page_view', utm: { source: 'instagram', medium: 'social', campaign: 'journey-01' } });
     await t.post({ event: 'page_view', utm: { source: 'instagram' } });
-    await t.post({ event: 'section_reached', section: 'money' });
-    await t.post({ event: 'section_reached', section: 'concepts' });
-    await t.post({ event: 'section_reached', section: 'concepts', conceptId: 'mens-cotton-shirt' });
+    await t.post({ event: 'section_reached', section: 'nav-cards' });
+    await t.post({ event: 'section_reached', section: 'why' });
+    await t.post({ event: 'section_reached', section: 'why', conceptId: 'mens-cotton-shirt' });
     const rows = t.rows();
     expect(rows).toHaveLength(6);
     expect(rows.every((r) => r.count === 1)).toBe(true);
@@ -105,7 +105,7 @@ describe('POST /api/events: accepted events', () => {
       utm_source: 'instagram',
       utm_medium: 'social',
     });
-    expect(rows.find((r) => r.concept_id === 'mens-cotton-shirt')).toMatchObject({ section: 'concepts' });
+    expect(rows.find((r) => r.concept_id === 'mens-cotton-shirt')).toMatchObject({ section: 'why' });
   });
 
   it('uses the UTC day from the injected clock', async () => {

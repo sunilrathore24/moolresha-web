@@ -66,19 +66,30 @@
   --font-serif: "Newsreader Variable", Georgia, serif;
   --font-sans: "Inter Variable", system-ui, sans-serif;
 
-  /* Fluid type scale (clamp: min, preferred, max) */
-  --fs-display: clamp(2.5rem, 1.6rem + 4vw, 4.75rem);
-  --fs-h1: clamp(2rem, 1.5rem + 2.5vw, 3rem);
-  --fs-h2: clamp(1.75rem, 1.3rem + 2vw, 2.75rem);
-  --fs-h3: clamp(1.25rem, 1.1rem + 0.8vw, 1.6rem);
-  --fs-h4: 1.15rem;
-  --fs-body: 1.0625rem;
-  --fs-small: 0.875rem;
-  --fs-label: 0.75rem;
+  /* Fixed mobile-first type scale (NOT fluid clamps — the old clamp() minimums, e.g. a 40px
+     hero floor, were themselves the "fonts too big on mobile" problem). Benchmarked against
+     Andamen (premium menswear: body 14px, nav/button/price 13px) and SAADAA (compact basics:
+     h1 28px, h2 21px), reconciled with a Flipkart-style compact commerce scale. See
+     docs/typography-research.md (redesign plan) for the full rationale. Scales up modestly on
+     desktop via the single @media bump at the bottom of this file — these are the mobile values. */
+  --fs-display: 1.5rem;     /* 24px — homepage hero headline */
+  --fs-h1: 1.375rem;        /* 22px — inner-page heading */
+  --fs-h2: 1.125rem;        /* 18px — section heading */
+  --fs-h3: 1rem;            /* 16px — tertiary/sub-section heading */
+  --fs-h4: 0.9375rem;       /* 15px — smallest heading tier */
+  --fs-product: 1.1875rem;  /* 19px — product name (serif) */
+  --fs-card-title: 0.9375rem; /* 15px — card heading (serif) */
+  --fs-body: 0.875rem;      /* 14px — UI/marketing body copy */
+  --fs-prose: 0.9375rem;    /* 15px — sustained-reading article/journal prose only */
+  --fs-small: 0.8125rem;    /* 13px — product specs, short strings only */
+  --fs-nav: 0.8125rem;      /* 13px — nav links, tabs */
+  --fs-button: 0.875rem;    /* 14px — buttons, weight 600 */
+  --fs-label: 0.75rem;      /* 12px — secondary/eyebrow labels */
+  --fs-micro: 0.6875rem;    /* 11px — non-essential decorative labels ONLY */
 
   --lh-tight: 1.1;
-  --lh-heading: 1.2;
-  --lh-body: 1.65;
+  --lh-heading: 1.25;
+  --lh-body: 1.5;
 
   /* ---- Spacing scale (8px rhythm) ---- */
   --space-1: 0.25rem;
@@ -99,10 +110,28 @@
   --radius-lg: 8px;
   --radius-card: 12px;
   --shadow-soft: 0 1px 2px rgb(44 38 32 / 0.04), 0 8px 24px -12px rgb(44 38 32 / 0.14);
-  --header-height: 4.5rem;
+  --header-height: 3.75rem; /* 60px — compact header per redesign (was 72px) */
 
   /* ---- Motion (reduced-motion friendly) ---- */
   --transition: 160ms ease;
+}
+
+/* Modest desktop scale-up so large screens don't look cramped — NOT a return to the old
+   clamp() maximums (the old --fs-display max was 76px; this tops out at 36px). */
+@media (min-width: 72rem) {
+  :root {
+    --fs-display: 2.25rem;    /* 36px */
+    --fs-h1: 1.875rem;        /* 30px */
+    --fs-h2: 1.5rem;          /* 24px */
+    --fs-product: 1.5rem;     /* 24px */
+    --fs-card-title: 1.0625rem; /* 17px */
+    --fs-body: 1rem;          /* 16px */
+    --fs-prose: 1.0625rem;    /* 17px */
+    --fs-small: 0.875rem;     /* 14px */
+    --fs-nav: 0.875rem;       /* 14px */
+    --fs-button: 0.9375rem;   /* 15px */
+    --fs-label: 0.8125rem;    /* 13px */
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

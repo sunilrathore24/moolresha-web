@@ -1,0 +1,231 @@
+---
+/**
+ * `/journey` — the cotton-to-garment journey, redesigned (2026-11) to match the user's
+ * reference image: an editorial header, a full-width hero photo, a horizontal 01-08 stepper,
+ * a single-column vertical timeline (not the earlier two-up serpentine layout — abandoned per
+ * this newer, more specific reference), a compact pricing teaser card, and a dark closing band
+ * with the Aim_Statement and a sources/last-updated line.
+ *
+ * Reuses `JOURNEY_STOPS` (src/lib/journey-stops.ts) and its backing Fact_Registry entries
+ * unchanged — see `JourneyTimeline.astro` for how each stage's fact is shown. The pricing
+ * teaser (`JourneyPricingTeaser.astro`) reuses `money-tshirt-breakdown`'s own shares and
+ * `price-layers.yaml`'s own layer names; nothing there is a new figure or a new claim.
+ *
+ * The closing band's tagline is the real Aim_Statement (`src/content/story/story.yaml`),
+ * whose exact wording the schema locks — not the reference image's own paraphrase of it,
+ * which doesn't match that locked sentence.
+ */
+import { getEntry } from 'astro:content';
+import { Picture } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import JourneyTimeline from '../../components/journey/JourneyTimeline.astro';
+import JourneyPricingTeaser from '../../components/journey/JourneyPricingTeaser.astro';
+import LastUpdated from '../../components/launch/LastUpdated.astro';
+import { aimBody, journeyFactIds } from '../../lib/journey-stops';
+import { journeyImage, pictureWidths } from '../../lib/journey-images';
+
+const story = await getEntry('story', 'story');
+if (!story) {
+  throw new Error('Missing story entry. Add src/content/story/story.yaml.');
+}
+const { aimLabel, aimStatement } = story.data;
+
+const hero = journeyImage('field');
+const PRICE_FACT_IDS = ['money-tshirt-breakdown', 'money-worker-share'];
+const allFactIds = [...journeyFactIds(), ...PRICE_FACT_IDS];
+---
+
+<BaseLayout
+  title="Our Journey — From Field to Finished Garment — MoolResha"
+  description="Follow a fibre through the people, processes and places that turn it into a garment, from the cotton field to the retail shelf — and what typically makes up its price."
+>
+  <header class="journey-page-head container">
+    <p class="eyebrow eyebrow-dashed">Our Journey</p>
+    <h1>From field to <span class="accent-underline">finished</span> garment.</h1>
+    <p class="journey-page-intro">
+      Every garment has a journey — from a cotton field, through many hands and processes, to a garment you can wear
+      and trust.
+    </p>
+  </header>
+
+  <div class="journey-hero container">
+    <Picture
+      src={hero}
+      alt="Cotton plants with open white bolls in a field at sunrise"
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
+      widths={pictureWidths(hero, [480, 768, 1080, 1280])}
+      sizes="(min-width: 60rem) 56rem, 100vw"
+      width={hero.width}
+      height={hero.height}
+      loading="eager"
+      decoding="async"
+      class="journey-hero-img"
+    />
+  </div>
+
+  <section class="journey-page-body container" aria-labelledby="journey-page-head-h">
+    <h2 id="journey-page-head-h" class="visually-hidden">The eight stages</h2>
+    <JourneyTimeline />
+  </section>
+
+  <section class="journey-page-pricing container">
+    <JourneyPricingTeaser />
+  </section>
+
+  <section class="journey-page-band">
+    <div class="container">
+      <p class="band-aim">{aimBody(aimLabel, aimStatement)}</p>
+      <div class="band-meta">
+        <p class="band-sources">Sources: industry reports, trade publications and government data.</p>
+        <LastUpdated factIds={allFactIds} />
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .journey-page-head {
+    padding-block: var(--space-10) var(--space-6);
+    text-align: center;
+  }
+
+  .eyebrow-dashed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  .eyebrow-dashed::before,
+  .eyebrow-dashed::after {
+    content: '';
+    width: 1.5rem;
+    height: 1px;
+    background: var(--color-accent-text);
+  }
+
+  h1 {
+    margin: 0 auto;
+    max-width: 24ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 600;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+
+  .accent-underline {
+    position: relative;
+    display: inline-block;
+  }
+
+  .accent-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.1em;
+    height: 2px;
+    background: var(--color-accent);
+  }
+
+  .journey-page-intro {
+    margin: var(--space-4) auto 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .journey-hero {
+    margin-bottom: var(--space-8);
+  }
+
+  .journey-hero :global(picture) {
+    display: block;
+  }
+
+  .journey-hero :global(.journey-hero-img) {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+  }
+
+  .journey-page-body {
+    padding-block: 0 var(--space-section);
+  }
+
+  .journey-page-pricing {
+    padding-block: 0 var(--space-section);
+  }
+
+  .journey-page-band {
+    padding-block: var(--space-8);
+    background: var(--color-band);
+    color: var(--color-on-band);
+  }
+
+  .band-aim {
+    margin: 0;
+    max-width: 36rem;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--fs-h3);
+    font-weight: 500;
+    line-height: var(--lh-heading);
+    color: var(--color-on-band);
+  }
+
+  .band-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid rgb(250 246 239 / 0.2);
+  }
+
+  .band-sources {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    color: var(--color-on-band);
+    opacity: 0.85;
+  }
+
+  .band-meta :global(.last-updated) {
+    margin: 0;
+    color: var(--color-on-band);
+    opacity: 0.85;
+  }
+
+  @media (min-width: 40rem) {
+    .journey-page-head {
+      text-align: left;
+    }
+
+    .eyebrow-dashed {
+      justify-content: flex-start;
+    }
+
+    h1 {
+      margin: 0;
+    }
+
+    .journey-page-intro {
+      margin-left: 0;
+    }
+  }
+</style>

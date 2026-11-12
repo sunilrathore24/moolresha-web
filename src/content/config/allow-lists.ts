@@ -55,27 +55,14 @@ export type EventName = ClientEvent | ServerEvent;
  * (Requirement 18.3: journey, money, concepts, interest form).
  * This is the API allow-list, not the page order: see PAGE_SECTIONS.
  */
-export const SECTIONS = ['journey', 'money', 'concepts', 'interest'] as const;
+export const SECTIONS = ['design-lab', 'nav-cards', 'why', 'beyond-label', 'trends', 'signup'] as const;
 export type SectionName = (typeof SECTIONS)[number];
 
 /**
  * The `data-section` values on the Launch_Page, in the order Requirement 2.1 fixes.
  * Used by Content_Check rule CC-15 and the page composition.
  */
-export const PAGE_SECTIONS = [
-  'hero',
-  'journey',
-  'money',
-  'price-layers',
-  'concepts',
-  'why',
-  'beyond-label',
-  'trends',
-  'frustration',
-  'interest',
-  'results',
-  'footer',
-] as const;
+export const PAGE_SECTIONS = ['hero', 'design-lab', 'nav-cards', 'footer'] as const;
 export type PageSection = (typeof PAGE_SECTIONS)[number];
 
 export const PRIORITY_CHIPS = [

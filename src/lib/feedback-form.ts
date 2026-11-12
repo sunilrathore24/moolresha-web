@@ -16,6 +16,7 @@ import {
   type PriorityChip,
   type Verdict,
 } from '../content/config/allow-lists';
+import type { FeedbackIconName } from './feedback-icons';
 import { bandLabel, type PriceBand } from './price-bands';
 
 export const VERDICT_LABELS: Record<Verdict, string> = {
@@ -31,6 +32,31 @@ export const CHANGE_CHIP_LABELS: Record<ChangeChip, string> = {
   pockets: 'Pockets',
   price: 'Price',
   other: 'Other',
+};
+
+/** Icon-topped chip redesign (2026-11): one icon per verdict/change/priority option. */
+export const VERDICT_ICONS: Record<Verdict, FeedbackIconName> = {
+  would_wear: 'would_wear',
+  maybe: 'maybe',
+  not_for_me: 'not_for_me',
+};
+
+export const CHANGE_CHIP_ICONS: Record<ChangeChip, FeedbackIconName> = {
+  fit: 'fit',
+  fabric_weight: 'fabric_weight',
+  colour: 'colour',
+  pockets: 'pockets',
+  price: 'price',
+  other: 'other',
+};
+
+export const PRIORITY_ICONS: Record<PriorityChip, FeedbackIconName> = {
+  softness: 'softness',
+  no_shrinking: 'no_shrinking',
+  colour_lasts: 'colour_lasts',
+  breathability: 'breathability',
+  easy_care: 'easy_care',
+  long_life: 'long_life',
 };
 
 export const PALETTE_LABELS: Record<PaletteColour, string> = {
@@ -60,6 +86,8 @@ export const FIELD_NAMES = {
   priorities: 'priorities',
   priceBandId: 'priceBandId',
   otherText: 'otherText',
+  /** The general "Any other thoughts?" field (redesign, 2026-11) — distinct from otherText. */
+  comment: 'comment',
 } as const;
 
 /** Requirement 9.6, exact wording. */
@@ -74,6 +102,17 @@ export const PRIORITY_QUESTION = 'What matters most to you?';
 /** Requirement 9.3. */
 export const OTHER_TEXT_MAX_LENGTH = 200;
 
+/** Redesign (2026-11): general "Any other thoughts?" field, separate from the "other" chip's
+ * conditional reveal — always available, not tied to any chip selection. */
+export const COMMENT_LABEL = 'Any other thoughts?';
+export const COMMENT_MAX_LENGTH = 250;
+
+/** Redesign (2026-11): button + header copy for the icon-driven form. */
+export const SUBMIT_LABEL = 'Submit Your Opinion';
+export const FORM_TITLE = 'Share Your Opinion';
+export const FORM_INTRO =
+  'This design is in research. Your feedback will help us refine the fit, details and final collection.';
+
 /** The same sentence the server's 415 page uses. */
 export const NOSCRIPT_NOTE =
   'Feedback needs JavaScript turned on. You can still read everything on this page.';
@@ -81,6 +120,7 @@ export const NOSCRIPT_NOTE =
 export interface FormOption {
   value: string;
   label: string;
+  icon?: FeedbackIconName;
 }
 
 export interface SwatchOption extends FormOption {
@@ -105,14 +145,18 @@ export function feedbackFormModel(
   colours: readonly PaletteColour[] = PALETTE,
 ): FeedbackFormModel {
   return {
-    verdicts: VERDICTS.map((v) => ({ value: v, label: VERDICT_LABELS[v] })),
-    changes: CHANGE_CHIPS.map((c) => ({ value: c, label: CHANGE_CHIP_LABELS[c] })),
+    verdicts: VERDICTS.map((v) => ({ value: v, label: VERDICT_LABELS[v], icon: VERDICT_ICONS[v] })),
+    changes: CHANGE_CHIPS.map((c) => ({ value: c, label: CHANGE_CHIP_LABELS[c], icon: CHANGE_CHIP_ICONS[c] })),
     colours: colours.map((c) => ({
       value: c,
       label: PALETTE_LABELS[c],
       swatch: PALETTE_SWATCH[c],
     })),
-    priorities: PRIORITY_CHIPS.map((p: PriorityChip) => ({ value: p, label: PRIORITY_LABELS[p] })),
+    priorities: PRIORITY_CHIPS.map((p: PriorityChip) => ({
+      value: p,
+      label: PRIORITY_LABELS[p],
+      icon: PRIORITY_ICONS[p],
+    })),
     prices: priceBands.map((b) => ({ value: b.id, label: bandLabel(b) })),
   };
 }

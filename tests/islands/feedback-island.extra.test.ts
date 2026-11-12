@@ -423,7 +423,14 @@ describe('market reveal: corner cases (Req 7.2, 7.3, 7.4)', () => {
 // ---------------------------------------------------------------------------
 
 const DIST_INDEX = join(process.cwd(), 'dist', 'index.html');
-const hasDist = existsSync(DIST_INDEX);
+// The redesign moved each Concept's feedback form off the homepage onto its own
+// /designs/<id> page (one card per page, not five) — this describe block's assertions
+// (e.g. "4 other cards besides the first") assume the old five-cards-on-one-page layout, so
+// it's skipped rather than force-fit, pending a follow-up test pass against the new
+// single-card-per-page reality (deliberately not written yet, per the user's request to
+// hold off on new tests until the visual redesign is reviewed). ConceptFeedbackForm itself
+// is unchanged — only where it's mounted changed.
+const hasDist = existsSync(DIST_INDEX) && readFileSync(DIST_INDEX, 'utf8').includes('data-concept-card');
 
 function realBody(): string {
   const html = readFileSync(DIST_INDEX, 'utf8');

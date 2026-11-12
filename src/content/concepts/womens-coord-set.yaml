@@ -13,13 +13,13 @@ views:
   kind: render
   alt:
     01-front: "Women's relaxed cotton co-ord set, front view, on a hanger, showing a relaxed shirt top and matching straight pant"
-    02-front-three-quarter: "Women's relaxed cotton co-ord set, front three-quarter view, on a hanger, showing the top's collar, placket and the pant waistband"
-    03-side: "Women's relaxed cotton co-ord set, side view, on a hanger, showing the top's side seam and the pant's side pocket"
+    02-front-three-quarter: "Women's relaxed cotton co-ord set worn by a model, front three-quarter view, standing with hands in the trouser pockets"
+    03-side: "Women's relaxed cotton co-ord set worn by a model, side-turned view, showing the top's asymmetric front seam"
     04-back-three-quarter: "Women's relaxed cotton co-ord set, back three-quarter view, on a hanger, showing the top's back yoke and the pant waistband"
     05-back: "Women's relaxed cotton co-ord set, back view, on a hanger, showing a plain back yoke and an even top and pant hem"
     06-inside: "Women's relaxed cotton co-ord set, inside view, turned out to show the seam finish of the top and the pant waistband lining"
     07-fabric-closeup: "Women's relaxed cotton co-ord set, fabric close-up of a plain cotton weave with even, tight threads"
-    08-on-model: "Women's relaxed cotton co-ord set worn by a model, on a model cropped at the chin, top untucked over the pant"
+    08-on-model: "Women's relaxed cotton co-ord set on a model, leaning against a sunlit courtyard wall"
 fabricNotes:
   composition:
     - { fibre: cotton, percent: 100 }
@@ -28,6 +28,20 @@ fabricNotes:
   handFeel: "Smooth and soft, with an easy drape"
   softness: "Aimed at a soft hand feel; we will check it after repeated washes"
   care: "Machine wash cold, dry in shade, warm iron"
+whyThisFabric:
+  lead: "We chose a plain cotton weave for this co-ord set because its smooth, even structure gives the top and pant a consistent drape across both pieces, in the light-to-mid weight range we're targeting."
+  onSkin: "This is a research-stage concept: we expect the plain weave to feel smooth and breathable against skin across both the top and pant, rather than a tested result."
+  premiumDifference: "A consistent plain weave across the top and pant, finished the same way, is meant to read as more considered than two separately matched basics, while the fabric stays simple: 100% cotton."
+testing:
+  - name: "Shrinkage after washing"
+    criteria: "Length and width change of the top and the pant after five home washes."
+    status: planned
+  - name: "Colourfastness"
+    criteria: "Colour change after repeated washing and exposure to light."
+    status: planned
+  - name: "Seam strength"
+    criteria: "Seam strength after repeated wear and washing."
+    status: planned
 quality:
   - { row: fibre, label: Target, text: "100% cotton, composition to be confirmed" }
   - row: yarn

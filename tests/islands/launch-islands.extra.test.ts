@@ -36,10 +36,21 @@ import { CONCEPT_IDS } from '../../src/content/config/allow-lists';
 const DIST_INDEX = join(process.cwd(), 'dist', 'index.html');
 const hasDist = existsSync(DIST_INDEX);
 
-function realBody(): string {
-  const html = readFileSync(DIST_INDEX, 'utf8');
+// The redesign relocated InterestForm and ResultsView off the homepage onto /your-voice
+// (unchanged components, just a new host page) — their "real built markup" checks below
+// read from there instead. The events-island checks further down are genuinely about the
+// homepage itself, so they still read dist/index.html.
+const DIST_YOUR_VOICE = join(process.cwd(), 'dist', 'your-voice', 'index.html');
+const hasYourVoiceDist = existsSync(DIST_YOUR_VOICE);
+
+function bodyOf(path: string): string {
+  const html = readFileSync(path, 'utf8');
   const body = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? '';
   return body.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+}
+
+function realBody(): string {
+  return bodyOf(DIST_INDEX);
 }
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
@@ -259,11 +270,11 @@ describe('interest island: server errors and guards (Req 22.3)', () => {
   });
 });
 
-describe.skipIf(!hasDist)('interest island on the real built form (dist/index.html)', () => {
-  const real = () => setupInterest(realBody());
+describe.skipIf(!hasYourVoiceDist)('interest island on the real built form (dist/your-voice/index.html)', () => {
+  const real = () => setupInterest(bodyOf(DIST_YOUR_VOICE));
 
   it('starts with the submit button hidden, then reveals it; the notice comes before the fields', () => {
-    document.body.innerHTML = realBody();
+    document.body.innerHTML = bodyOf(DIST_YOUR_VOICE);
     const form = document.querySelector<HTMLFormElement>('form[data-interest-form]')!;
     expect(form.querySelector('[data-submit]')!.hasAttribute('hidden')).toBe(true);
     const notice = document.querySelector('[data-interest-notice]')!;
@@ -466,15 +477,16 @@ describe('results island: extra cases (Req 16.3, 16.6, 22.3)', () => {
   });
 });
 
-describe.skipIf(!hasDist)('results island on the real built markup (dist/index.html)', () => {
+describe.skipIf(!hasYourVoiceDist)('results island on the real built markup (dist/your-voice/index.html)', () => {
   beforeEach(() => stubIO());
   afterEach(() => vi.unstubAllGlobals());
 
   it('has its placeholder and a noscript link, observes the root with a 200 px margin and renders into it', async () => {
-    document.body.innerHTML = realBody();
+    document.body.innerHTML = bodyOf(DIST_YOUR_VOICE);
     const root = document.querySelector<HTMLElement>('[data-results-root]')!;
     expect(root.textContent).toMatch(/Results load here/i);
-    expect(root.closest('[data-section="results"]')).not.toBeNull();
+    const tabpanel = root.closest('[role="tabpanel"]');
+    expect(tabpanel).not.toBeNull();
     const fetchImpl = vi.fn(async () => okBody(CONCEPT_IDS.map((c) => notEnough(c, 2))));
     initResults(root, { fetchImpl: fetchImpl as never });
     expect(observers[0]!.opts?.rootMargin).toBe('200px 0px');
@@ -524,17 +536,17 @@ describe('events island: extra cases (Req 18.3)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const PAGE = `
-    <section data-section="journey"></section><section data-section="money"></section>
-    <section data-section="concepts"></section><section data-section="interest"></section>
+    <section data-section="design-lab"></section><section data-section="why"></section>
+    <section data-section="beyond-label"></section><section data-section="trends"></section>
     <a id="a" href="/article/x">J</a><a id="b" href="/privacy?next=/article/x">P</a><button id="c">B</button>`;
 
   it('sends each section once even when the observer reports it many times, in any order', async () => {
     const doc = makeDoc(PAGE);
     initEvents(doc);
     beacon.mockClear();
-    for (const s of ['interest', 'journey', 'interest', 'journey', 'money', 'concepts', 'money']) see(doc, s, 1);
+    for (const s of ['trends', 'design-lab', 'trends', 'design-lab', 'why', 'beyond-label', 'why']) see(doc, s, 1);
     const bodies = await eventBodies(beacon.mock.calls);
-    expect(bodies.map((b) => b.section)).toEqual(['interest', 'journey', 'money', 'concepts']);
+    expect(bodies.map((b) => b.section)).toEqual(['trends', 'design-lab', 'why', 'beyond-label']);
     expect(new Set(bodies.map((b) => b.section)).size).toBe(4);
   });
 
@@ -542,9 +554,9 @@ describe('events island: extra cases (Req 18.3)', () => {
     const doc = makeDoc(PAGE);
     initEvents(doc);
     beacon.mockClear();
-    see(doc, 'journey', 0.49);
+    see(doc, 'design-lab', 0.49);
     expect(beacon).not.toHaveBeenCalled();
-    see(doc, 'journey', 0.5);
+    see(doc, 'design-lab', 0.5);
     expect(beacon).toHaveBeenCalledTimes(1);
   });
 
@@ -596,15 +608,22 @@ describe.skipIf(!hasDist)('events island on the real built page (dist/index.html
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('observes exactly the four allow-listed sections that exist on the page, not hero/footer/results', () => {
+  it('observes exactly the two allow-listed sections that exist on the page, not hero/footer', () => {
+    // why/beyond-label/trends moved to /journal in the redesign — still real SECTIONS values,
+    // just tracked from their new page now, not the homepage. `signup` (LaunchSignup.astro)
+    // was removed from the homepage entirely (2026-11) — Footer.astro now has its own
+    // always-present email panel on every page, so the homepage-only copy was redundant.
     const doc = makeDoc(realBody());
     initEvents(doc);
     const names = observers[0]!.observed.map((e) => (e as HTMLElement).dataset.section);
-    expect(names).toEqual(['journey', 'money', 'concepts', 'interest']);
+    expect(names).toEqual(['design-lab', 'nav-cards']);
   });
 
   it('the real Journal link in the footer or header triggers journal_click', async () => {
-    const doc = makeDoc(realBody());
+    // The only /article/ link on the homepage itself lived inside WhyItMatters/BeyondTheLabel/
+    // Trends content, which moved to /journal in the redesign — check there instead; same real
+    // markup, same island, just relocated.
+    const doc = makeDoc(bodyOf(join(process.cwd(), 'dist', 'journal', 'index.html')));
     initEvents(doc);
     const beacon = navigator.sendBeacon as unknown as ReturnType<typeof vi.fn>;
     beacon.mockClear();

@@ -1,41 +1,79 @@
 ---
 /**
  * Colour_Swatches: the swatch row that picks which colour's Angle_Viewer panel is
- * visible inside a Concept_Card. Just the swatches: the caller (`ConceptCard.astro`)
- * wraps this *and* the `[data-colour-panel]`s it points at in one shared
- * `[data-colour-swatches]` root, which is what `src/islands/colour-swatches.ts`
- * enhances — both pieces must be inside the same root for the island to find them.
+ * visible inside a Concept_Card. Just the swatches: the caller (`ConceptCard.astro`
+ * or `/designs/[conceptId].astro`) wraps this *and* the `[data-colour-panel]`s it
+ * points at in one shared `[data-colour-swatches]` root, which is what
+ * `src/islands/colour-swatches.ts` enhances — both pieces must be inside the same
+ * root for the island to find them.
+ *
+ * Redesigned 2026-11 to match the circular micro-photo swatches already shipped in
+ * `ConceptFeedbackForm.astro` (a tiny crop of the colour's own `07-fabric-closeup` photo,
+ * not a flat CSS colour fill) — same visual language, same photo, different control. Also
+ * moved from above the gallery photos to below them (per explicit instruction: "below the
+ * regular browser images for easy selection"), which is the caller's job (DOM order), not
+ * this component's.
+ *
+ * A dynamic N-column grid (N = however many colours this Concept has) keeps every swatch on
+ * one row at any width, same technique as the feedback form's colour row. Concepts without
+ * colour-scoped photography yet (`photos` absent for that colour) fall back to a flat CSS
+ * colour fill, exactly like the feedback form's own fallback.
  *
  * Without JavaScript every swatch is a plain in-page anchor to its panel's id,
  * and every panel stays visible, one after another.
+ *
+ * Generalised (2026-11) to also drive a Concept's DESIGN variants, not just Palette_Colour
+ * (see src/lib/concept-design-variants.ts) — `colours` accepts any string key the caller's
+ * `[data-colour-panel]`s use, not only real Palette_Colour values. `label`/`swatch` let the
+ * caller override the name/flat-fill colour shown per key; a key that IS a real Palette_Colour
+ * still falls back to its real `PALETTE_LABELS`/`PALETTE_SWATCH` entry when no override is
+ * given, so every existing caller (passing real colours, no overrides) is unaffected.
  */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import { PALETTE_LABELS, PALETTE_SWATCH } from '../../lib/feedback-form';
 import { colourPanelId } from '../../lib/colour-panel-id';
-import type { PaletteColour } from '../../content/config/allow-lists';
+
+const LABELS: Record<string, string> = PALETTE_LABELS;
+const SWATCHES: Record<string, string> = PALETTE_SWATCH;
 
 interface Props {
   conceptId: string;
-  colours: readonly PaletteColour[];
+  colours: readonly string[];
+  /** This Concept's colour/design key → representative photo. A key without an entry falls
+   * back to a flat colour fill (only meaningful for a real Palette_Colour key). */
+  photos?: Partial<Record<string, ImageMetadata>>;
+  /** Override the visible name for a key — required for a non-Palette_Colour key (e.g. a
+   * design id), since there's no real label to fall back to for those. */
+  labels?: Partial<Record<string, string>>;
 }
 
-const { conceptId, colours } = Astro.props;
+const { conceptId, colours, photos = {}, labels = {} } = Astro.props;
 ---
 
 <div class="colour-swatches" aria-label="Colour">
   <p class="cs-label">Colour</p>
-  <div class="cs-list" role="group" aria-label="Choose a colour">
+  <div class="cs-list" role="group" aria-label="Choose a colour" style={`grid-template-columns: repeat(${colours.length}, minmax(0, 1fr))`}>
     {
-      colours.map((c) => (
-        <a
-          href={`#${colourPanelId(conceptId, c)}`}
-          class="cs-swatch"
-          data-colour-swatch={c}
-          aria-pressed="false"
-        >
-          <span class="cs-chip" style={`background-color: ${PALETTE_SWATCH[c]}`} aria-hidden="true" />
-          <span class="cs-name">{PALETTE_LABELS[c]}</span>
-        </a>
-      ))
+      colours.map((c) => {
+        const photo = photos[c];
+        const label = labels[c] ?? LABELS[c] ?? c;
+        return (
+          <a
+            href={`#${colourPanelId(conceptId, c)}`}
+            class="cs-swatch"
+            data-colour-swatch={c}
+            aria-pressed="false"
+          >
+            {photo ? (
+              <Image src={photo} alt="" width={72} height={72} class="cs-chip cs-chip-photo" aria-hidden="true" />
+            ) : (
+              <span class="cs-chip" style={`background-color: ${SWATCHES[c] ?? 'var(--color-surface)'}`} aria-hidden="true" />
+            )}
+            <span class="cs-name">{label}</span>
+          </a>
+        );
+      })
     }
   </div>
 </div>
@@ -56,27 +94,43 @@ const { conceptId, colours } = Astro.props;
   }
 
   .cs-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-3);
+    display: grid;
+    gap: var(--space-1) 2px;
   }
 
   .cs-swatch {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
+    min-width: 0;
     min-height: 44px;
-    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
+    gap: var(--space-1);
+    padding: var(--space-1) 2px;
+    border-radius: var(--radius-lg);
     text-decoration: none;
     color: var(--color-text);
     cursor: pointer;
   }
 
-  .cs-swatch[aria-pressed='true'] {
-    border-color: var(--color-accent-text);
-    background: var(--color-surface);
+  .cs-chip {
+    display: block;
+    width: 2.0625rem;
+    height: 2.0625rem;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 0 0 2px var(--color-card, #fbf7f0);
+    flex: none;
+    transition: box-shadow var(--transition);
+  }
+
+  .cs-chip-photo {
+    object-fit: cover;
+  }
+
+  .cs-swatch[aria-pressed='true'] .cs-chip {
+    box-shadow:
+      0 0 0 2px var(--color-card, #fbf7f0),
+      0 0 0 4px var(--color-accent-text);
   }
 
   .cs-swatch:focus-visible {
@@ -84,17 +138,19 @@ const { conceptId, colours } = Astro.props;
     outline-offset: 2px;
   }
 
-  .cs-chip {
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 50%;
-    border: 1px solid var(--color-border);
-    flex: none;
+  .cs-name {
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: var(--fs-label, 0.75rem);
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
-  .cs-name {
-    font-family: var(--font-sans);
-    font-size: var(--fs-small);
+  .cs-swatch[aria-pressed='true'] .cs-name {
+    font-weight: 700;
+    color: var(--color-accent-text);
   }
 </style>
 

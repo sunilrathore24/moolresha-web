@@ -36,6 +36,27 @@ construction:
     - "Subtle ivory buttons"
     - "Interlocking-thread embroidery on the left chest"
     - "Clean, unbranded back"
+# ⚠️ founder copy: the wording below is a draft for the founder to finalise.
+whyThisFabric:
+  lead: "We chose a fine diamond micro-dobby weave for this shirt because its close, woven structure gives plain cotton a subtle all-over pattern and a little more body, while keeping the cloth in the light-to-mid weight range we're targeting for a shirt meant for everyday wear, not just special occasions."
+  onSkin: "This is a research-stage concept, so here is our design intent rather than a tested result: we expect the fine, even dobby structure to feel smooth and breathable against skin, to suit warm weather, and to soften gradually with repeated washing. We have not run wear trials to confirm this yet."
+  premiumDifference: "What we think sets this apart from a plain cotton shirt is construction, not a label: the diamond micro-dobby texture is woven into the cloth rather than printed on, and the interlocking-thread embroidery on the left chest is a quiet, considered detail rather than a logo. Together they are meant to give the shirt a more tactile, intentional feel while the fabric itself stays simple: 100% cotton."
+testing:
+  - name: "Shrinkage after washing"
+    criteria: "Length and width change after five home washes, measured garment by garment."
+    status: planned
+  - name: "Colourfastness"
+    criteria: "Colour change after repeated washing and exposure to light, checked against the original swatch."
+    status: planned
+  - name: "Pilling resistance"
+    criteria: "Surface pilling on the diamond micro-dobby weave after repeated wash-and-wear cycles."
+    status: planned
+  - name: "Seam strength"
+    criteria: "Seam and button strength after repeated wear and washing, checked for loosening or popping."
+    status: planned
+  - name: "Embroidery durability"
+    criteria: "Interlocking-thread embroidery checked for fraying or colour loss after repeated washing."
+    status: planned
 quality:
   - { row: fibre, label: Target, text: "100% cotton, no blended fibres" }
   - row: yarn

@@ -72,7 +72,10 @@ export function initInterestForm(form: HTMLFormElement, env: InterestEnv = {}): 
   shareCopyBtn?.addEventListener('click', () => {
     void (async () => {
       try {
-        const url = `${location.origin}${location.pathname}#concepts`;
+        // Points at the Design Lab (where an opinion is actually formed), not the page the
+        // form happens to be mounted on — the form moved off the homepage in the redesign,
+        // so a same-page "#concepts" anchor no longer resolves to anything.
+        const url = `${location.origin}/designs`;
         await navigator.clipboard.writeText(url);
         if (shareStatus) shareStatus.textContent = MSG_LINK_COPIED;
       } catch {

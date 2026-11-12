@@ -179,75 +179,96 @@ function conceptIdOfCard(card: HTMLElement): string | undefined {
   return lb.startsWith('qc-') ? lb.slice(3) : undefined;
 }
 
+/**
+ * Which page(s) a Concept's Quality_Card may render on. Originally only `/index.html`
+ * (every Concept on the one long homepage); the redesign gives each Concept its own
+ * `/designs/<id>` page instead, so a card there satisfies CC-18 just as well. Checking
+ * both (rather than switching outright) tolerates either architecture without a second
+ * rule change if a Concept is ever shown in both places at once.
+ */
+function pagesToCheck(ctx: CheckContext, conceptId: string): typeof ctx.pages {
+  const candidates = [`/index.html`, `/designs/${conceptId}/index.html`];
+  return ctx.pages.filter((p) => candidates.includes(p.path));
+}
+
 function checkRenderedCards(ctx: CheckContext): Violation[] {
-  const index = ctx.pages.find((p) => p.path === '/index.html');
-  if (!index) return [];
+  // Unit tests that only care about checkQualityCard's data-level logic pass no pages at
+  // all (rendering is not under test there) — skip entirely rather than reporting every
+  // Concept as missing its card, same escape hatch the original /index.html-only check had.
+  const hasAnyRelevantPage = ctx.pages.some((p) => p.path === '/index.html' || p.path.startsWith('/designs/'));
+  if (!hasAnyRelevantPage) return [];
+
   const out: Violation[] = [];
-  const root = parse(index.html.replace(/<!doctype[^>]*>/gi, ''), {
-    blockTextElements: { script: true, style: true },
-  });
   const byId = new Map(ctx.concepts.map((c) => [c.id as string, c]));
-  const hasHowWeCheck = root.querySelector('#how-we-check') !== null;
-  const seen = new Set<string>();
 
-  const cards = root.querySelectorAll('[data-quality-card]');
-  cards.forEach((card, n) => {
-    const id = conceptIdOfCard(card);
-    const concept = id ? byId.get(id) : undefined;
-    const name = id ?? `(card ${n + 1})`;
-    const fail = (detail: string): void => {
-      out.push({ rule: 'CC-18', target: name, detail: `rendered Quality_Card on ${index.path}: ${detail}` });
-    };
-    if (!id || !concept) {
-      fail('card does not belong to a known Concept (no data-concept-id ancestor or qc-<concept-id> aria-labelledby)');
-    } else if (seen.has(id)) {
-      fail('Concept has more than one Quality_Card');
+  for (const concept of ctx.concepts) {
+    const pages = pagesToCheck(ctx, concept.id as string);
+    let foundOnAnyPage = false;
+
+    for (const page of pages) {
+      const root = parse(page.html.replace(/<!doctype[^>]*>/gi, ''), {
+        blockTextElements: { script: true, style: true },
+      });
+      const hasHowWeCheck = root.querySelector('#how-we-check') !== null;
+      const cards = root.querySelectorAll('[data-quality-card]').filter((card) => {
+        const id = conceptIdOfCard(card);
+        // On a per-concept detail page, a card with no resolvable id still belongs to
+        // this concept (there is only one on the page); on the shared index it must
+        // declare its id explicitly so cards are not misattributed.
+        return id ? id === concept.id : page.path !== '/index.html';
+      });
+
+      cards.forEach((card) => {
+        foundOnAnyPage = true;
+        const fail = (detail: string): void => {
+          out.push({ rule: 'CC-18', target: concept.id as string, detail: `rendered Quality_Card on ${page.path}: ${detail}` });
+        };
+
+        const rows = card.querySelectorAll('[data-quality-row]');
+        const ids = rows.map((r) => r.getAttribute('data-quality-row') ?? '');
+        if (ids.join() !== QUALITY_ROWS.join()) {
+          fail(`rows are [${ids.join(', ')}], expected [${QUALITY_ROWS.join(', ')}]`);
+        }
+
+        for (const r of rows) {
+          const rid = r.getAttribute('data-quality-row') ?? '(no row id)';
+          const label = r.getAttribute('data-quality-label') ?? '';
+          const known = label in QUALITY_LABEL_TEXT;
+          if (!known) fail(`row "${rid}" has data-quality-label "${label}", which is not a Quality_Label`);
+
+          const labels = new Set<HTMLElement>([
+            ...r.querySelectorAll('.q-label'),
+            ...r.querySelectorAll('[data-claim-label]'),
+          ]);
+          if (labels.size !== 1) {
+            fail(`row "${rid}" shows ${labels.size} visible labels, expected exactly one`);
+          } else if (known) {
+            const shown = norm([...labels][0]!.textContent);
+            const want = QUALITY_LABEL_TEXT[label as keyof typeof QUALITY_LABEL_TEXT];
+            if (shown !== want) fail(`row "${rid}" shows the label "${shown}", expected "${want}"`);
+          }
+
+          const concept2 = byId.get(concept.id as string);
+          const dataRow = concept2?.quality.find((q) => q.row === rid);
+          if (dataRow && known && dataRow.label !== label) {
+            fail(`row "${rid}" is rendered as ${label} but the Concept data says ${dataRow.label}`);
+          }
+          if (label === 'Target' && !norm(r.textContent).includes(TARGET_NOTE)) {
+            fail(`row "${rid}" is a Target row without the note "${TARGET_NOTE}"`);
+          }
+        }
+
+        if (!card.querySelectorAll('a').some((a) => a.getAttribute('href') === '#how-we-check')) {
+          fail('no link to #how-we-check');
+        } else if (!hasHowWeCheck) {
+          fail('the #how-we-check link does not resolve: no element with id "how-we-check" on the page');
+        }
+      });
     }
-    if (id) seen.add(id);
 
-    const rows = card.querySelectorAll('[data-quality-row]');
-    const ids = rows.map((r) => r.getAttribute('data-quality-row') ?? '');
-    if (ids.join() !== QUALITY_ROWS.join()) {
-      fail(`rows are [${ids.join(', ')}], expected [${QUALITY_ROWS.join(', ')}]`);
-    }
-
-    for (const r of rows) {
-      const rid = r.getAttribute('data-quality-row') ?? '(no row id)';
-      const label = r.getAttribute('data-quality-label') ?? '';
-      const known = label in QUALITY_LABEL_TEXT;
-      if (!known) fail(`row "${rid}" has data-quality-label "${label}", which is not a Quality_Label`);
-
-      const labels = new Set<HTMLElement>([
-        ...r.querySelectorAll('.q-label'),
-        ...r.querySelectorAll('[data-claim-label]'),
-      ]);
-      if (labels.size !== 1) {
-        fail(`row "${rid}" shows ${labels.size} visible labels, expected exactly one`);
-      } else if (known) {
-        const shown = norm([...labels][0]!.textContent);
-        const want = QUALITY_LABEL_TEXT[label as keyof typeof QUALITY_LABEL_TEXT];
-        if (shown !== want) fail(`row "${rid}" shows the label "${shown}", expected "${want}"`);
-      }
-
-      const dataRow = concept?.quality.find((q) => q.row === rid);
-      if (dataRow && known && dataRow.label !== label) {
-        fail(`row "${rid}" is rendered as ${label} but the Concept data says ${dataRow.label}`);
-      }
-      if (label === 'Target' && !norm(r.textContent).includes(TARGET_NOTE)) {
-        fail(`row "${rid}" is a Target row without the note "${TARGET_NOTE}"`);
-      }
-    }
-
-    if (!card.querySelectorAll('a').some((a) => a.getAttribute('href') === '#how-we-check')) {
-      fail('no link to #how-we-check');
-    } else if (!hasHowWeCheck) {
-      fail('the #how-we-check link does not resolve: no element with id "how-we-check" on the page');
-    }
-  });
-
-  for (const c of ctx.concepts) {
-    if (!seen.has(c.id)) {
-      out.push({ rule: 'CC-18', target: c.id, detail: `no Quality_Card rendered on ${index.path}` });
+    if (!foundOnAnyPage) {
+      const where = pages.map((p) => p.path).join(' or ') || '/index.html or /designs/<id>/index.html';
+      out.push({ rule: 'CC-18', target: concept.id as string, detail: `no Quality_Card rendered on ${where}` });
     }
   }
   return out;

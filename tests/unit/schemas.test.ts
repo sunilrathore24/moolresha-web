@@ -225,7 +225,7 @@ describe('InterestBody', () => {
 describe('EventBody', () => {
   it('accepts page_view and section_reached with a section', () => {
     expect(ok(EventBody, { event: 'page_view' })).toBe(true);
-    expect(ok(EventBody, { event: 'section_reached', section: 'journey', utm: { source: 'x' } })).toBe(true);
+    expect(ok(EventBody, { event: 'section_reached', section: 'design-lab', utm: { source: 'x' } })).toBe(true);
     expect(ok(EventBody, { event: 'journal_click', conceptId: 'mens-linen-shirt' })).toBe(true);
   });
 

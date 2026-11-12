@@ -26,6 +26,20 @@ fabricNotes:
   handFeel: "Smooth and slightly firm, easing with wear"
   softness: "Aimed at a soft hand feel; we will check it after repeated washes"
   care: "Machine wash cold, dry in shade, warm iron"
+whyThisFabric:
+  lead: "We chose a cotton twill weave for this pant because its diagonal rib gives a smooth, slightly firm cloth more structure and drape than a plain weave, in the mid weight range we're targeting for a relaxed, everyday pant."
+  onSkin: "This is a research-stage concept: we expect the twill to feel smooth against skin and to ease and soften with wear, rather than a tested result."
+  premiumDifference: "The twill's diagonal weave and the relaxed, tailored leg are meant to read as more considered than a plain cotton pant, while the fabric stays simple: 100% cotton."
+testing:
+  - name: "Shrinkage after washing"
+    criteria: "Length and width change after five home washes."
+    status: planned
+  - name: "Colourfastness"
+    criteria: "Colour change after repeated washing and exposure to light."
+    status: planned
+  - name: "Pilling resistance"
+    criteria: "Surface pilling on the twill weave after repeated wash-and-wear cycles."
+    status: planned
 quality:
   - { row: fibre, label: Target, text: "100% cotton, no blended fibres" }
   - row: yarn

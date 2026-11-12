@@ -1,0 +1,69 @@
+---
+/**
+ * `/journey/pricing` — "What makes up the price of a shirt?", linked from `/journey`.
+ *
+ * Hosts Money_Breakdown and Price_Layers' existing content by rendering those components
+ * as-is (src/components/launch/MoneyBreakdown.astro, PriceLayers.astro): same data sources
+ * (src/content/facts/money-*.yaml, src/content/price-layers/price-layers.yaml), same careful
+ * "not a promise yet" framing in Price_Layers' `launchPromise`. Both components already carry
+ * their own section padding and a self-contained "mini hero" banner, so they transplant onto a
+ * fresh page unchanged; only the page's own intro sits above them.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MoneyBreakdown from '../../components/launch/MoneyBreakdown.astro';
+import PriceLayers from '../../components/launch/PriceLayers.astro';
+---
+
+<BaseLayout
+  title="Price Transparency — MoolResha"
+  description="What a garment's price is typically made of, and the layers that make up the price of a shirt."
+>
+  <header class="pricing-head container">
+    <p class="eyebrow">Journey</p>
+    <h1>Price Transparency</h1>
+    <p class="pricing-intro">
+      A garment's price is made of more layers than its shop tag shows. Here is where the money typically goes, and
+      the layers that make up the price of a shirt.
+    </p>
+    <p class="pricing-back"><a href="/journey">&larr; Back to the journey</a></p>
+  </header>
+
+  <MoneyBreakdown />
+  <PriceLayers />
+</BaseLayout>
+
+<style>
+  .pricing-head {
+    padding-block: var(--space-10) var(--space-8);
+  }
+
+  h1 {
+    margin: 0;
+    max-width: 20ch;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 600;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+
+  .pricing-intro {
+    margin: var(--space-4) 0 0;
+    max-width: 38rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .pricing-back {
+    margin: var(--space-5) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+  }
+
+  .pricing-back a {
+    color: var(--color-accent-text);
+  }
+</style>

@@ -77,18 +77,21 @@ describe('footerModel', () => {
 describe('Footer.astro', () => {
   const src = readFileSync('src/components/Footer.astro', 'utf8');
 
-  it('keeps data-section="footer" on the launch page and every remaining model field, with no studio or statement markup', () => {
+  it('keeps data-section="footer" on the launch page and every remaining model field, with no studio, statement or grievance markup', () => {
     expect(src).toContain("data-section={launch ? 'footer' : undefined}");
-    for (const attr of ['data-footer-contact', 'data-footer-grievance', 'data-footer-entity']) {
+    for (const attr of ['data-footer-contact', 'data-footer-entity']) {
       expect(src).toContain(attr);
     }
-    for (const attr of ['data-footer-statement', 'data-footer-studio']) {
+    // Grievance Contact was a second, duplicate email in the footer — removed per explicit
+    // instruction (no grievance mailbox exists yet); the dedicated /privacy page section
+    // (src/pages/privacy.astro's #grievance-contact) is unchanged and still has it.
+    for (const attr of ['data-footer-statement', 'data-footer-studio', 'data-footer-grievance']) {
       expect(src).not.toContain(attr);
     }
   });
 
-  it('is a dark olive band with a decorative cotton-boll icon', () => {
+  it('is a dark olive band with the real logo image', () => {
     expect(src).toContain('background: var(--color-footer-bg)');
-    expect(src).toMatch(/<svg class="footer-icon" aria-hidden="true"/);
+    expect(src).toMatch(/<Image class="footer-logo" src={logo}/);
   });
 });

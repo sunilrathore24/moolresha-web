@@ -1,16 +1,34 @@
 ---
-// Hero (Requirements 1.1, 1.2, 1.4, 1.5, 2.3).
-// Full-bleed, full-viewport cotton field at sunrise: a still frame (<Picture>, the LCP image and
-// the no-JS view) with a muted looping video laid over it. One wordmark, one headline, one
-// supporting line and one call to action. Put <ResearchNotice /> in the default slot so it sits
-// directly below the call to action (Requirement 1.3).
+// Hero carousel (redesign spec §6, Section 2; user: "a browser of at least three images...
+// only Explore the design button should be consistent and rest you can decide").
 //
-// The video never plays without src/islands/hero-video.ts: that island applies the
-// reduced-motion and Save-Data policy, waits for `load`, and reveals the pause/play toggle
-// (WCAG 2.2.2). Without JS the still frame shows and nothing moves.
+// 3-4 slides rotate the background + eyebrow + headline + support text + a "See more" link
+// (to whatever page that slide is actually about); the pinned "Explore the designs" CTA is
+// rendered ONCE and never changes — it always goes to /designs regardless of slide. The
+// ResearchNotice ("research project, not a shop") was removed from the homepage per user
+// request (2026-11) — it's redundant with /designs's own equivalent framing, which is where
+// it actually matters most. Slide 1 keeps the exact existing video system
+// (src/lib/hero-photo.ts, src/islands/hero-video.ts:
+// reduced-motion/Save-Data autoplay policy, poster-as-LCP-image, pause/play toggle) — none of
+// that logic changed, just scoped to slide 1's background layer. Slides 2-4 are static images
+// already in the asset library (no new photography needed).
+//
+// Backgrounds are N absolutely-positioned crossfading layers (one per slide). Text (eyebrow,
+// headline, support) is ONE set of elements in normal flow, right above the pinned CTA — the
+// carousel island swaps its text content on slide change, rather than duplicating four full
+// positioned text blocks that would otherwise fight the pinned CTA for "the bottom of the hero".
+// Each slide's real text still exists in the DOM (a `[hidden] [data-hero-text]` list, read by
+// the island), so no-JS visitors see slide 1's text with nothing to rotate, same as every other
+// progressively-enhanced component here.
+//
+// Auto-advance is paused by prefers-reduced-motion (dots/arrows still work manually) and by
+// hover/focus within the hero.
 import { Picture } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { HERO_PHOTO_ALT, HERO_VIDEO, pickHeroPhotoKey, toggleState } from '../../lib/hero-photo';
+import meadowFront from '../../assets/concepts/mens-cotton-shirt/meadow/01-front.png';
+import meadowFabric from '../../assets/concepts/mens-cotton-shirt/meadow/07-fabric-closeup.png';
+import fibreTexture from '../../assets/beyond-label/fibre-texture.png';
 
 const modules = import.meta.glob<{ default: ImageMetadata }>(
   '/src/assets/hero/*.{jpg,jpeg,webp,png}',
@@ -19,47 +37,132 @@ const modules = import.meta.glob<{ default: ImageMetadata }>(
 const key = pickHeroPhotoKey(Object.keys(modules));
 const photo = key ? modules[key]?.default : undefined;
 const initialToggle = toggleState(true);
+
+interface Slide {
+  id: string;
+  eyebrow: string;
+  headline: string;
+  support: string;
+  /** Per-slide "See more" link — each slide is actually about a different page; the pinned
+   * "Explore the designs" CTA always goes to /designs regardless of slide, but this one
+   * changes so a visitor can jump straight to whichever page THIS slide is actually about. */
+  linkHref: string;
+  linkLabel: string;
+  image?: ImageMetadata;
+  alt: string;
+}
+
+// Slide 1 has no `image` here — its background is the video+poster system below, unchanged.
+const SLIDES: Slide[] = [
+  {
+    id: 'fibre-journal',
+    eyebrow: 'The Fibre Journal',
+    headline: 'Why does a simple cotton shirt cost so much? We traced it.',
+    support: 'Explore the journey from fibre to fabric to something you wear.',
+    linkHref: '/journey',
+    linkLabel: 'See the journey',
+    alt: HERO_PHOTO_ALT,
+  },
+  {
+    id: 'design-lab',
+    eyebrow: 'The Design Lab',
+    headline: 'Five concepts, designed from the fibre up.',
+    support: 'Thoughtful garments in cotton and linen, created for everyday comfort.',
+    linkHref: '/designs',
+    linkLabel: 'View the designs',
+    image: meadowFront,
+    alt: 'RootWeave 01 shirt in Meadow Sage, on a hanger',
+  },
+  {
+    id: 'design-principles',
+    eyebrow: 'Design Principles',
+    headline: 'Why the fabric matters before the label.',
+    support: 'We choose each weave and fibre for how it behaves on your skin — not for a logo.',
+    linkHref: '/designs/mens-cotton-shirt',
+    linkLabel: 'See the fabric story',
+    image: meadowFabric,
+    alt: 'Close-up of the Meadow Sage micro-dobby weave',
+  },
+  {
+    id: 'journal-research',
+    eyebrow: 'Journal & Research',
+    headline: 'Evidence, not marketing.',
+    support: 'Studies and stories on fabric, longevity and what actually lasts.',
+    linkHref: '/journal',
+    linkLabel: 'Read the journal',
+    image: fibreTexture,
+    alt: 'Macro texture of natural fibre',
+  },
+];
 ---
 
-<section class="hero" data-section="hero" id="hero" aria-labelledby="hero-h">
-  <div class="hero-media">
+<section
+  class="hero"
+  data-section="hero"
+  id="hero"
+  aria-labelledby="hero-h"
+  data-hero-carousel
+  aria-roledescription="carousel"
+  aria-label="Moolresha highlights"
+>
+  <div class="hero-backgrounds">
     {
-      photo ? (
-        <Picture
-          src={photo}
-          alt={HERO_PHOTO_ALT}
-          formats={['avif', 'webp']}
-          fallbackFormat="jpg"
-          widths={[640, 960, 1280, 1600, 1920]}
-          sizes="100vw"
-          width={photo.width}
-          height={photo.height}
-          loading="eager"
-          decoding="async"
-          fetchpriority="high"
-          class="hero-photo"
-        />
-      ) : (
-        <div class="hero-photo hero-placeholder" role="img" aria-label={HERO_PHOTO_ALT} />
-      )
+      SLIDES.map((slide, i) => (
+        <div class="hero-bg" data-hero-bg={i} hidden={i !== 0}>
+          {i === 0 ? (
+            <>
+              {photo ? (
+                <Picture
+                  src={photo}
+                  alt=""
+                  formats={['avif', 'webp']}
+                  fallbackFormat="jpg"
+                  widths={[640, 960, 1280, 1600, 1920]}
+                  sizes="100vw"
+                  width={photo.width}
+                  height={photo.height}
+                  loading="eager"
+                  decoding="async"
+                  fetchpriority="high"
+                  class="hero-photo"
+                />
+              ) : (
+                <div class="hero-photo hero-placeholder" role="img" aria-label={slide.alt} />
+              )}
+              <video
+                class="hero-video"
+                data-hero-video
+                muted
+                playsinline
+                loop
+                preload="none"
+                poster={HERO_VIDEO.poster}
+                width={HERO_VIDEO.width}
+                height={HERO_VIDEO.height}
+                aria-hidden="true"
+                tabindex="-1"
+                disablepictureinpicture
+              >
+                <source src={HERO_VIDEO.src} type={HERO_VIDEO.type} />
+              </video>
+            </>
+          ) : (
+            <Picture
+              src={slide.image!}
+              alt=""
+              formats={['avif', 'webp']}
+              fallbackFormat="webp"
+              widths={[640, 960, 1280, 1600]}
+              sizes="100vw"
+              loading="lazy"
+              decoding="async"
+              class="hero-photo"
+            />
+          )}
+        </div>
+      ))
     }
-    <video
-      class="hero-video"
-      data-hero-video
-      muted
-      playsinline
-      loop
-      preload="none"
-      poster={HERO_VIDEO.poster}
-      width={HERO_VIDEO.width}
-      height={HERO_VIDEO.height}
-      aria-hidden="true"
-      tabindex="-1"
-      disablepictureinpicture
-    >
-      <source src={HERO_VIDEO.src} type={HERO_VIDEO.type} />
-    </video>
-    <div class="hero-overlay" aria-hidden="true"></div>
+    <div class="hero-overlay" aria-hidden="true" />
   </div>
 
   <svg
@@ -81,11 +184,35 @@ const initialToggle = toggleState(true);
 
   <div class="container hero-inner">
     <p class="wordmark">MoolResha</p>
-    <h1 id="hero-h">Why does a simple cotton shirt cost so much? We traced it.</h1>
-    <p class="support">Explore the journey from fibre to fabric to something you wear.</p>
+
+    <p class="eyebrow-hero" data-hero-eyebrow>{SLIDES[0]!.eyebrow}</p>
+    <h1 id="hero-h" data-hero-headline>{SLIDES[0]!.headline}</h1>
+    <p class="support" data-hero-support>{SLIDES[0]!.support}</p>
+
+    <p class="hero-more-row">
+      <a class="hero-more" href={SLIDES[0]!.linkHref} data-hero-more>
+        <span data-hero-more-label>{SLIDES[0]!.linkLabel}</span>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" width="14" height="14">
+          <path d="M3 10h13M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+    </p>
+
+    {/* The real per-slide text, read by the carousel island; never shown directly as a list. */}
+    <ul class="visually-hidden" data-hero-text-source>
+      {SLIDES.map((slide) => (
+        <li
+          data-eyebrow={slide.eyebrow}
+          data-headline={slide.headline}
+          data-support={slide.support}
+          data-link-href={slide.linkHref}
+          data-link-label={slide.linkLabel}
+        />
+      ))}
+    </ul>
 
     <p class="cta-row">
-      <a class="cta" href="#concepts">
+      <a class="cta" href="/designs">
         <span>Explore the designs</span>
         <svg class="cta-arrow" aria-hidden="true" focusable="false" viewBox="0 0 20 20" width="20" height="20">
           <path d="M3 10h13M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
@@ -99,10 +226,17 @@ const initialToggle = toggleState(true);
           fill="currentColor"
         />
       </svg>
-      Share your view early — founding supporters get first access and a launch perk.
+      Be early. Get first access.
     </p>
 
     <slot />
+
+    <div class="hero-dots" data-hero-dots hidden>
+      {SLIDES.map((slide, i) => (
+        <button type="button" data-hero-dot aria-label={`Show slide ${i + 1}: ${slide.eyebrow}`} aria-selected={i === 0 ? 'true' : 'false'} />
+      ))}
+    </div>
+    <p class="visually-hidden" role="status" aria-live="polite" data-hero-status></p>
   </div>
 
   <button
@@ -125,6 +259,7 @@ const initialToggle = toggleState(true);
 
 <script>
   import '../../islands/hero-video';
+  import '../../islands/hero-carousel';
 </script>
 
 <style>
@@ -134,24 +269,43 @@ const initialToggle = toggleState(true);
     display: flex;
     align-items: flex-end;
     width: 100%;
-    min-height: 100vh;
-    min-height: 100svh;
+    /* Header is now always solid and in normal flow (not floating over the hero), so the hero
+       only needs to fill the REST of the viewport below it, not the full 100vh. */
+    min-height: calc(100vh - var(--header-height));
+    min-height: calc(100svh - var(--header-height));
     overflow: hidden;
     color: var(--color-on-hero);
     background: var(--c-ink);
   }
 
-  .hero-media,
+  .hero-backgrounds,
   .hero-overlay {
     position: absolute;
     inset: 0;
   }
 
-  .hero-media {
+  .hero-backgrounds {
     z-index: -1;
   }
 
-  .hero-media :global(picture),
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 1;
+    transition: opacity 600ms ease;
+  }
+
+  .hero-bg[hidden] {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :global(html:not(.js)) .hero-bg[hidden] {
+    display: none;
+  }
+
+  .hero-bg :global(picture),
   .hero-photo,
   .hero-video {
     position: absolute;
@@ -197,41 +351,82 @@ const initialToggle = toggleState(true);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-4);
-    padding-top: calc(var(--header-height) + var(--space-8));
+    gap: var(--space-1);
+    /* No header-height offset needed any more — the header is solid/in-flow now, already
+       excluded from .hero's own height, not floating over this content. */
+    padding-top: var(--space-8);
     padding-bottom: clamp(var(--space-8), 10vh, var(--space-12));
   }
 
   .wordmark {
+    margin: 0 0 var(--space-3);
     font-family: var(--font-serif);
     font-size: var(--fs-h4);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.02em;
     color: var(--color-on-hero);
   }
 
+  .eyebrow-hero {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--c-terracotta-light);
+    transition: opacity 200ms ease;
+  }
+
   h1 {
     max-width: 16ch;
+    margin: 0;
     font-size: var(--fs-display);
     line-height: var(--lh-tight);
-    font-weight: 400;
+    font-weight: 600;
     color: var(--color-on-hero);
     text-shadow: 0 1px 24px rgb(var(--hero-scrim) / 0.35);
+    transition: opacity 200ms ease;
   }
 
   .support {
+    margin: var(--space-3) 0 0;
     max-width: 34rem;
-    font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
     color: var(--color-on-hero);
+    transition: opacity 200ms ease;
+  }
+
+  .hero-more-row {
+    margin: var(--space-3) 0 0;
+    transition: opacity 200ms ease;
+  }
+
+  .hero-more {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    color: var(--color-on-hero);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .hero-text-fading .eyebrow-hero,
+  .hero-text-fading h1,
+  .hero-text-fading .support,
+  .hero-text-fading .hero-more-row {
+    opacity: 0;
   }
 
   .cta-row {
-    margin-top: var(--space-2);
+    margin: var(--space-4) 0 0;
   }
 
-  /* A directional teaser only (no exact percentage or headcount promised here — that detail,
-     and its full non-binding wording, lives with the actual email capture in InterestForm.astro).
-     Just enough to make opening a design feel worth it. */
   .cta-hint {
     display: inline-flex;
     align-items: center;
@@ -239,7 +434,7 @@ const initialToggle = toggleState(true);
     margin-top: var(--space-3);
     color: var(--c-terracotta-light);
     font-size: var(--fs-small);
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .cta-hint svg {
@@ -256,7 +451,9 @@ const initialToggle = toggleState(true);
     color: var(--c-off-white);
     border-radius: 999px;
     text-decoration: none;
-    font-weight: 500;
+    font-family: var(--font-sans);
+    font-size: var(--fs-button);
+    font-weight: 600;
     letter-spacing: 0.01em;
     transition: background-color var(--transition);
   }
@@ -277,6 +474,30 @@ const initialToggle = toggleState(true);
 
   .hero :focus-visible {
     outline-color: var(--color-focus-on-dark);
+  }
+
+  .hero-dots {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+  }
+
+  .hero-dots[hidden] {
+    display: none;
+  }
+
+  .hero-dots button {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 1px solid rgb(255 255 255 / 0.7);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .hero-dots button[aria-selected='true'] {
+    background: var(--color-on-hero);
   }
 
   .hero-video-toggle {

@@ -4,7 +4,19 @@ Living reference for the production deployment of **moolresha-web**. Point a new
 session at this file to pick up where the last one left off. Update it whenever deployment
 state changes; don't let it go stale.
 
-Last updated: **2026-11-11**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
+Last updated: **2026-11-12**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
+
+## ✅ `0002_feedback_comment.sql` applied to production — 2026-11-12
+
+`migrations/0002_feedback_comment.sql` (adds `concept_feedback.comment_text`, the column the
+feedback form's "Any other thoughts?" field writes to) was applied directly against the live
+D1 database via the Cloudflare dashboard's Console tab (wrangler still isn't authenticated on
+this machine, so the dashboard was used instead of `wrangler d1 migrations apply`). Verified
+twice: the `ALTER TABLE` ran with "This query successfully executed", and a follow-up
+`PRAGMA table_info(concept_feedback);` confirms `comment_text` is now a real column. No further
+action needed — `redesign/mobile-premium-v1` is safe to merge/deploy without a 500 on
+comment-bearing feedback submissions. Once
+done, delete this section (or mark it done with the date) so it doesn't linger as a stale alarm.
 
 ## 1. Accounts and IDs
 

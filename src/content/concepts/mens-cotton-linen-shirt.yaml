@@ -25,6 +25,20 @@ fabricNotes:
   handFeel: "Dry and textured, relaxing with washing"
   softness: "Aimed at a softer hand than pure linen; we will check it after repeated washes"
   care: "Machine wash cold on a gentle cycle, dry in shade, warm iron"
+whyThisFabric:
+  lead: "We paired cotton with linen in a plain weave with a light slub texture to get linen's airy drape without losing all of cotton's smoothness, in the light weight range we're targeting."
+  onSkin: "This is a research-stage concept: we expect the blend to feel dry and breathable against skin, easing with washing, rather than a tested result."
+  premiumDifference: "The light slub texture and the camp collar's relaxed drape are meant to read as more considered than a plain, smooth blend, while the cloth itself stays simple."
+testing:
+  - name: "Shrinkage after washing"
+    criteria: "Length and width change after five home washes."
+    status: planned
+  - name: "Colourfastness"
+    criteria: "Colour change after repeated washing and exposure to light."
+    status: planned
+  - name: "Seam strength"
+    criteria: "Seam strength after repeated wear and washing."
+    status: planned
 quality:
   - { row: fibre, label: Target, text: "Cotton and linen blend, ratio to be confirmed" }
   - row: yarn

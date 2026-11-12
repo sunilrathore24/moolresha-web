@@ -1,0 +1,11 @@
+---
+/**
+ * `/designs/rootweave-01` → `/designs/mens-cotton-shirt`.
+ *
+ * "RootWeave 01" is the product code printed on the featured concept's photography, so the
+ * vanity URL is worth keeping — but the canonical page is the concept id. In Astro's static
+ * build `Astro.redirect(..., 301)` emits a redirect page (a meta-refresh plus the status for
+ * hosts that honour it); on Cloudflare Pages this resolves to the target.
+ */
+return Astro.redirect('/designs/mens-cotton-shirt', 301);
+---

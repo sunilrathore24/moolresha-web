@@ -35,6 +35,7 @@ export const CONSENT_REQUIRED = 'consent_required';
 export { UUID_V4, UTM_VALUE, IN_MOBILE, EMAIL_PATTERN, MAX_EMAIL };
 
 export const MAX_FREE_TEXT = 200;
+export const MAX_COMMENT_LENGTH = 250;
 export const MAX_TOKEN = 2048;
 
 /** NFC, line breaks and tabs to a space, other control characters removed, trimmed. */
@@ -62,6 +63,10 @@ export const Token = z.string().min(1).max(MAX_TOKEN);
 /** Free text: at most 200 characters, stored as plain text. */
 export const FreeText = z.string().max(MAX_FREE_TEXT).transform(normaliseText);
 
+/** The general "Any other thoughts?" comment: at most 250 characters, stored as plain text.
+ * Distinct from FreeText/otherText, which stays tied to the "other" Change_Chip. */
+export const CommentText = z.string().max(MAX_COMMENT_LENGTH).transform(normaliseText);
+
 export const ConceptId = z.enum(CONCEPT_IDS);
 
 const hasDuplicates = (xs: readonly unknown[]): boolean => new Set(xs).size !== xs.length;
@@ -77,6 +82,8 @@ export const FeedbackBody = z
     verdict: z.enum(VERDICTS),
     changes: z.array(z.enum(CHANGE_CHIPS)).max(CHANGE_CHIPS.length).default([]),
     otherText: FreeText.optional(),
+    /** General "Any other thoughts?" field — optional, not tied to any chip. */
+    comment: CommentText.optional(),
     colour: z.enum(PALETTE).optional(),
     priorities: z.array(z.enum(PRIORITY_CHIPS)).max(PRIORITY_CHIPS.length).default([]),
     // The price answer is a band id for this Concept, the literal `true` skip, or nothing.

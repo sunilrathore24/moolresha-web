@@ -1,0 +1,98 @@
+---
+/**
+ * Why_This_Fabric (concept detail page). The differentiator block: renders the
+ * `whyThisFabric.lead / onSkin / premiumDifference` design-intent copy with its own tab
+ * ("Why This Fabric", alongside Fabric/Comfort/Quality/Testing) rather than an always-visible
+ * section — the full content is kept (still "the main thing we're pointing out"), just tucked
+ * behind a click instead of consuming default scroll space. Optional field — the caller only
+ * renders this component when `concept.whyThisFabric` exists, so there is no empty state here.
+ *
+ * Plain design-intent copy, not a Fact: no Claim_Label, no data-fact-id.
+ */
+import type { WhyThisFabricData } from '../../lib/concept-schema';
+
+interface Props {
+  whyThisFabric: WhyThisFabricData;
+  /** Used to build a unique heading id. */
+  conceptId: string;
+}
+
+const { whyThisFabric, conceptId } = Astro.props;
+const headingId = `why-fabric-${conceptId}`;
+---
+
+<section class="wtf" aria-labelledby={headingId}>
+  <p class="wtf-eyebrow">Why this fabric</p>
+  <h2 id={headingId} class="wtf-lead">{whyThisFabric.lead}</h2>
+  <div class="wtf-grid">
+    <div class="wtf-item">
+      <h3 class="wtf-item-title">On your skin</h3>
+      <p class="wtf-item-body">{whyThisFabric.onSkin}</p>
+    </div>
+    <div class="wtf-item">
+      <h3 class="wtf-item-title">Where the difference shows</h3>
+      <p class="wtf-item-body">{whyThisFabric.premiumDifference}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .wtf {
+    /* No card background/padding here — this now lives inside a Tabs panel, which already
+       provides the surrounding spacing; a nested card would double-box it. */
+    max-width: 40rem;
+  }
+
+  .wtf-eyebrow {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+  }
+
+  .wtf-lead {
+    margin: 0 0 var(--space-5);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .wtf-grid {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  @media (min-width: 40rem) {
+    .wtf-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+  }
+
+  .wtf-item {
+    min-width: 0;
+  }
+
+  .wtf-item-title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .wtf-item-body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+</style>

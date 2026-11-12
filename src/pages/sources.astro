@@ -1,0 +1,163 @@
+---
+/**
+ * Sources & Citations: every published article's title plus its `sources`
+ * frontmatter entries (src/content.config.ts), grouped by article. No invented
+ * content — an article with an empty `sources` array just says so.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HubHero from '../components/HubHero.astro';
+import { getPublishedArticles } from '../lib/articles';
+
+const articles = await getPublishedArticles();
+---
+
+<BaseLayout
+  title="Sources & Citations — MoolResha"
+  description="Every external source behind the claims in our published articles, grouped by article."
+>
+  <HubHero
+    eyebrow="Sources & Citations"
+    title="Where our claims come from."
+    lede="Every article we publish carries a fact-check trail. Here is every source, grouped by article."
+    image="/images/hub-sources.webp"
+  />
+
+  <section class="sources container">
+    {
+      articles.length > 0 ? (
+        <ul class="sources-list">
+          {articles.map((a) => (
+            <li class="sources-item">
+              <h2><a href={`/article/${a.id}`}>{a.data.title}</a></h2>
+              {a.data.sources.length > 0 ? (
+                <ul class="source-entries">
+                  {a.data.sources.map((s) =>
+                    typeof s === 'string' ? (
+                      <li class="source-entry">
+                        <p class="source-claim fact">{s}</p>
+                      </li>
+                    ) : (
+                      <li class="source-entry">
+                        <p class="source-claim fact">{s.claim}</p>
+                        <p class="source-meta">
+                          <span class="source-status">{s.status}</span>
+                          {s.source ? <span class="source-attribution"> — {s.source}</span> : null}
+                          {s.verify ? <span class="source-flag"> (flagged for follow-up verification)</span> : null}
+                        </p>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              ) : (
+                <p class="no-sources">No external sources cited for this article.</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="soon">No published articles yet.</p>
+      )
+    }
+
+    <p class="back"><a href="/">&larr; Back home</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .sources {
+    padding-block: var(--space-8) var(--space-10);
+  }
+
+  .sources-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .sources-item {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .sources-item:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .sources-item h2 {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+  }
+
+  .sources-item h2 a {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .sources-item h2 a:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .source-entries {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .source-entry {
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius);
+  }
+
+  .source-claim {
+    margin: 0;
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .source-meta {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .source-status {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: var(--fs-label);
+  }
+
+  .source-flag {
+    color: var(--color-accent-text);
+  }
+
+  .no-sources {
+    margin: 0;
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .soon {
+    color: var(--color-text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .back {
+    margin-top: var(--space-8);
+  }
+</style>

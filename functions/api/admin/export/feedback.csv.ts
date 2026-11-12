@@ -27,6 +27,7 @@ export const FEEDBACK_CSV_HEADER = [
   'price_band_id',
   'price_skipped',
   'other_text',
+  'comment_text',
   'utm_source',
   'utm_medium',
   'utm_campaign',
@@ -48,6 +49,7 @@ export function buildFeedbackCsv(rows: readonly FeedbackRow[]): string {
       r.priceSkipped ? '' : (r.priceBandId ?? ''),
       r.priceSkipped ? '1' : '0',
       r.otherText ?? '',
+      r.comment ?? '',
       r.utm.source,
       r.utm.medium,
       r.utm.campaign,
@@ -63,7 +65,7 @@ export function buildFeedbackCsv(rows: readonly FeedbackRow[]): string {
 // Same columns and order as `exportFeedbackRows` in db.ts (no email or phone).
 // Keyset paging avoids OFFSET scans and stays correct if rows change between pages.
 const SQL_EXPORT_PAGE = `
-SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text,
+SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
        utm_source, utm_medium, utm_campaign, updated_at
 FROM concept_feedback
 WHERE (concept_id, anon_id) > (?1, ?2)
@@ -80,6 +82,7 @@ interface ExportRow {
   price_band_id: string | null;
   price_skipped: number;
   other_text: string | null;
+  comment_text: string | null;
   utm_source: string;
   utm_medium: string;
   utm_campaign: string;
@@ -97,6 +100,7 @@ function toFeedbackRow(r: ExportRow): FeedbackRow {
     priceBandId: r.price_band_id,
     priceSkipped: r.price_skipped === 1,
     otherText: r.other_text,
+    comment: r.comment_text,
     utm: { source: r.utm_source, medium: r.utm_medium, campaign: r.utm_campaign },
     updatedAt: r.updated_at,
   };

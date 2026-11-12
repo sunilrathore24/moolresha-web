@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SITE } from '../../src/content/config/site';
 import { NOTICE_VERSION } from '../../src/lib/notice-version';
 import { interestNotice } from '../../src/lib/interest-notice';
 import { loadPrivacy } from '../../src/lib/privacy-schema';
@@ -18,7 +19,10 @@ describe('interestNotice', () => {
     expect(n.purpose).toMatch(/results/i);
     expect(n.processors).toMatch(/MailerLite/);
     expect(n.withdraw).toMatch(/withdraw/i);
-    expect(n.grievanceEmail).toBe(privacy.grievance.email);
+    // The withdrawal contact is now the one real site address (support@), not the
+    // Grievance Contact email — that disclosure was removed sitewide (no grievance mailbox
+    // exists yet), and this was the one place that email also did real functional work.
+    expect(n.grievanceEmail).toBe(SITE.contactEmail);
   });
 
   it('repeats the retention text from privacy.yaml, placeholder marker included', () => {

@@ -119,14 +119,14 @@ describe('CC-15 section order', () => {
   });
   const run = (sections: readonly string[]) => cc15(ctx({ pages: [page(sections)] }));
 
-  it('accepts the eleven sections in order', () => {
-    expect(PAGE_SECTIONS).toHaveLength(12);
+  it('accepts the four sections in order', () => {
+    expect(PAGE_SECTIONS).toHaveLength(4);
     expect(run(PAGE_SECTIONS)).toEqual([]);
   });
 
   it('reports a missing section', () => {
-    const v = run(PAGE_SECTIONS.filter((s) => s !== 'trends'));
-    expect(v.map((x) => x.detail)).toContain('missing data-section "trends"');
+    const v = run(PAGE_SECTIONS.filter((s) => s !== 'nav-cards'));
+    expect(v.map((x) => x.detail)).toContain('missing data-section "nav-cards"');
     expect(v.every((x) => x.rule === 'CC-15' && x.target === '/index.html')).toBe(true);
   });
 
@@ -137,8 +137,8 @@ describe('CC-15 section order', () => {
   });
 
   it('reports a duplicate section', () => {
-    const v = run([...PAGE_SECTIONS.slice(0, 3), 'money', ...PAGE_SECTIONS.slice(3)]);
-    expect(v.some((x) => /"money" appears 2 times/.test(x.detail))).toBe(true);
+    const v = run([...PAGE_SECTIONS.slice(0, 3), 'nav-cards', ...PAGE_SECTIONS.slice(3)]);
+    expect(v.some((x) => /"nav-cards" appears 2 times/.test(x.detail))).toBe(true);
   });
 
   it('reports swapped sections', () => {

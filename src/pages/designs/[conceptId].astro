@@ -1,0 +1,335 @@
+---
+/**
+ * Concept detail page (`/designs/<conceptId>`). One static page per concept id.
+ *
+ * Order (revised per the user's reference-image review, 2026-11): breadcrumb → product header
+ * (name, category, research-stage line) → gallery (AngleViewer per colour behind
+ * ColourSwatches — the exact pairing ConceptCard.astro already uses, reverted from an earlier
+ * merged colour-is-the-tile experiment) → compact 2×2 Product_Specification_Grid → five tabs
+ * (Fabric / Comfort / Quality / Testing / Why This Fabric) → "Share your opinion" CTA → the
+ * relocated ConceptFeedbackForm.
+ *
+ * Why_This_Fabric moved from an always-visible section into its own tab: kept the full
+ * elaborated content (still "the main thing we're pointing out"), but tucked behind a tab
+ * click instead of consuming default scroll space, matching the reference's minimal default
+ * view ("no information upfront... it will give a long scroll").
+ */
+import type { GetStaticPaths, ImageMetadata } from 'astro';
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Tabs from '../../components/launch/Tabs.astro';
+import FabricNotes from '../../components/launch/FabricNotes.astro';
+import ConstructionNotes from '../../components/launch/ConstructionNotes.astro';
+import QualityCard from '../../components/launch/QualityCard.astro';
+import HowWeCheck from '../../components/launch/HowWeCheck.astro';
+import ConceptFeedbackForm from '../../components/launch/ConceptFeedbackForm.astro';
+import AngleViewer from '../../components/launch/AngleViewer.astro';
+import ColourSwatches from '../../components/launch/ColourSwatches.astro';
+import WhyThisFabric from '../../components/designs/WhyThisFabric.astro';
+import ProductSpecificationGrid from '../../components/designs/ProductSpecificationGrid.astro';
+import TestingList from '../../components/designs/TestingList.astro';
+import { conceptColourViews, conceptExtraPhotos, conceptMaterialCards, conceptViews } from '../../lib/concept-images';
+import { buildColourPanels } from '../../lib/concept-colour-panels';
+import { colourPanelId } from '../../lib/colour-panel-id';
+import { CONCEPT_CATEGORIES } from '../../lib/concept-categories';
+import { CONCEPT_DESIGN_VARIANTS } from '../../lib/concept-design-variants';
+
+export const getStaticPaths = (async () => {
+  const concepts = await getCollection('concepts');
+  return concepts.map((e) => ({ params: { conceptId: e.data.id } }));
+}) satisfies GetStaticPaths;
+
+const { conceptId } = Astro.params;
+
+const concepts = (await getCollection('concepts')).map((e) => e.data);
+const concept = concepts.find((c) => c.id === conceptId);
+if (!concept) {
+  throw new Error(`No concept with id "${conceptId}"`);
+}
+
+const maps = { conceptColourViews, conceptMaterialCards, conceptExtraPhotos };
+const designVariants = CONCEPT_DESIGN_VARIANTS[concept.id];
+
+// Design variants (today, only womens-coord-set) take over the gallery entirely — a Concept
+// either has DESIGN variants or Palette_Colour variants, never both, so there's no conflict
+// with the colour-panel branch below. 'design-1' is the Concept's own flat, non-colour-scoped
+// views; every other id resolves through conceptColourViews exactly like a real colourway
+// subfolder would (see concept-design-variants.ts for why that reuse is safe).
+const designPanels = designVariants?.map((v) => {
+  const views = v.id === 'design-1' ? conceptViews[concept.id] ?? [] : conceptColourViews[concept.id]?.[v.id] ?? [];
+  const materialCard = conceptMaterialCards[concept.id]?.[v.id];
+  const extraPhotos = conceptExtraPhotos[concept.id]?.[v.id];
+  return { id: v.id, label: v.label, views, materialCard, extraPhotos };
+});
+const designThumbs: Partial<Record<string, ImageMetadata>> = {};
+const designLabels: Partial<Record<string, string>> = {};
+for (const p of designPanels ?? []) {
+  const front = p.views.find((v) => v.view === '01-front' && v.status === 'file');
+  if (front && front.status === 'file') designThumbs[p.id] = front.image;
+  designLabels[p.id] = p.label;
+}
+
+const colourPanels = designVariants ? [] : buildColourPanels(concept.id, concept.colours, maps);
+const hasColourPhotos = colourPanels.length > 1;
+const category = CONCEPT_CATEGORIES[concept.id];
+
+// Same circular micro-photo treatment as ConceptFeedbackForm.astro's colour swatches: a crop
+// of each colour's own `07-fabric-closeup` shot, not a flat CSS fill.
+const colourPhotos: Partial<Record<(typeof colourPanels)[number]['colour'], ImageMetadata>> = {};
+for (const p of colourPanels) {
+  const closeup = p.views.find((v) => v.view === '07-fabric-closeup' && v.status === 'file');
+  if (closeup && closeup.status === 'file') colourPhotos[p.colour] = closeup.image;
+}
+
+// The tabs that actually have content. Comfort only when `construction` exists, Testing
+// only when `testing` exists, Why This Fabric only when `whyThisFabric` exists — Tabs needs
+// at least two to enhance, which Fabric + Quality always satisfy.
+const tabs = [
+  { id: 'fabric', label: 'Fabric' },
+  ...(concept.construction ? [{ id: 'comfort', label: 'Comfort' }] : []),
+  { id: 'quality', label: 'Quality' },
+  ...(concept.testing && concept.testing.length > 0 ? [{ id: 'testing', label: 'Testing' }] : []),
+  ...(concept.whyThisFabric ? [{ id: 'why', label: 'Why This Fabric' }] : []),
+];
+---
+
+<BaseLayout
+  noindex
+  title={`${concept.name} — Design Lab — MoolResha`}
+  description={`${concept.name}: a research-stage design concept. Read the fabric notes, see every colour and angle, and tell us what you would change. Not for sale.`}
+>
+  <article class="cd container">
+    <Breadcrumbs
+      items={[
+        { label: 'Home', href: '/' },
+        { label: 'Design Lab', href: '/designs' },
+        { label: concept.name },
+      ]}
+    />
+
+    <header class="cd-head">
+      <p class="cd-status">
+        <span class="cd-tag">Concept, not for sale</span>
+        {concept.productCode && <span class="cd-code">{concept.productCode}</span>}
+        {concept.laterProduct && <span class="cd-later">Planned for a later release</span>}
+      </p>
+      <h1 class="cd-name">{concept.name}</h1>
+      <p class="cd-category">{category}</p>
+      <p class="cd-research">Research-stage design concept</p>
+    </header>
+
+    <div class="cd-gallery">
+      {
+        designPanels ? (
+          <div data-colour-swatches>
+            {designPanels.map((p) => (
+              <div data-colour-panel={p.id} id={colourPanelId(concept.id, p.id)}>
+                <AngleViewer
+                  concept={concept}
+                  views={p.views}
+                  materialCard={p.materialCard}
+                  extraPhotos={p.extraPhotos}
+                  conceptIndex={0}
+                  firstCardAboveFold={false}
+                  autoAdvance
+                />
+              </div>
+            ))}
+            <ColourSwatches
+              conceptId={concept.id}
+              colours={designPanels.map((p) => p.id)}
+              photos={designThumbs}
+              labels={designLabels}
+            />
+          </div>
+        ) : hasColourPhotos ? (
+          <div data-colour-swatches>
+            {colourPanels.map((p) => (
+              <div data-colour-panel={p.colour} id={colourPanelId(concept.id, p.colour)}>
+                <AngleViewer
+                  concept={concept}
+                  views={p.views}
+                  materialCard={p.materialCard}
+                  extraPhotos={p.extraPhotos}
+                  conceptIndex={0}
+                  firstCardAboveFold={false}
+                  autoAdvance
+                />
+              </div>
+            ))}
+            {/* Below the photos, per explicit instruction — was above them. */}
+            <ColourSwatches conceptId={concept.id} colours={colourPanels.map((p) => p.colour)} photos={colourPhotos} />
+          </div>
+        ) : (
+          <AngleViewer concept={concept} conceptIndex={0} firstCardAboveFold={false} autoAdvance />
+        )
+      }
+    </div>
+
+    <ProductSpecificationGrid fabricNotes={concept.fabricNotes} />
+
+    <section class="cd-tabs" aria-label={`${concept.name} details`}>
+      <Tabs tabs={tabs} ariaLabel={`${concept.name} details`}>
+        <div role="tabpanel" data-tab-panel="fabric" id="panel-fabric" aria-labelledby="tab-fabric" tabindex="0">
+          <FabricNotes fabricNotes={concept.fabricNotes} conceptId={concept.id} />
+        </div>
+
+        {
+          concept.construction && (
+            <div role="tabpanel" data-tab-panel="comfort" id="panel-comfort" aria-labelledby="tab-comfort" tabindex="0">
+              <ConstructionNotes construction={concept.construction} conceptId={concept.id} />
+            </div>
+          )
+        }
+
+        <div role="tabpanel" data-tab-panel="quality" id="panel-quality" aria-labelledby="tab-quality" tabindex="0">
+          <QualityCard quality={concept.quality} conceptId={concept.id} />
+          <HowWeCheck />
+        </div>
+
+        {
+          concept.testing && concept.testing.length > 0 && (
+            <div role="tabpanel" data-tab-panel="testing" id="panel-testing" aria-labelledby="tab-testing" tabindex="0">
+              <h2 class="cd-testing-h">Testing plan</h2>
+              <p class="cd-testing-intro">
+                What we intend to test on this concept, and the pass criteria. A result is only
+                marked Verified once we have the evidence.
+              </p>
+              <TestingList testing={concept.testing} />
+            </div>
+          )
+        }
+
+        {
+          concept.whyThisFabric && (
+            <div role="tabpanel" data-tab-panel="why" id="panel-why" aria-labelledby="tab-why" tabindex="0">
+              <WhyThisFabric whyThisFabric={concept.whyThisFabric} conceptId={concept.id} />
+            </div>
+          )
+        }
+      </Tabs>
+    </section>
+
+    <section class="cd-voice">
+      {/* No page-level heading here on purpose — ConceptFeedbackForm renders its own "Share
+         Your Opinion" title + intro right below it; a second copy above it duplicated the same
+         words (caught via live screenshot review, 2026-11). */}
+      <ConceptFeedbackForm concept={concept} />
+    </section>
+  </article>
+</BaseLayout>
+
+<script>
+  // ConceptFeedbackForm.astro is server-rendered only (see its own doc comment) — the page that
+  // renders it is responsible for importing the island. your-voice.astro does this already;
+  // this page was missing it, so the submit button never left `hidden` and the form never came
+  // alive (caught via live Playwright check, 2026-11).
+  import '../../islands/feedback-island';
+</script>
+
+<style>
+  .cd {
+    padding-block: var(--space-6) var(--space-10);
+  }
+
+  .cd-head {
+    margin-block: var(--space-6) var(--space-6);
+  }
+
+  .cd-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label, 0.75rem);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  .cd-code,
+  .cd-later {
+    padding: 0 var(--space-2);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: 999px;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  .cd-later {
+    border-style: dashed;
+  }
+
+  .cd-name {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-hero, var(--fs-h1));
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .cd-category {
+    margin: var(--space-1) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    color: var(--color-text-muted);
+  }
+
+  .cd-research {
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  .cd-gallery {
+    max-width: 44rem;
+    margin-block: var(--space-4) var(--space-2);
+  }
+
+  .cd-tabs {
+    margin-block: var(--space-8);
+  }
+
+  /* Without JS the Tabs panels stack; give each a little separation. */
+  .cd-tabs :global([data-tab-panel]) {
+    padding-top: var(--space-2);
+  }
+
+  .cd-tabs :global([data-tab-panel]:focus-visible) {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .cd-testing-h {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h3);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .cd-testing-intro {
+    margin: 0 0 var(--space-4);
+    max-width: 40rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .cd-voice {
+    margin-top: var(--space-10);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+</style>

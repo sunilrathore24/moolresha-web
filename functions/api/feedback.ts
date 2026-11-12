@@ -28,6 +28,7 @@ export async function storeFeedback(data: FeedbackData, ctx: StoreContext): Prom
       verdict: data.verdict,
       changes: data.changes,
       otherText: data.otherText ? data.otherText : null,
+      comment: data.comment ? data.comment : null,
       colour: data.colour ?? null,
       priorities: data.priorities,
       priceBandId: data.priceBandId ?? null,

@@ -1,0 +1,377 @@
+---
+/**
+ * Design index card — used on both the homepage Design Lab teaser and the `/designs` index.
+ * Rewritten again (2026-11) to match the user's newer, more detailed reference: NO colour
+ * swatches, NO per-card interactivity (unchanged from before) — but the featured card is now a
+ * full-bleed photo with text OVERLAID on a dark scrim, and the grid tiles are back to a 2-col
+ * photo-on-top + cream-panel-below layout (not the single-column rows from the previous pass).
+ *
+ * Three density levels via props:
+ * - `featured`: full-bleed photo, text overlay (productCode eyebrow + weave headline + a short
+ *   composition/GSM line + a "View design" pill), all on the image itself.
+ * - default (grid tile): photo top, cream panel below with name + one human descriptor line +
+ *   "View concept →" link (used for the other 4 concepts, 2-per-row).
+ * - `minimal`: image + name ONLY, small square tile (the homepage's small 2x2 grid) — unchanged,
+ *   homepage stays compact per earlier "keep it minimalistic" feedback.
+ */
+import { Image, Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { comingSoonImage } from '../../lib/coming-soon-image';
+
+interface Props {
+  conceptId: string;
+  name: string;
+  productCode?: string;
+  featured?: boolean;
+  laterProduct?: boolean;
+  minimal?: boolean;
+  image?: ImageMetadata;
+  alt: string;
+  /** Featured only: the weave, shown as the big headline over the image. */
+  weave?: string;
+  /** Featured only: a short "<composition> · <GSM> GSM target" line under the weave headline. */
+  specLine?: string;
+  /** Grid tile only (not featured, not minimal): one human descriptor line, e.g.
+   * "Breathable blend · Easy everyday". */
+  descriptor?: string;
+}
+
+const {
+  conceptId,
+  name,
+  productCode,
+  featured = false,
+  laterProduct = false,
+  minimal = false,
+  image,
+  alt,
+  weave,
+  specLine,
+  descriptor,
+} = Astro.props;
+const href = `/designs/${conceptId}`;
+const sizes = featured ? '100vw' : minimal ? '20vw' : '(min-width: 48rem) 22rem, 45vw';
+// Each image's OWN real aspect ratio, not a guessed fixed box — a hardcoded 4/3 (or 4/5, or
+// anything else) crops or stretches whatever doesn't happen to match it. These five photos
+// are two different real shapes (the lifestyle shot is ~2:1, the other four are 3:2), so a
+// single fixed ratio for all of them was never going to fit everything cleanly. Caught live
+// after it kept visibly distorting on both `/designs` and the homepage teaser.
+const mediaStyle = image ? `aspect-ratio: ${image.width} / ${image.height}` : undefined;
+---
+
+<article class:list={['dic', { 'dic-featured': featured, 'dic-minimal': minimal }]} data-design-card>
+  <a class="dic-media-link" href={href} aria-label={`View the ${name} design`}>
+    <div class="dic-media" style={mediaStyle}>
+      {
+        image ? (
+          <Picture
+            src={image}
+            alt={alt}
+            formats={['avif', 'webp']}
+            fallbackFormat="webp"
+            widths={minimal ? [160, 240, 320] : featured ? [640, 960, 1280, 1600] : [360, 540, 720, 1080]}
+            sizes={sizes}
+            width={image.width}
+            height={image.height}
+            loading="lazy"
+            decoding="async"
+            class="dic-img"
+          />
+        ) : comingSoonImage ? (
+          <Image
+            src={comingSoonImage}
+            alt={`${name} — design coming soon`}
+            width={comingSoonImage.width}
+            height={comingSoonImage.height}
+            loading="lazy"
+            decoding="async"
+            class="dic-img dic-img-placeholder"
+          />
+        ) : (
+          <div class="dic-empty" aria-hidden="true">
+            <span>Design coming soon</span>
+          </div>
+        )
+      }
+
+      {
+        featured && (
+          <>
+            <div class="dic-scrim" aria-hidden="true" />
+            <div class="dic-overlay">
+              <p class="dic-overlay-status">
+                {productCode && <span class="dic-overlay-code">{productCode}</span>}
+                {laterProduct && <span class="dic-later">Planned for a later release</span>}
+              </p>
+              {/* No nested <a> here — the whole card is already one link via the outer
+                 `.dic-media-link` wrapping this entire `.dic-media` box; an inner anchor
+                 around just the headline was invalid HTML (anchors can't nest), and browsers
+                 "fixing" that broken markup were silently reparenting this text under the
+                 global `a { color }` rule, giving a hard-to-read terracotta eyebrow instead
+                 of `.dic-overlay`'s intended off-white (caught via live screenshot). */}
+              <h3 class="dic-overlay-weave">{weave ?? name}</h3>
+              {specLine && <p class="dic-overlay-spec" data-composition>{specLine}</p>}
+              <span class="dic-overlay-cta" aria-hidden="true">
+                View design<span class="dic-arrow"> &rarr;</span>
+              </span>
+            </div>
+          </>
+        )
+      }
+    </div>
+  </a>
+
+  {
+    !featured && (
+      <div class="dic-body">
+        {laterProduct && !minimal && (
+          <p class="dic-status">
+            <span class="dic-later">Planned for a later release</span>
+          </p>
+        )}
+        <h3 class="dic-name"><a href={href}>{name}</a></h3>
+        {!minimal && descriptor && <p class="dic-descriptor">{descriptor}</p>}
+        {!minimal && (
+          <p class="dic-cta">
+            <a href={href}>View concept<span aria-hidden="true"> &rarr;</span></a>
+          </p>
+        )}
+      </div>
+    )
+  }
+</article>
+
+<style>
+  .dic {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  /* ---- Featured: full-bleed photo, text overlaid on a dark scrim at the bottom ---- */
+  .dic-featured .dic-media-link {
+    display: block;
+    border-radius: var(--radius-card, 14px);
+    overflow: hidden;
+  }
+
+  .dic-featured .dic-media {
+    position: relative;
+    aspect-ratio: 4 / 3; /* fallback only — the real image's own ratio comes from the inline
+      `style` set in the frontmatter (`mediaStyle`) and wins whenever `image` exists. */
+  }
+
+  .dic-scrim {
+    position: absolute;
+    inset: 0;
+    /* The 35%-then-dark version left the eyebrow sitting on a still-transparent part of the
+       scrim once the box got shorter (4/3 instead of 4/5) — low contrast against a bright
+       photo. Darkens gradually from the very top instead, so the whole overlay has reliable
+       contrast regardless of the box's exact height. */
+    background: linear-gradient(180deg, rgb(20 17 12 / 0.12) 0%, rgb(20 17 12 / 0.45) 30%, rgb(20 17 12 / 0.88) 100%);
+  }
+
+  .dic-overlay {
+    position: absolute;
+    inset: auto var(--space-5) var(--space-5) var(--space-5);
+    color: var(--c-off-white, #faf6ef);
+  }
+
+  .dic-overlay-status {
+    margin: 0 0 var(--space-2);
+  }
+
+  .dic-overlay-code {
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid currentColor;
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .dic-overlay-weave {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-serif);
+    font-size: var(--fs-product);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    max-width: 18ch;
+  }
+
+  .dic-overlay-spec {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    opacity: 0.92;
+  }
+
+  .dic-overlay-cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-5);
+    background: var(--color-olive, #3b3a2b);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-button);
+    font-weight: 600;
+  }
+
+  .dic-arrow {
+    margin-left: var(--space-2);
+  }
+
+  /* ---- Grid tile: photo top, cream panel below ---- */
+  .dic:not(.dic-featured) .dic-media-link {
+    display: block;
+    border-radius: var(--radius-lg, 10px) var(--radius-lg, 10px) 0 0;
+    overflow: hidden;
+  }
+
+  .dic:not(.dic-featured) .dic-media {
+    position: relative;
+    background: var(--color-surface);
+  }
+
+  /* Fallbacks only, for the no-photo ("coming soon") placeholder case — matches the
+     placeholder graphic's own real shape (1122x1402, ~4/5). Whenever a real `image` exists,
+     the frontmatter's `mediaStyle` sets that image's own exact aspect ratio inline, which
+     wins over these. Kept as two explicit rules (not one shared selector) so the grid tile
+     and the homepage's small teaser tile can never again silently inherit each other's ratio
+     the way they did when this was one rule both matched — that's what caused the real
+     distortion caught live on both pages. */
+  .dic:not(.dic-featured):not(.dic-minimal) .dic-media {
+    aspect-ratio: 4 / 5;
+  }
+
+  .dic-minimal .dic-media {
+    aspect-ratio: 4 / 5;
+  }
+
+  .dic:not(.dic-featured):not(.dic-minimal) {
+    background: var(--color-card, #fbf7f0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, 10px);
+    overflow: hidden;
+    /* Fill the grid cell so all four cards end up the same height regardless of how much
+       text any one of them has (e.g. the "Planned for a later release" badge). */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dic-media-link:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .dic-media :global(picture),
+  .dic-media :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .dic-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: var(--space-2);
+  }
+
+  .dic-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* grows to fill the card's now-stretched height */
+    gap: var(--space-1);
+  }
+
+  .dic:not(.dic-minimal) .dic-body {
+    padding: var(--space-3);
+  }
+
+  .dic-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
+  }
+
+  .dic-later {
+    padding: 0 var(--space-2);
+    border: 1px dashed var(--c-raw-umber);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    color: var(--color-text);
+  }
+
+  .dic-name {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-card-title);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .dic-minimal .dic-name {
+    font-size: var(--fs-small);
+    text-align: center;
+    margin-top: var(--space-1);
+  }
+
+  .dic-name a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .dic-name a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .dic-name a:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .dic-descriptor {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .dic-cta {
+    margin: var(--space-1) 0 0;
+    margin-top: auto; /* pinned to the bottom of the now-stretched .dic-body */
+  }
+
+  .dic-cta a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .dic-cta a:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+</style>

@@ -21,8 +21,8 @@ export interface SiteConfig {
 
 export const SITE: SiteConfig = {
   // Online-only at launch: no studio name or location is disclosed in the footer.
-  // ⚠️ confirm: contact@ is a PLACEHOLDER address. Founder to confirm the mailbox exists before launch.
-  contactEmail: 'contact@moolresha.com',
+  // ⚠️ confirm: support@ is a PLACEHOLDER address. Founder to confirm the mailbox exists before launch.
+  contactEmail: 'support@moolresha.com',
   // The Journal index (src/pages/journal.astro) lists every published article.
   journalHref: '/journal',
   // Empty by default: no registered legal entity yet. Fill both fields when one exists.

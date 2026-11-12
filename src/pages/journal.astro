@@ -9,6 +9,9 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import HubHero from "../components/HubHero.astro";
 import ArticleCard from "../components/ArticleCard.astro";
+import WhyItMatters from "../components/launch/WhyItMatters.astro";
+import BeyondTheLabel from "../components/launch/BeyondTheLabel.astro";
+import Trends from "../components/launch/Trends.astro";
 import { CATEGORY_PATH, getPublishedArticles } from "../lib/articles";
 
 const articles = await getPublishedArticles();
@@ -50,7 +53,18 @@ const articles = await getPublishedArticles();
 
     <p class="back"><a href="/">&larr; Back home</a></p>
   </section>
+
+  {/* Relocated from the homepage (redesign, 2026-11): not in the 6-screen reference, but kept
+      — not deleted — per "don't delete existing content merely because it is absent from the
+      design reference." These fit this page's research/insights framing. */}
+  <WhyItMatters />
+  <BeyondTheLabel />
+  <Trends />
 </BaseLayout>
+
+<script>
+  import '../islands/events-island';
+</script>
 
 <style>
   .hub {

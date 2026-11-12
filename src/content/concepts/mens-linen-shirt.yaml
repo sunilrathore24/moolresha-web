@@ -26,6 +26,20 @@ fabricNotes:
   handFeel: "Dry and textured, softening with washing"
   softness: "Linen starts crisper than cotton and softens with washing; we will check how it feels after repeated washes"
   care: "Machine wash cold on a gentle cycle, dry in shade, iron damp if you want a smooth finish"
+whyThisFabric:
+  lead: "We chose a plain weave with a visible slub texture for this 100% linen shirt because that open structure is what gives linen its characteristic texture and drape, in the light-to-mid weight range we're targeting."
+  onSkin: "This is a research-stage concept: we expect the open weave to feel dry and breathable against skin, starting crisp and softening with repeated washing, rather than a tested result."
+  premiumDifference: "The visible slub texture and the natural drape of an open linen weave are meant to read as more considered than a flat, even cloth, while the fabric stays simple: 100% linen."
+testing:
+  - name: "Shrinkage after washing"
+    criteria: "Length and width change after five home washes."
+    status: planned
+  - name: "Colourfastness"
+    criteria: "Colour change after repeated washing and exposure to light."
+    status: planned
+  - name: "Crease recovery"
+    criteria: "How the fabric recovers from creasing after wear and after washing."
+    status: planned
 quality:
   - { row: fibre, label: Target, text: "100% linen, no blended fibres" }
   - row: yarn

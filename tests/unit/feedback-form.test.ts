@@ -86,7 +86,7 @@ describe('feedbackFormModel', () => {
 
   it('exposes the field names the island reads', () => {
     expect(Object.values(FIELD_NAMES).sort()).toEqual(
-      ['changes', 'colour', 'otherText', 'priceBandId', 'priorities', 'verdict'].sort(),
+      ['changes', 'colour', 'comment', 'otherText', 'priceBandId', 'priorities', 'verdict'].sort(),
     );
     expect(OTHER_TEXT_MAX_LENGTH).toBe(200);
   });

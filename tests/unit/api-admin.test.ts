@@ -355,11 +355,11 @@ describe('export endpoints', () => {
     expect(text).not.toMatch(/person@example\.test|9876543210|email|phone/i);
     expect(FEEDBACK_CSV_HEADER).toEqual([
       'anon_id', 'concept_id', 'verdict', 'changes', 'colour', 'priorities', 'price_band_id',
-      'price_skipped', 'other_text', 'utm_source', 'utm_medium', 'utm_campaign', 'updated_at',
+      'price_skipped', 'other_text', 'comment_text', 'utm_source', 'utm_medium', 'utm_campaign', 'updated_at',
     ]);
     const records = parseCsv(text);
     expect(records).toHaveLength(1 + 4);
-    for (const r of records) expect(r).toHaveLength(13);
+    for (const r of records) expect(r).toHaveLength(14);
   });
 
   it('neutralises formulas in free text, keeps multi-line quoted text intact, and empties band on skip', async () => {

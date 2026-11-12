@@ -5,6 +5,7 @@
  * disagree, and a placeholder carries the same "confirm" marker in both places.
  * Pure: takes the already-loaded Privacy data, reads no files.
  */
+import { SITE } from '../content/config/site';
 import type { PrivacyData } from './privacy-schema';
 
 export interface InterestNotice {
@@ -50,11 +51,13 @@ export function interestNotice(privacy: PrivacyData, noticeVersion: string): Int
       "Your WhatsApp number goes to Meta's WhatsApp Business Platform, which sends you a confirmation message. " +
       'Everything else is stored with Cloudflare, which hosts this site.',
     retention,
-    withdraw:
-      'You can withdraw any consent at any time. Use the unsubscribe link in any email, or write to the ' +
-      `${privacy.grievance.label} at`,
+    // Was "...or write to the {grievance label} at <grievance email>" — the Grievance Contact
+    // disclosure was removed sitewide (no grievance mailbox exists yet); this is the one place
+    // that email was also doing real, functional work (how to actually withdraw consent), not
+    // just a duplicate disclosure, so it gets the one real address instead, not just a deletion.
+    withdraw: 'You can withdraw any consent at any time. Use the unsubscribe link in any email, or write to us at',
     grievanceLabel: privacy.grievance.label,
-    grievanceEmail: privacy.grievance.email,
+    grievanceEmail: SITE.contactEmail,
     privacyHref: '/privacy',
     privacyLinkText: 'Read the full privacy notice',
     versionText: `Privacy notice version ${privacy.version}`,

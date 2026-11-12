@@ -153,6 +153,40 @@ export const ConstructionNotes = z.strictObject({
 });
 export type ConstructionNotesData = z.output<typeof ConstructionNotes>;
 
+/**
+ * Why_This_Fabric: design-intent copy explaining the fabric choice. Optional: only
+ * concepts with real copy render this fold. Every sub-field is a claim about intent
+ * or expectation, not an independently-verified result (Content_Check CC-02/CC-09).
+ */
+export const WhyThisFabric = z.strictObject({
+  lead: z.string().max(400),
+  onSkin: z.string().max(400),
+  premiumDifference: z.string().max(400),
+});
+export type WhyThisFabricData = z.output<typeof WhyThisFabric>;
+
+/** A planned or completed quality test, distinct from the Quality_Card's `We'll test` rows. */
+export const TESTING_STATUSES = ['planned', 'in_progress', 'verified', 'needs_improvement'] as const;
+export type TestingStatus = (typeof TESTING_STATUSES)[number];
+
+/** The exact visible wording for each status. Nothing is ever shown "Verified" without evidence. */
+export const TESTING_STATUS_LABELS: Record<TestingStatus, string> = {
+  planned: 'Planned',
+  in_progress: 'In Progress',
+  verified: 'Verified',
+  needs_improvement: 'Needs Improvement',
+};
+
+export const TestingEntry = z.strictObject({
+  name: z.string().max(80),
+  criteria: z.string().max(200),
+  status: z.enum(TESTING_STATUSES),
+});
+export type TestingEntryData = z.output<typeof TestingEntry>;
+
+export const Testing = z.array(TestingEntry).max(10);
+export type TestingData = z.output<typeof Testing>;
+
 export const Concept = z
   .object({
     id: z.enum(CONCEPT_IDS),
@@ -168,6 +202,8 @@ export const Concept = z
     quality: QualityCard,
     fabricNotes: FabricNotes,
     construction: ConstructionNotes.optional(),
+    whyThisFabric: WhyThisFabric.optional(),
+    testing: Testing.optional(),
     priceBands: PriceBandsSchema,
     marketScanId: z.string().min(1),
     colours: z.array(PaletteColourSchema).min(1).max(PALETTE.length).default([...PALETTE]),

@@ -12,9 +12,13 @@
  * `launch` defaults to true only on the home page ("/"), so BaseLayout needs no change. A page can set
  * it explicitly: <Footer launch={true} />.
  */
+import { Image } from 'astro:assets';
 import { SITE } from '../content/config/site';
 import { loadPrivacy } from '../lib/privacy-schema';
 import { footerModel } from '../lib/footer';
+import { NOTICE_VERSION } from '../lib/notice-version';
+import { INTEREST_FIELDS as F, interestErrorId } from '../lib/interest-fields';
+import logo from '../assets/brand/logo-light.png';
 
 interface Props {
   launch?: boolean;
@@ -26,21 +30,57 @@ const m = footerModel(launch, SITE, privacy.grievance, new Date().getFullYear())
 // The copyright year sits in <time datetime="YYYY"> so Content_Check CC-09 reads it as a declared date.
 const [baseBefore, baseAfter] =
   m.copyrightYear === null ? [m.baseLine, ''] : m.baseLine.split(String(m.copyrightYear));
+
+const footerEmailId = 'footer-signup-email';
 ---
 
 <footer class="site-footer" data-section={launch ? 'footer' : undefined}>
+  {/* Always rendered — on every page, not just the home page's LaunchSignup.astro panel —
+     per explicit instruction ("the footer is always visible in all the navigation pages and
+     user can always go down and subscribe"). Same /api/interest endpoint and the same
+     interest-island.ts the full /your-voice form and the homepage panel already use; see
+     LaunchSignup.astro's own header comment for why that's safe to reuse rather than invent a
+     second signup backend. */}
+  <div class="container footer-signup">
+    <form class="footer-signup-panel" data-interest-form data-notice-version={NOTICE_VERSION} method="post" action="/api/interest">
+      <div class="footer-signup-text">
+        <p class="footer-signup-heading">Join us — don't miss an exclusive release.</p>
+        <p class="footer-signup-body">Stay tuned for early access. Just your email, nothing else.</p>
+      </div>
+      <div class="footer-signup-field-row">
+        <label class="visually-hidden" for={footerEmailId}>Email address</label>
+        <input
+          class="footer-signup-input"
+          type="email"
+          id={footerEmailId}
+          name={F.email}
+          placeholder="you@example.com"
+          autocomplete="email"
+          aria-describedby={interestErrorId(F.email)}
+        />
+        <button type="submit" class="footer-signup-submit" data-submit hidden>Subscribe</button>
+      </div>
+      <p class="field-error" id={interestErrorId(F.email)} data-error-for={F.email}></p>
+
+      {/* Hidden, pre-checked — same reasoning as LaunchSignup.astro: the API requires both
+         consents.email and consents.adult to be true for any email submission, and per "as
+         simple as that" there's no visible checkbox for either here either. */}
+      <input type="checkbox" name={F.consentEmail} checked hidden aria-hidden="true" tabindex="-1" />
+      <input type="checkbox" name={F.consentAdult} checked hidden aria-hidden="true" tabindex="-1" />
+      <p class="footer-signup-disclosure">
+        By subscribing, you confirm you are 18 or older and agree to receive updates by email. See our{' '}
+        <a href="/privacy">Privacy Notice</a>.
+      </p>
+
+      <div data-turnstile></div>
+      <noscript><p class="footer-signup-disclosure">This needs JavaScript turned on — nothing was sent.</p></noscript>
+      <p class="footer-signup-live" role="status" aria-live="polite" data-live-region></p>
+    </form>
+  </div>
+
   <div class="container footer-inner">
     <div class="footer-brand">
-      <svg class="footer-icon" aria-hidden="true" focusable="false" viewBox="0 0 48 48" width="40" height="40">
-        <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M24 30c-5 0-9-3-9-7.5 0-3 2.2-5.3 5-5.8C20.6 13.6 22.5 12 24 12s3.4 1.6 4 4.7c2.8.5 5 2.8 5 5.8 0 4.5-4 7.5-9 7.5z" />
-          <path d="M18.5 21.5c1.8 1 3.6 1.4 5.5 1.4s3.7-.4 5.5-1.4" />
-          <path d="M24 30v12M24 36c-2.5-1-4.5-.6-6.5 1M24 34c2.5-1 4.5-.6 6.5 1" />
-          <path d="M17 29l-3 3M31 29l3 3" />
-        </g>
-      </svg>
-      <span class="footer-name">MoolResha</span>
-      <span class="footer-tagline">Closer to the Root.</span>
+      <Image class="footer-logo" src={logo} alt="MoolResha — Closer to the Root" width={356} height={178} />
       <p class="footer-mission">
         Know what you wear. Learn to read any label, judge any fabric, and
         choose for yourself.
@@ -50,9 +90,6 @@ const [baseBefore, baseAfter] =
           <address class="footer-contact">
             <span>
               Contact: <a href={`mailto:${m.contactEmail}`} data-footer-contact>{m.contactEmail}</a>
-            </span>
-            <span>
-              {m.grievanceLabel}: <a href={`mailto:${m.grievanceEmail}`} data-footer-grievance>{m.grievanceEmail}</a>
             </span>
             {m.entity && (
               <span class="footer-entity" data-footer-entity>
@@ -64,6 +101,28 @@ const [baseBefore, baseAfter] =
           </address>
         )
       }
+
+      <ul class="footer-social" aria-label="MoolResha on social media">
+        <li>
+          <a href="https://www.instagram.com/moolresha/" target="_blank" rel="noopener noreferrer">
+            <span class="visually-hidden">Instagram (opens in a new tab)</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a href="https://www.youtube.com/@moolresha" target="_blank" rel="noopener noreferrer">
+            <span class="visually-hidden">YouTube (opens in a new tab)</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2.5" y="5.5" width="19" height="13" rx="4" />
+              <path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none" />
+            </svg>
+          </a>
+        </li>
+      </ul>
     </div>
 
     <nav aria-label="Footer" class="footer-nav">
@@ -80,6 +139,10 @@ const [baseBefore, baseAfter] =
   </div>
 </footer>
 
+<script>
+  import '../islands/interest-island';
+</script>
+
 <style>
   /* Dark olive band (#3b3d2c). Contrast: off-white text 10.31:1, warm-oat secondary text 8.19:1,
      light-terracotta links 5.99:1, focus ring off-white. */
@@ -93,6 +156,122 @@ const [baseBefore, baseAfter] =
     outline-color: var(--color-focus-on-dark);
   }
 
+  /* ---- Email subscribe panel: on every page, not just the home page's own hero-adjacent
+     LaunchSignup.astro panel. A lighter tint than the footer's own olive so it still reads as
+     a distinct card, not just more footer text. ---- */
+  .footer-signup {
+    margin-bottom: var(--space-8);
+  }
+
+  .footer-signup-panel {
+    padding: var(--space-5);
+    background: rgb(250 246 239 / 0.06);
+    border: 1px solid rgb(250 246 239 / 0.18);
+    border-radius: var(--radius-card, 14px);
+  }
+
+  .footer-signup-heading {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h4);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-footer-text);
+  }
+
+  .footer-signup-body {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-footer-muted);
+  }
+
+  .footer-signup-field-row {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    max-width: 26rem;
+  }
+
+  .footer-signup-input {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid rgb(250 246 239 / 0.3);
+    border-radius: 999px;
+    background: rgb(250 246 239 / 0.08);
+    color: var(--color-footer-text);
+    font: inherit;
+    font-size: var(--fs-body);
+  }
+
+  .footer-signup-input::placeholder {
+    color: var(--color-footer-muted);
+  }
+
+  .footer-signup-submit {
+    flex: none;
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-5);
+    background: var(--color-accent-text);
+    color: var(--c-off-white, #faf6ef);
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-size: var(--fs-button);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .footer-signup-submit[hidden] {
+    display: none;
+  }
+
+  .footer-signup-disclosure,
+  .footer-signup-live {
+    margin: var(--space-2) 0 0;
+    max-width: 26rem;
+    font-size: var(--fs-label);
+    color: var(--color-footer-muted);
+  }
+
+  .footer-signup-live:empty {
+    display: none;
+  }
+
+  .footer-signup .field-error {
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-small);
+    color: var(--color-on-band-accent, var(--c-terracotta-light));
+  }
+
+  .footer-signup .field-error:empty {
+    display: none;
+  }
+
+  /* ---- Social icons ---- */
+  .footer-social {
+    display: flex;
+    gap: var(--space-3);
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer-social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--color-footer-text);
+  }
+
+  .footer-social a:hover {
+    color: var(--color-footer-link);
+  }
+
   .footer-inner {
     display: flex;
     flex-wrap: wrap;
@@ -104,24 +283,11 @@ const [baseBefore, baseAfter] =
     max-width: 30rem;
   }
 
-  .footer-icon {
-    margin-bottom: var(--space-3);
-    color: var(--color-footer-link);
-  }
-
-  .footer-name {
+  .footer-logo {
     display: block;
-    font-family: var(--font-serif);
-    font-size: 1.75rem;
-    font-weight: 500;
-    line-height: 1.1;
-  }
-
-  .footer-tagline {
-    font-family: var(--font-serif);
-    font-style: italic;
-    color: var(--color-footer-muted);
-    font-size: var(--fs-small);
+    height: 44px;
+    width: auto;
+    margin-bottom: var(--space-3);
   }
 
   .footer-mission {
@@ -168,7 +334,7 @@ const [baseBefore, baseAfter] =
     align-items: center;
     min-height: 44px;
     text-decoration: none;
-    font-size: 0.95rem;
+    font-size: var(--fs-nav);
   }
 
   .footer-nav a:hover {

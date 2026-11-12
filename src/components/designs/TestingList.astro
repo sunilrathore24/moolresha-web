@@ -1,0 +1,106 @@
+---
+/**
+ * Testing_List (concept detail page, "Testing" tab): one row per `testing` entry —
+ * name, criteria and a status. Status labels are exactly "Planned" / "In Progress" /
+ * "Verified" / "Needs Improvement" (TESTING_STATUS_LABELS); nothing is marked Verified
+ * here that the data does not already say. The label is always text, so the state never
+ * rests on colour alone.
+ */
+import type { TestingData } from '../../lib/concept-schema';
+import { TESTING_STATUS_LABELS } from '../../lib/concept-schema';
+
+interface Props {
+  testing: TestingData;
+}
+
+const { testing } = Astro.props;
+---
+
+<ul class="tl">
+  {
+    testing.map((t) => (
+      <li class="tl-row">
+        <div class="tl-head">
+          <h3 class="tl-name">{t.name}</h3>
+          <span class={`tl-status tl-status-${t.status}`}>{TESTING_STATUS_LABELS[t.status]}</span>
+        </div>
+        <p class="tl-criteria">{t.criteria}</p>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .tl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .tl-row {
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border-radius: var(--radius-card, 14px);
+  }
+
+  .tl-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .tl-name {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    line-height: var(--lh-tight);
+    color: var(--color-text);
+  }
+
+  /* Status reads as a quiet labelled chip; the word is the signal, the border a second,
+     non-colour cue per status so it never rests on colour alone. */
+  .tl-status {
+    flex: none;
+    padding: 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label, 0.75rem);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.8;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+  }
+
+  .tl-status-planned {
+    border-style: dashed;
+  }
+
+  .tl-status-in_progress {
+    border-style: dotted;
+  }
+
+  .tl-status-verified {
+    border-color: var(--color-accent-text);
+    color: var(--color-accent-text);
+  }
+
+  .tl-status-needs_improvement {
+    border-style: double;
+    border-width: 3px;
+  }
+
+  .tl-criteria {
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+</style>

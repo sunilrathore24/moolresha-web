@@ -15,6 +15,8 @@
  * STABLE HOOKS FOR THE ISLAND (do not rename without updating task 6.7):
  *   [data-angle-viewer]            root; one per Concept. Island runs per root.
  *   [data-concept-id]              on root; the Concept id.
+ *   [data-auto-advance]            on root, opt-in; present (any value) turns on the
+ *                                  timer-driven auto-advance. Absent = off (default).
  *   .av-stage                      focusable group (tabindex=0). Gets pointer
  *                                  and key listeners (Left/Right still turn the
  *                                  five Turn_Views; there is no visible button
@@ -91,9 +93,21 @@ interface Props {
    * that does not fit one of the eight named Concept_Views (see `concept-image-resolver.ts`'s
    * `resolveExtraPhotos`). Omitted or missing slots just render nothing extra. */
   extraPhotos?: Partial<Record<ExtraPhotoSlot, { path: string; image: ImageMetadata }>>;
+  /** Opt-in: step through the thumbnail strip on a timer, same idea as the homepage hero
+   * carousel (paused by prefers-reduced-motion and by hover/focus, loops at the end instead
+   * of stopping). Off by default — only the Design Lab detail page turns this on. */
+  autoAdvance?: boolean;
 }
 
-const { concept, conceptIndex = 0, firstCardAboveFold = false, views, materialCard, extraPhotos } = Astro.props;
+const {
+  concept,
+  conceptIndex = 0,
+  firstCardAboveFold = false,
+  views,
+  materialCard,
+  extraPhotos,
+  autoAdvance = false,
+} = Astro.props;
 
 const resolved = views ?? conceptViews[concept.id];
 const isRender = concept.views.kind === 'render';
@@ -138,7 +152,7 @@ function thumbLabel(view: ViewBase): string {
 }
 ---
 
-<div class="angle-viewer" data-angle-viewer data-concept-id={concept.id}>
+<div class="angle-viewer" data-angle-viewer data-concept-id={concept.id} data-auto-advance={autoAdvance ? '' : undefined}>
   <div class="av-stage" role="group" tabindex="0" aria-label={stageLabel} style={`aspect-ratio: ${stageRatio}`}>
     <figure class="av-frame" data-view={firstView} data-current>
       {

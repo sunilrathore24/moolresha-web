@@ -1,29 +1,32 @@
 /**
- * Pure helpers for the header navigation and the Hub_Pages (Requirement 2.4).
+ * Pure helpers for the header navigation and the Hub_Pages.
  *
- * The header links only to Launch_Page section anchors, the Journal and the
- * Privacy_Notice. Hub_Pages stay reachable by URL (article breadcrumbs link to
- * them) but are `noindex` and not in the navigation or the sitemap.
+ * Redesign (2026-11): the header used to link only to Launch_Page section
+ * anchors (`/#journey` etc.) because every section lived on one long home
+ * page. The redesign gives each area its own route, so the header now links
+ * to real pages: Home, Our Journey, Design Lab, Journal & Research, Your
+ * Voice, Our Story — matching the redesign spec's mobile menu exactly.
+ * Privacy stays out of the primary nav (it's in the footer already) to keep
+ * the compact header focused on the six real sections.
+ *
+ * Hub_Pages stay reachable by URL (article breadcrumbs link to them) but are
+ * `noindex` and not in the navigation or the sitemap.
  */
 import { PAGE_SECTIONS, type PageSection } from '../content/config/allow-lists';
-
-export type NavKind = 'anchor' | 'journal' | 'privacy';
 
 export interface NavItem {
   label: string;
   href: string;
-  kind: NavKind;
 }
 
-/**
- * Launch_Page sections the header links to. The page composition (task 8.10)
- * must give each of these sections an element with `id` equal to `section`.
- */
-export const NAV_SECTIONS: readonly { section: PageSection; label: string }[] = [
-  { section: 'journey', label: 'Our journey' },
-  { section: 'concepts', label: 'Designs' },
-  { section: 'trends', label: 'Trends' },
-  { section: 'frustration', label: 'Your voice' },
+/** Header links, in display order. */
+export const NAV_ITEMS: readonly NavItem[] = [
+  { label: 'Home', href: '/' },
+  { label: 'Our Journey', href: '/journey' },
+  { label: 'Design Lab', href: '/designs' },
+  { label: 'Journal & Research', href: '/journal' },
+  { label: 'Your Voice', href: '/your-voice' },
+  { label: 'Our Story', href: '/about' },
 ];
 
 export const PRIVACY_PATH = '/privacy';
@@ -36,20 +39,9 @@ export const HUB_PAGE_PATHS = [
   '/shopping-guides',
 ] as const;
 
-/**
- * Header links in display order. Anchors are written as `/#id` so they work
- * from every page, not only the home page. The Journal link is left out when
- * there is no published article to point to.
- */
-export function buildNavItems(opts: { journalHref?: string } = {}): NavItem[] {
-  const items: NavItem[] = NAV_SECTIONS.map(({ section, label }) => ({
-    label,
-    href: `/#${section}`,
-    kind: 'anchor',
-  }));
-  if (opts.journalHref) items.push({ label: 'Journal', href: opts.journalHref, kind: 'journal' });
-  items.push({ label: 'Privacy', href: PRIVACY_PATH, kind: 'privacy' });
-  return items;
+/** Header links in display order. Pure passthrough now that every link is a real route. */
+export function buildNavItems(): NavItem[] {
+  return [...NAV_ITEMS];
 }
 
 /** Strips a trailing slash (but keeps "/"). */
@@ -63,15 +55,16 @@ export function isHubPagePath(path: string): boolean {
   return (HUB_PAGE_PATHS as readonly string[]).includes(p);
 }
 
-/** Whether a nav item should carry `aria-current="page"` on `path`. Anchors never do. */
+/**
+ * Whether a nav item should carry `aria-current="page"` on `path`.
+ * "Home" only matches the exact root. Everything else matches its own path
+ * and any sub-route under it (e.g. "/designs" also matches
+ * "/designs/mens-cotton-shirt"). "Journal & Research" also matches an
+ * article page, since `/article/[...slug]` stays the canonical article URL.
+ */
 export function isCurrentNavItem(item: NavItem, path: string): boolean {
   const p = normalisePath(path);
-  if (item.kind === 'privacy') return p === PRIVACY_PATH;
-  if (item.kind === 'journal') return p === '/journal' || p.startsWith('/article/');
-  return false;
-}
-
-/** Section ids the header expects to find on the Launch_Page. */
-export function navAnchorIds(): PageSection[] {
-  return NAV_SECTIONS.map((s) => s.section).filter((s) => PAGE_SECTIONS.includes(s));
+  if (item.href === '/') return p === '/';
+  if (item.href === '/journal') return p === '/journal' || p.startsWith('/article/');
+  return p === item.href || p.startsWith(`${item.href}/`);
 }

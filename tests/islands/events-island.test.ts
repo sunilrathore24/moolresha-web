@@ -48,10 +48,10 @@ function makeDoc(html: string): Document {
 
 const PAGE = `
 <section data-section="hero"></section>
-<section data-section="journey"></section>
-<section data-section="money"></section>
-<section data-section="concepts"></section>
-<section data-section="interest"></section>
+<section data-section="design-lab"></section>
+<section data-section="nav-cards"></section>
+<section data-section="why"></section>
+<section data-section="beyond-label"></section>
 <footer><a id="j" href="/article/buying-a-linen-shirt">Journal</a><a id="o" href="/privacy">Privacy</a></footer>`;
 
 let beacon: ReturnType<typeof vi.fn>;
@@ -92,21 +92,21 @@ describe('events island: section_reached', () => {
     initEvents(doc);
     expect(ioInstances[0]?.opts?.threshold).toBe(0.5);
     const names = ioInstances[0]?.observed.map((e) => (e as HTMLElement).dataset.section);
-    expect(names).toEqual(['journey', 'money', 'concepts', 'interest']);
+    expect(names).toEqual(['design-lab', 'nav-cards', 'why', 'beyond-label']);
   });
 
   it('sends once per section, only when at least half visible', async () => {
     const doc = makeDoc(PAGE);
     initEvents(doc);
     beacon.mockClear();
-    see(doc, 'journey', 0.3);
+    see(doc, 'design-lab', 0.3);
     expect(beacon).not.toHaveBeenCalled();
-    see(doc, 'journey', 0.6);
-    see(doc, 'journey', 1);
-    see(doc, 'money', 0.5);
+    see(doc, 'design-lab', 0.6);
+    see(doc, 'design-lab', 1);
+    see(doc, 'nav-cards', 0.5);
     expect(await bodies(beacon.mock.calls)).toEqual([
-      { event: 'section_reached', section: 'journey' },
-      { event: 'section_reached', section: 'money' },
+      { event: 'section_reached', section: 'design-lab' },
+      { event: 'section_reached', section: 'nav-cards' },
     ]);
   });
 
@@ -143,7 +143,7 @@ describe('events island: bodies and transport', () => {
     localStorage.setItem('mr_anon_id', 'f47ac10b-58cc-4372-a567-0e02b2c3d479');
     const doc = makeDoc(PAGE);
     initEvents(doc);
-    see(doc, 'concepts', 1);
+    see(doc, 'why', 1);
     (doc.getElementById('j') as HTMLElement).dispatchEvent(new Event('click', { bubbles: true }));
     const all = await bodies(beacon.mock.calls);
     expect(all).toHaveLength(3);

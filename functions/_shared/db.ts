@@ -64,11 +64,12 @@ export interface Utm {
 // ---------------------------------------------------------------------------
 
 const SQL_FEEDBACK_UPSERT = `
-INSERT INTO concept_feedback (anon_id, concept_id, verdict, changes, other_text, colour, priorities, price_band_id, price_skipped,
+INSERT INTO concept_feedback (anon_id, concept_id, verdict, changes, other_text, comment_text, colour, priorities, price_band_id, price_skipped,
                               utm_source, utm_medium, utm_campaign, created_at, updated_at)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)
 ON CONFLICT (anon_id, concept_id) DO UPDATE SET
   verdict = excluded.verdict, changes = excluded.changes, other_text = excluded.other_text,
+  comment_text = excluded.comment_text,
   colour = excluded.colour, priorities = excluded.priorities,
   price_band_id = excluded.price_band_id, price_skipped = excluded.price_skipped,
   updated_at = excluded.updated_at`;
@@ -134,7 +135,7 @@ const SQL_RESULTS_RESPONSES = `SELECT concept_id, COUNT(*) AS n FROM concept_fee
 
 // Column list matches the feedback CSV (Req 17.3): no email or phone.
 const SQL_EXPORT_FEEDBACK = `
-SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text,
+SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
        utm_source, utm_medium, utm_campaign, updated_at
 FROM concept_feedback
 ORDER BY concept_id, anon_id`;
@@ -149,6 +150,8 @@ export interface FeedbackInput {
   verdict: Verdict;
   changes: readonly ChangeChip[];
   otherText: string | null;
+  /** The general "Any other thoughts?" field — distinct from `otherText`. */
+  comment: string | null;
   colour: PaletteColour | null;
   priorities: readonly PriorityChip[];
   priceBandId: string | null;
@@ -169,6 +172,7 @@ export function feedbackUpsertStatement(db: D1Like, f: FeedbackInput): D1Prepare
       f.verdict,
       encodeChipSet(f.changes),
       f.otherText,
+      f.comment,
       f.colour,
       encodeChipSet(f.priorities),
       f.priceBandId,
@@ -429,6 +433,7 @@ interface ExportRow {
   price_band_id: string | null;
   price_skipped: number;
   other_text: string | null;
+  comment_text: string | null;
   utm_source: string;
   utm_medium: string;
   utm_campaign: string;
@@ -452,6 +457,7 @@ export async function exportFeedbackRows(db: D1Like): Promise<FeedbackRow[]> {
     priceBandId: r.price_band_id,
     priceSkipped: r.price_skipped === 1,
     otherText: r.other_text,
+    comment: r.comment_text,
     utm: { source: r.utm_source, medium: r.utm_medium, campaign: r.utm_campaign },
     updatedAt: r.updated_at,
   }));

@@ -105,6 +105,11 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
   const path = isConcept ? '/api/feedback' : '/api/frustration';
   const live = form.querySelector<HTMLElement>('[data-live-region]');
   const submitBtn = form.querySelector<HTMLElement>('[data-submit]');
+  // Progressive disclosure (2026-11): every question after "Would you wear this design?",
+  // plus the comment field and submit bar, lives inside this wrapper and starts `hidden` in
+  // the markup. `refresh()` below reveals it once a verdict exists — including right after
+  // `restore()` checks a saved verdict radio back in from a previous session.
+  const progressive = form.querySelector<HTMLElement>('[data-progressive]');
   const otherField = form.querySelector<HTMLElement>('[data-other-field]');
   const otherBox = form.querySelector<HTMLInputElement>('input[type="checkbox"][value="other"]');
   const skipBtn = form.querySelector<HTMLElement>('button[data-price-skip]');
@@ -116,6 +121,16 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
     if (live) live.textContent = text;
   };
   const text = (): string => form.querySelector<HTMLInputElement>('input[name="otherText"]')?.value.trim() ?? '';
+  const comment = (): string => form.querySelector<HTMLInputElement>('input[name="comment"]')?.value.trim() ?? '';
+
+  // Redesign (2026-11): live "N/250" counter next to the general comment field. Plain
+  // presentational update, no save/validate side effects (collect() re-reads the input value).
+  const commentInput = form.querySelector<HTMLInputElement>('input[name="comment"]');
+  const commentCounter = form.querySelector<HTMLElement>('[data-comment-count]');
+  const updateCommentCounter = (): void => {
+    if (commentCounter && commentInput) commentCounter.textContent = String(commentInput.value.length);
+  };
+  commentInput?.addEventListener('input', updateCommentCounter);
 
   function setSkip(on: boolean): void {
     skipped = on;
@@ -129,6 +144,7 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
     otherBox?.setAttribute('aria-expanded', String(on));
     const ready = isConcept ? picked(form, 'verdict').length > 0 : picked(form, 'chips').length > 0;
     submitBtn?.setAttribute('aria-disabled', String(!ready));
+    if (isConcept && ready && progressive?.hidden) progressive.hidden = false;
   }
 
   function save(): void {
@@ -155,12 +171,24 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
         const vals = saved.fields?.[i.name];
         if (!Array.isArray(vals)) return;
         if (i.type === 'radio' || i.type === 'checkbox') i.checked = vals.includes(i.value);
-        else if (typeof vals[0] === 'string') i.value = vals[0].slice(0, 200);
+        // 250, not 200: the longest single-line field now is the comment field (250), not
+        // otherText (200) — each input's own `maxlength` attribute still enforces its real cap.
+        else if (typeof vals[0] === 'string') i.value = vals[0].slice(0, 250);
       });
       if (saved.skipped === true && picked(form, 'priceBandId').length === 0) setSkip(true);
+      updateCommentCounter();
     } catch {
       // Bad JSON or blocked storage: start with an empty form.
     }
+  }
+
+  /** Every checked `colour` input, with its `data-design-label` when it has one (only the
+   * design-variant checkboxes do — see ConceptFeedbackForm.astro's "Which design..." question;
+   * a real colour radio never has more than one checked, so this is a no-op there). */
+  function colourSelections(): { value: string; label: string | null }[] {
+    return Array.from(form.querySelectorAll<HTMLInputElement>('input[name="colour"]'))
+      .filter((i) => i.checked)
+      .map((i) => ({ value: i.value, label: i.dataset.designLabel ?? null }));
   }
 
   function collect(): Record<string, unknown> {
@@ -169,7 +197,23 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
       return { chips, ...(chips.includes('other') && text() ? { otherText: text() } : {}) };
     }
     const changes = inOrder(CHANGE_CHIPS, picked(form, 'changes'));
-    const colour = picked(form, 'colour')[0];
+    // `name="colour"` only ever submits ONE real value (no backend change) — when the
+    // design-variant checkboxes let someone pick more than one, the rest are folded into the
+    // comment by label instead of silently dropped.
+    const colourPicks = colourSelections();
+    const colour = colourPicks[0]?.value;
+    const extraDesignLabels = colourPicks
+      .slice(1)
+      .map((p) => p.label)
+      .filter((l): l is string => l !== null);
+    const baseComment = comment();
+    // 250, not an import of feedback-form.ts's COMMENT_MAX_LENGTH: that module pulls in zod
+    // (via price-bands.ts) for the Astro component side, which this island must not bundle.
+    // Keep this in sync with COMMENT_MAX_LENGTH by hand if that ever changes.
+    const fullComment =
+      extraDesignLabels.length > 0
+        ? [baseComment, `Also liked: ${extraDesignLabels.join(', ')}`].filter(Boolean).join(' — ').slice(0, 250)
+        : baseComment;
     const band = picked(form, 'priceBandId')[0];
     return {
       conceptId,
@@ -177,6 +221,7 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
       changes,
       priorities: inOrder(PRIORITY_CHIPS, picked(form, 'priorities')),
       ...(changes.includes('other') && text() ? { otherText: text() } : {}),
+      ...(fullComment ? { comment: fullComment } : {}),
       ...(colour ? { colour } : {}),
       ...(band ? { priceBandId: band } : skipped ? { priceSkipped: true } : {}),
     };

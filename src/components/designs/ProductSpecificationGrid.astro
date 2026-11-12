@@ -1,0 +1,106 @@
+---
+/**
+ * Product_Specification_Grid (concept detail page): a compact 2×2 of the four headline
+ * fabric facts — Fabric (composition), Weave, Weight, Feel (hand feel) — sourced from the
+ * existing `fabricNotes` schema fields. No new data: this is a glanceable summary that sits
+ * between Why_This_Fabric and the detail tabs.
+ */
+import type { FabricNotesData } from '../../lib/concept-schema';
+
+interface Props {
+  fabricNotes: FabricNotesData;
+}
+
+const { fabricNotes } = Astro.props;
+
+const FIBRE_LABELS: Record<string, string> = {
+  cotton: 'Cotton',
+  linen: 'Linen',
+  elastane: 'Elastane',
+};
+
+const compositionText = fabricNotes.composition
+  .map((p) => `${p.percent}% ${FIBRE_LABELS[p.fibre] ?? p.fibre}`)
+  .join(', ');
+
+// `composition` marks the cell `[data-composition]` so Content_Check CC-09 exempts its
+// percentages (e.g. "60% Cotton, 40% Linen"), exactly as FabricNotes does. `tone` gives each
+// tile a light colour accent from the existing palette (beautified 2026-11, per explicit
+// instruction: the previous 4-row stacked list used a lot of vertical space for very short
+// values — a 2x2 grid of compact, coloured tiles fits the same facts in about half the height).
+const specs: { term: string; value: string; composition?: boolean; tone: 'terracotta' | 'sage' | 'clay' | 'indigo' }[] = [
+  { term: 'Fabric', value: compositionText, composition: true, tone: 'terracotta' },
+  { term: 'Weave', value: fabricNotes.weave, tone: 'sage' },
+  { term: 'Weight', value: fabricNotes.weight, tone: 'clay' },
+  { term: 'Feel', value: fabricNotes.handFeel, tone: 'indigo' },
+];
+---
+
+<dl class="psg">
+  {
+    specs.map((s) => (
+      <div class={`psg-cell tone-${s.tone}`}>
+        <dt class="psg-term">{s.term}</dt>
+        <dd class="psg-value" data-composition={s.composition ? '' : undefined}>
+          {s.value}
+        </dd>
+      </div>
+    ))
+  }
+</dl>
+
+<style>
+  .psg {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin: var(--space-6) 0;
+    padding: 0;
+  }
+
+  .psg-cell {
+    padding: var(--space-3);
+    border-radius: var(--radius-lg, 10px);
+    border: 1px solid transparent;
+  }
+
+  /* Light tints of existing palette tokens, same approach as NavCards.astro's icon badges —
+     not new colours, just a quiet background per tile instead of one plain stacked list. */
+  .tone-terracotta {
+    background: rgb(181 113 79 / 0.1);
+    border-color: rgb(181 113 79 / 0.25);
+  }
+
+  .tone-sage {
+    background: rgb(154 167 140 / 0.16);
+    border-color: rgb(154 167 140 / 0.35);
+  }
+
+  .tone-clay {
+    background: rgb(192 138 106 / 0.13);
+    border-color: rgb(192 138 106 / 0.3);
+  }
+
+  .tone-indigo {
+    background: rgb(63 70 104 / 0.1);
+    border-color: rgb(63 70 104 / 0.22);
+  }
+
+  .psg-term {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .psg-value {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+</style>

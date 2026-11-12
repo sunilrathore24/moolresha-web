@@ -22,7 +22,13 @@ const lastUpdatedDisplay = new Intl.DateTimeFormat("en-IN", {
   timeZone: "UTC",
 }).format(new Date(`${privacy.lastUpdated}T00:00:00Z`));
 
-const { grievance, responseTimes, withdrawal, deletion } = privacy;
+// `grievance` is intentionally not destructured here any more: the dedicated "Grievance
+// Contact" section was removed (no grievance mailbox exists yet, per explicit instruction —
+// the footer's duplicate contact line was removed the same way). The underlying
+// `privacy.grievance` data/schema is untouched, since `InterestForm.astro`'s own "How to
+// withdraw" consent text still uses that same email for consent withdrawal specifically —
+// that's a different, functional use (not a duplicate disclosure) and wasn't part of this ask.
+const { responseTimes, withdrawal, deletion } = privacy;
 ---
 
 <BaseLayout
@@ -44,7 +50,6 @@ const { grievance, responseTimes, withdrawal, deletion } = privacy;
           <li><a href="#withdraw-consent">Withdraw consent</a></li>
           <li><a href="#delete-data">Ask us to delete your data</a></li>
           <li><a href="#response-times">How fast we reply</a></li>
-          <li><a href="#grievance-contact">Grievance Contact</a></li>
         </ul>
       </nav>
     </header>
@@ -136,18 +141,6 @@ const { grievance, responseTimes, withdrawal, deletion } = privacy;
       <h2 id="response-times-h">How fast we reply</h2>
       <p data-response-times>{responseTimes.note}</p>
       <p>This applies to withdrawal requests, deletion requests and complaints.</p>
-    </section>
-
-    <section id="grievance-contact" aria-labelledby="grievance-contact-h" data-privacy-section="grievance">
-      <h2 id="grievance-contact-h">{grievance.label}</h2>
-      <p>
-        For any question or complaint about your data, write to the {grievance.label}:
-      </p>
-      <p class="contact">
-        {grievance.organisation}<br />
-        <a href={`mailto:${grievance.email}`} data-grievance-email>{grievance.email}</a>
-      </p>
-      <p class="detail">{grievance.note}</p>
     </section>
 
     <p><a href="/">&larr; Back home</a></p>

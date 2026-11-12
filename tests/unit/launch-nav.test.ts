@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  HUB_PAGE_PATHS,
-  buildNavItems,
-  isCurrentNavItem,
-  isHubPagePath,
-  navAnchorIds,
-} from '../../src/lib/launch-nav';
+import { HUB_PAGE_PATHS, buildNavItems, isCurrentNavItem, isHubPagePath } from '../../src/lib/launch-nav';
 import {
   HERO_FRAME,
   HERO_PHOTO_ALT,
@@ -14,63 +8,61 @@ import {
   shouldAutoplay,
   toggleState,
 } from '../../src/lib/hero-photo';
-import { PAGE_SECTIONS } from '../../src/content/config/allow-lists';
 
 describe('buildNavItems', () => {
-  it('links only to page sections, the Journal and Privacy', () => {
-    const items = buildNavItems({ journalHref: '/article/example' });
-    for (const item of items) {
-      if (item.kind === 'anchor') {
-        const id = item.href.replace('/#', '');
-        expect(item.href.startsWith('/#')).toBe(true);
-        expect(PAGE_SECTIONS).toContain(id);
-      }
-    }
-    expect(items.map((i) => i.kind)).toEqual(['anchor', 'anchor', 'anchor', 'anchor', 'journal', 'privacy']);
-  });
-
-  it('uses the storyboard labels and anchors in order', () => {
-    const items = buildNavItems({ journalHref: '/article/example' });
+  it('links to the six redesign routes, in order, with no Privacy link', () => {
+    const items = buildNavItems();
     expect(items.map((i) => [i.label, i.href])).toEqual([
-      ['Our journey', '/#journey'],
-      ['Designs', '/#concepts'],
-      ['Trends', '/#trends'],
-      ['Your voice', '/#frustration'],
-      ['Journal', '/article/example'],
-      ['Privacy', '/privacy'],
+      ['Home', '/'],
+      ['Our Journey', '/journey'],
+      ['Design Lab', '/designs'],
+      ['Journal & Research', '/journal'],
+      ['Your Voice', '/your-voice'],
+      ['Our Story', '/about'],
     ]);
+    expect(items.some((i) => i.href === '/privacy')).toBe(false);
   });
 
   it('contains no Hub_Page link', () => {
-    const hrefs = buildNavItems({ journalHref: '/article/example' }).map((i) => i.href);
+    const hrefs = buildNavItems().map((i) => i.href);
     for (const hub of HUB_PAGE_PATHS) expect(hrefs).not.toContain(hub);
-  });
-
-  it('leaves out Journal when there is no article', () => {
-    const items = buildNavItems();
-    expect(items.some((i) => i.kind === 'journal')).toBe(false);
-    expect(items.at(-1)?.href).toBe('/privacy');
-  });
-
-  it('exposes every section id the header expects', () => {
-    expect(navAnchorIds()).toEqual(['journey', 'concepts', 'trends', 'frustration']);
   });
 });
 
 describe('isCurrentNavItem', () => {
-  const items = buildNavItems({ journalHref: '/article/example' });
-  const journal = items.find((i) => i.kind === 'journal')!;
-  const privacy = items.find((i) => i.kind === 'privacy')!;
+  const items = buildNavItems();
+  const home = items.find((i) => i.href === '/')!;
+  const journey = items.find((i) => i.href === '/journey')!;
+  const designs = items.find((i) => i.href === '/designs')!;
+  const journal = items.find((i) => i.href === '/journal')!;
+  const yourVoice = items.find((i) => i.href === '/your-voice')!;
+  const ourStory = items.find((i) => i.href === '/about')!;
 
-  it('marks Journal on article pages and Privacy on /privacy', () => {
-    expect(isCurrentNavItem(journal, '/article/example')).toBe(true);
-    expect(isCurrentNavItem(journal, '/privacy')).toBe(false);
-    expect(isCurrentNavItem(privacy, '/privacy')).toBe(true);
-    expect(isCurrentNavItem(privacy, '/privacy/')).toBe(true);
+  it('marks Home only on the exact root', () => {
+    expect(isCurrentNavItem(home, '/')).toBe(true);
+    expect(isCurrentNavItem(home, '/journey')).toBe(false);
   });
 
-  it('never marks an anchor', () => {
-    expect(items.filter((i) => i.kind === 'anchor').some((i) => isCurrentNavItem(i, '/'))).toBe(false);
+  it('marks a route current on itself and any sub-route', () => {
+    expect(isCurrentNavItem(journey, '/journey')).toBe(true);
+    expect(isCurrentNavItem(journey, '/journey/pricing')).toBe(true);
+    expect(isCurrentNavItem(designs, '/designs')).toBe(true);
+    expect(isCurrentNavItem(designs, '/designs/mens-cotton-shirt')).toBe(true);
+    expect(isCurrentNavItem(designs, '/designs/rootweave-01')).toBe(true);
+    expect(isCurrentNavItem(yourVoice, '/your-voice')).toBe(true);
+    expect(isCurrentNavItem(ourStory, '/about')).toBe(true);
+    expect(isCurrentNavItem(ourStory, '/about/')).toBe(true);
+  });
+
+  it('marks Journal & Research current on an article page too', () => {
+    expect(isCurrentNavItem(journal, '/journal')).toBe(true);
+    expect(isCurrentNavItem(journal, '/article/example')).toBe(true);
+    expect(isCurrentNavItem(journal, '/privacy')).toBe(false);
+  });
+
+  it('does not cross-match unrelated routes', () => {
+    expect(isCurrentNavItem(journey, '/designs')).toBe(false);
+    expect(isCurrentNavItem(designs, '/journey')).toBe(false);
   });
 });
 

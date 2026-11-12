@@ -1,0 +1,167 @@
+---
+/**
+ * Design Lab index (`/designs`). Redesigned again (2026-11) to match the user's newer reference:
+ * an editorial heading (large serif title + italic subtitle + thin rule + muted research note,
+ * NO uppercase eyebrow label), a full-bleed FEATURED card with text overlaid on the image, then
+ * the other four concepts as a 2x2 GRID of photo-top + cream-panel-below tiles (reverted from the
+ * previous single-column list). Ends with a dark banner CTA. No colour swatches / interactivity
+ * on this index — that stays detail-page-only.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import DesignIndexCard from '../../components/designs/DesignIndexCard.astro';
+import { conceptColourViews, conceptExtraPhotos, conceptMaterialCards, conceptViews } from '../../lib/concept-images';
+import { buildColourPanels } from '../../lib/concept-colour-panels';
+import { CONCEPT_DESCRIPTORS, CONCEPT_SHORT_NAMES, conceptSpecLine, conceptWeaveLabel } from '../../lib/concept-categories';
+import featuredLifestylePhoto from '../../assets/concepts/mens-cotton-shirt/lifestyle-featured.png';
+
+const maps = { conceptColourViews, conceptMaterialCards, conceptExtraPhotos };
+
+const concepts = (await getCollection('concepts')).map((e) => e.data).sort((a, b) => a.order - b.order);
+
+const cards = concepts.map((concept) => {
+  // The featured card uses its own styled lifestyle shot (shirt + flowers), not the plain
+  // product photo every other usage of this concept's "front" view shows.
+  if (concept.featured) return { concept, image: featuredLifestylePhoto };
+
+  const panels = buildColourPanels(concept.id, concept.colours, maps);
+  const firstColourFront = panels
+    .map((p) => p.views.find((v) => v.view === '01-front' && v.status === 'file'))
+    .find((v) => v?.status === 'file');
+  const flatFront = conceptViews[concept.id]?.find((v) => v.view === '01-front' && v.status === 'file');
+  const front = firstColourFront ?? flatFront;
+  const image = front && front.status === 'file' ? front.image : undefined;
+
+  return { concept, image };
+});
+
+const featured = cards.find((c) => c.concept.featured);
+const rest = cards.filter((c) => !c.concept.featured);
+---
+
+<BaseLayout
+  noindex
+  title="Design Lab — MoolResha"
+  description="Five design concepts in research. Turn each one around, read the fabric notes and tell us what you would change. Nothing here is for sale."
+>
+  <section class="dl container">
+    <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Design Lab' }]} />
+
+    <header class="dl-head">
+      <h1 class="dl-title">Design Lab</h1>
+      <p class="dl-subtitle">Five ideas. Your point of view.</p>
+      <hr class="dl-rule" />
+      <p class="dl-note">Research concepts, not for sale.</p>
+    </header>
+
+    {
+      featured && (
+        <div class="dl-featured">
+          <DesignIndexCard
+            conceptId={featured.concept.id}
+            name={featured.concept.name}
+            productCode={featured.concept.productCode}
+            weave={conceptWeaveLabel(featured.concept.fabricNotes.weave)}
+            specLine={conceptSpecLine(featured.concept.fabricNotes)}
+            featured
+            laterProduct={featured.concept.laterProduct}
+            image={featured.image}
+            alt={featured.concept.views.alt['01-front']}
+          />
+        </div>
+      )
+    }
+
+    <ul class="dl-grid">
+      {
+        rest.map((c) => (
+          <li>
+            <DesignIndexCard
+              conceptId={c.concept.id}
+              name={CONCEPT_SHORT_NAMES[c.concept.id]}
+              productCode={c.concept.productCode}
+              descriptor={CONCEPT_DESCRIPTORS[c.concept.id]}
+              laterProduct={c.concept.laterProduct}
+              image={c.image}
+              alt={c.concept.views.alt['01-front']}
+            />
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="dl-banner">Explore the fabrics. Shape the designs.</p>
+  </section>
+</BaseLayout>
+
+<style>
+  .dl {
+    padding-block: var(--space-6) var(--space-10);
+  }
+
+  .dl-head {
+    /* Was var(--space-6) (24px) top — the breadcrumb row and the "Design Lab" heading sat too
+       close together. var(--space-10) matches the roomier header spacing /journey and
+       /journey/pricing already use. */
+    margin-block: var(--space-10) var(--space-7);
+  }
+
+  .dl-title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .dl-subtitle {
+    margin: var(--space-1) 0 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-product);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  .dl-rule {
+    width: 2.5rem;
+    margin: var(--space-4) 0 var(--space-3);
+    border: 0;
+    border-top: 1px solid var(--c-raw-umber, var(--color-border));
+  }
+
+  .dl-note {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .dl-featured {
+    margin-bottom: var(--space-6);
+  }
+
+  .dl-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    list-style: none;
+    margin: 0 0 var(--space-7);
+    padding: 0;
+  }
+
+  .dl-banner {
+    margin: 0;
+    padding: var(--space-6) var(--space-5);
+    background: var(--color-olive, #3b3a2b);
+    border-radius: var(--radius-card, 14px);
+    color: var(--c-off-white, #faf6ef);
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    text-align: center;
+  }
+</style>

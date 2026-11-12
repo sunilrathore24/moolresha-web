@@ -1,0 +1,118 @@
+---
+/**
+ * Homepage "Design Lab" teaser — matches the reference image exactly: the featured concept
+ * (RootWeave 01 / mens-cotton-shirt) full-width with name + one fabric line, then the other
+ * four as SMALL SQUARE TILES (image + name only, no fabric line, no swatches) in a 2x2 grid,
+ * then a link through to the full `/designs` index. Reuses the same data-assembly as
+ * `/designs/index.astro` so both pages agree on what a concept's "hero shot" is.
+ */
+import { getCollection } from 'astro:content';
+import DesignIndexCard from '../designs/DesignIndexCard.astro';
+import { conceptColourViews, conceptExtraPhotos, conceptMaterialCards, conceptViews } from '../../lib/concept-images';
+import { buildColourPanels } from '../../lib/concept-colour-panels';
+import { CONCEPT_SHORT_NAMES, conceptSpecLine, conceptWeaveLabel } from '../../lib/concept-categories';
+import featuredLifestylePhoto from '../../assets/concepts/mens-cotton-shirt/lifestyle-featured.png';
+
+const maps = { conceptColourViews, conceptMaterialCards, conceptExtraPhotos };
+const concepts = (await getCollection('concepts')).map((e) => e.data).sort((a, b) => a.order - b.order);
+
+const cards = concepts.map((concept) => {
+  if (concept.featured) return { concept, image: featuredLifestylePhoto };
+
+  const panels = buildColourPanels(concept.id, concept.colours, maps);
+  const firstColourFront = panels
+    .map((p) => p.views.find((v) => v.view === '01-front' && v.status === 'file'))
+    .find((v) => v?.status === 'file');
+  const flatFront = conceptViews[concept.id]?.find((v) => v.view === '01-front' && v.status === 'file');
+  const front = firstColourFront ?? flatFront;
+  const image = front && front.status === 'file' ? front.image : undefined;
+  return { concept, image };
+});
+
+const featured = cards.find((c) => c.concept.featured);
+const rest = cards.filter((c) => !c.concept.featured);
+---
+
+<section class="section dlt" data-section="design-lab" id="design-lab" aria-labelledby="design-lab-h">
+  <div class="section-head">
+    <p class="section-label">Design Lab</p>
+    <h2 id="design-lab-h">Five research-led concepts.</h2>
+  </div>
+
+  {
+    featured && (
+      <DesignIndexCard
+        conceptId={featured.concept.id}
+        name={featured.concept.name}
+        productCode={featured.concept.productCode}
+        weave={conceptWeaveLabel(featured.concept.fabricNotes.weave)}
+        specLine={conceptSpecLine(featured.concept.fabricNotes)}
+        featured
+        laterProduct={featured.concept.laterProduct}
+        image={featured.image}
+        alt={featured.concept.views.alt['01-front']}
+      />
+    )
+  }
+
+  <ul class="dlt-grid">
+    {
+      rest.map((c) => (
+        <li>
+          <DesignIndexCard
+            conceptId={c.concept.id}
+            name={CONCEPT_SHORT_NAMES[c.concept.id]}
+            minimal
+            image={c.image}
+            alt={c.concept.views.alt['01-front']}
+          />
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="dlt-cta"><a href="/designs">See all five designs<span aria-hidden="true"> &rarr;</span></a></p>
+</section>
+
+<style>
+  .dlt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .dlt-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dlt-cta {
+    margin: 0;
+    text-align: center;
+  }
+
+  .dlt-cta a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-button);
+    font-weight: 600;
+    color: var(--color-accent-text);
+    text-decoration: none;
+  }
+
+  .dlt-cta a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .dlt-cta a:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+</style>

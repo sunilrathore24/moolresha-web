@@ -1,0 +1,252 @@
+---
+/**
+ * Compact "What makes up the price of a shirt?" card at the bottom of `/journey`, matching the
+ * user's reference image: one horizontal stacked bar instead of the full vertical chart
+ * `MoneyBreakdown.astro` uses on its own page, plus a collapsible row naming the Price_Layers.
+ *
+ * No new figures and no new claims:
+ *  - The four bar segments are the exact shares `money-tshirt-breakdown` already states,
+ *    parsed with the same `parseShares` helper `MoneyBreakdown.astro` uses — not retyped.
+ *  - The "other components" note reuses that file's own existing sentence verbatim. It does
+ *    NOT compute or show a remainder percentage: `100 - (60+12+12+8) = 8` happens to equal the
+ *    fact's own "8% to transport" share, a coincidence that would read as a false link between
+ *    two different numbers if displayed next to each other.
+ *  - "Explore all N cost layers" lists the Price_Layers' names only (no explanations, no
+ *    amounts) and is a DIFFERENT lens on pricing, not a breakdown of the remainder above — it
+ *    is never described as such. Full detail (explanations, the GST fact, the launch promise)
+ *    stays on `/journey/pricing`, linked at the end.
+ */
+import { getEntry } from 'astro:content';
+import { barWidth, parseShares } from '../../lib/money-breakdown';
+import { getFact } from '../../lib/facts';
+
+const BREAKDOWN_FACT_ID = 'money-tshirt-breakdown';
+const TONES = ['tone-retailer', 'tone-brand', 'tone-materials', 'tone-transport'] as const;
+
+const breakdown = await getFact(BREAKDOWN_FACT_ID);
+const shares = parseShares(breakdown.text);
+const tone = (i: number) => TONES[i % TONES.length];
+
+const priceLayersEntry = await getEntry('price-layers', 'price-layers');
+if (!priceLayersEntry) {
+  throw new Error('Missing price-layers entry. Add src/content/price-layers/price-layers.yaml.');
+}
+const layerNames = priceLayersEntry.data.layers.map((l) => l.name);
+---
+
+<div class="jpt">
+  <h2 class="jpt-title">What makes up the price of a shirt?</h2>
+  <p class="jpt-intro">
+    A typical breakdown of a retail shirt's price, based on industry reports. This is an illustrative example, not
+    MoolResha's actual costs.
+  </p>
+
+  {
+    shares.length > 0 && (
+      <div
+        class="jpt-bar"
+        role="img"
+        aria-label={`Share of the retail price — ${shares.map((s) => `${s.label} ${s.display}`).join(', ')}`}
+      >
+        {shares.map((s, i) => (
+          // flex-grow (not a fixed %) so every segment keeps a usable minimum width (see
+          // `.jpt-seg`'s min-width below) — an 8%-of-295px segment is ~24px, too narrow for
+          // "Transport" to wrap without breaking mid-word; flex-grow lets the roomy 60%
+          // segment give up the space the narrow ones need, while staying proportional.
+          <span class={`jpt-seg ${tone(i)}`} style={`flex-grow: ${barWidth(s.percent)}`} aria-hidden="true">
+            <span class="jpt-seg-label">{s.label}</span>
+            {/* data-fact-id (not aria-hidden) is what exempts this number from CC-09 — the
+               parent's aria-hidden only affects the accessibility tree, not the content-check
+               text scan, which reads real rendered text regardless. */}
+            <span class="jpt-seg-value fact" data-fact-id={BREAKDOWN_FACT_ID}>{s.display}</span>
+          </span>
+        ))}
+      </div>
+    )
+  }
+
+  <p class="jpt-note jpt-note-muted">The source lists these components only. Other components are not shown here.</p>
+
+  <details class="jpt-layers">
+    <summary>
+      <span class="jpt-layers-label">Explore all {layerNames.length} cost layers</span>
+      <span class="jpt-chevron" aria-hidden="true">&#8964;</span>
+    </summary>
+    <p class="jpt-layers-list">{layerNames.join(', ')}</p>
+    <a class="jpt-layers-link" href="/journey/pricing">See the full breakdown, layer by layer<span aria-hidden="true"> &rarr;</span></a>
+  </details>
+</div>
+
+<style>
+  .jpt {
+    padding: var(--space-6) var(--space-5);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+  }
+
+  .jpt-title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 600;
+    line-height: var(--lh-heading);
+    color: var(--color-text);
+  }
+
+  .jpt-intro {
+    margin: var(--space-2) 0 0;
+    max-width: 34rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Stacked bar: one row, four segments, label + value inside each. ---- */
+  .jpt-bar {
+    display: flex;
+    margin-top: var(--space-5);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .jpt-seg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 1;
+    gap: 2px;
+    min-width: 2.75rem; /* a usable floor for the narrowest (8%) segment's two-line label */
+    height: 4.25rem;
+    padding: var(--space-1) 1px;
+    overflow: hidden;
+    text-align: center;
+    color: var(--c-off-white, #faf6ef);
+  }
+  .jpt-seg-label {
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    overflow-wrap: break-word;
+  }
+
+  .jpt-seg-value {
+    width: 100%;
+    font-family: var(--font-serif);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .tone-retailer {
+    background: var(--color-olive, #3b3a2b);
+  }
+
+  .tone-brand {
+    background: var(--color-accent-text);
+  }
+
+  .tone-materials {
+    background: var(--c-raw-umber);
+    color: var(--c-off-white, #faf6ef);
+  }
+
+  .tone-transport {
+    background: var(--c-sage);
+    color: var(--c-ink);
+  }
+
+  .jpt-note {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+
+  .jpt-note-muted {
+    margin-top: var(--space-2);
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Layers accordion ---- */
+  .jpt-layers {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .jpt-layers summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .jpt-layers summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .jpt-layers summary::marker {
+    content: '';
+  }
+
+  .jpt-layers summary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  .jpt-layers-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .jpt-chevron {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+    transition: transform var(--transition);
+  }
+
+  .jpt-layers[open] .jpt-chevron {
+    transform: rotate(180deg);
+  }
+
+  .jpt-layers-list {
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: var(--lh-body);
+    color: var(--color-text-muted);
+  }
+
+  .jpt-layers-link {
+    display: inline-block;
+    margin-top: var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--color-accent-text);
+  }
+
+  .jpt-layers-link:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jpt-chevron {
+      transition: none;
+    }
+  }
+</style>

@@ -1,30 +1,32 @@
 ---
 /**
- * Launch_Page (Requirements 2.1, 2.2, 2.3, 22.1).
+ * Launch_Page — redesigned homepage (mobile-first premium redesign, 2026-11).
  *
- * Sections, in the order Requirement 2.1 fixes (PAGE_SECTIONS in
- * src/content/config/allow-lists.ts). Each component carries its own
- * `data-section` and an `id` equal to it, so the header anchors (/#journey,
- * /#money, /#concepts, /#results) and the Hero call to action (#concepts)
- * resolve. The footer comes from BaseLayout. Never add a second `data-section`
- * here (Content_Check CC-15).
+ * Previously one long page holding every section (journey, pricing, all 5 concepts with
+ * their feedback forms, why-it-matters, beyond-the-label, trends, frustration form, the
+ * full interest form, and the results view) reached by in-page anchors. The redesign gives
+ * Journey, Pricing, Designs, and Your Voice (frustration + interest + results) their own
+ * dedicated pages — /journey, /journey/pricing, /designs, /your-voice — so the homepage can
+ * be the compact, scannable overview the redesign spec asks for, not a single long scroll.
  *
- * Order: hero, journey, money, price-layers, concepts, why, beyond-label, trends,
- * frustration, interest, results, footer.
+ * WhyItMatters, BeyondTheLabel and Trends moved to /journal (2026-11, per the user's
+ * reference-image review: "a lot of details which should not be there on the home page...
+ * can go in other pages") — not deleted, relocated, since they fit that page's research/
+ * insights framing and weren't in the 6-screen reference to begin with.
+ *
+ * Sections, in the order Content_Check CC-15 fixes (PAGE_SECTIONS in
+ * src/content/config/allow-lists.ts): hero, design-lab, nav-cards, footer. Never add
+ * a second `data-section` here.
+ *
+ * LaunchSignup.astro (the homepage-only "Be part of the beginning" email panel) was removed
+ * 2026-11, per explicit instruction, now that Footer.astro has its own always-present email
+ * signup panel on every page including this one — a second copy right above the footer's own
+ * was redundant. The component file itself was deleted too (nothing else used it).
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/launch/Hero.astro';
-import ResearchNotice from '../components/launch/ResearchNotice.astro';
-import CottonJourney from '../components/launch/CottonJourney.astro';
-import MoneyBreakdown from '../components/launch/MoneyBreakdown.astro';
-import PriceLayers from '../components/launch/PriceLayers.astro';
-import ConceptsSection from '../components/launch/ConceptsSection.astro';
-import WhyItMatters from '../components/launch/WhyItMatters.astro';
-import BeyondTheLabel from '../components/launch/BeyondTheLabel.astro';
-import Trends from '../components/launch/Trends.astro';
-import FrustrationForm from '../components/launch/FrustrationForm.astro';
-import InterestForm from '../components/launch/InterestForm.astro';
-import ResultsView from '../components/launch/ResultsView.astro';
+import DesignLabTeaser from '../components/launch/DesignLabTeaser.astro';
+import NavCards from '../components/launch/NavCards.astro';
 
 const title = 'MoolResha: a cotton shirt research project';
 const description =
@@ -32,22 +34,11 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
-  <Hero><ResearchNotice /></Hero>
-  <CottonJourney />
-  <MoneyBreakdown />
-  <PriceLayers />
-  <ConceptsSection />
-  <WhyItMatters />
-  <BeyondTheLabel />
-  <Trends />
-  <FrustrationForm />
-  <InterestForm />
-  <ResultsView />
+  <Hero />
+  <DesignLabTeaser />
+  <NavCards />
 </BaseLayout>
 
 <script>
   import '../islands/events-island';
-  import '../islands/feedback-island';
-  import '../islands/results-island';
-  import '../islands/interest-island';
 </script>

@@ -37,6 +37,9 @@ export interface FeedbackRow {
   priceBandId: string | null;
   priceSkipped: boolean; // never both set with priceBandId
   otherText: string | null;
+  /** The general "Any other thoughts?" field — like `otherText`, admin-export-only, never
+   * part of the public ConceptAggregate below. */
+  comment: string | null;
   utm: { source: string; medium: string; campaign: string };
   updatedAt: string;
 }

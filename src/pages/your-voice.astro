@@ -1,0 +1,88 @@
+---
+/**
+ * Your_Voice page: the general feedback and contact-capture destination, moved off the
+ * homepage (previously the frustration/interest/results sections lived directly on
+ * `index.astro`). This page only relocates where those three existing, fully working
+ * components mount — their internals (validation, endpoints, copy) are untouched.
+ *
+ * Layout: a Share Opinion / Results toggle (Tabs.astro) holding the frustration form and
+ * the results view, then the full interest/contact form below both tabs, always visible —
+ * general contact capture is not tied to either tab.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HubHero from '../components/HubHero.astro';
+import Tabs from '../components/launch/Tabs.astro';
+import FrustrationForm from '../components/launch/FrustrationForm.astro';
+import InterestForm from '../components/launch/InterestForm.astro';
+import ResultsView from '../components/launch/ResultsView.astro';
+
+const tabs = [
+  { id: 'share-opinion', label: 'Share Opinion' },
+  { id: 'results', label: 'Results' },
+];
+---
+
+<BaseLayout
+  title="Your Voice — MoolResha"
+  description="Tell us what frustrates you about the clothes you buy, see what others have said so far, and stay in touch as we build."
+>
+  <HubHero
+    eyebrow="Your Voice"
+    title="Help shape what we make."
+    lede="Your input guides our designs, fabric choices and testing."
+    image="/images/hub-your-voice.webp"
+  />
+
+  <section class="voice-tabs container">
+    <Tabs tabs={tabs} ariaLabel="Share your opinion or see the results so far">
+      <div role="tabpanel" data-tab-panel="share-opinion" id="panel-share-opinion" aria-labelledby="tab-share-opinion">
+        <FrustrationForm />
+        <p class="see-designs">
+          Looking for a specific idea? <a href="/designs">See what people think of each design</a>.
+        </p>
+      </div>
+      <div role="tabpanel" data-tab-panel="results" id="panel-results" aria-labelledby="tab-results">
+        <ResultsView />
+      </div>
+    </Tabs>
+  </section>
+
+  <InterestForm />
+</BaseLayout>
+
+<script>
+  import '../islands/feedback-island';
+  import '../islands/interest-island';
+  import '../islands/results-island';
+</script>
+
+<style>
+  .voice-tabs {
+    padding-block: var(--space-8) var(--space-6);
+  }
+
+  .see-designs {
+    max-width: var(--wide-width);
+    margin: calc(-1 * var(--space-5)) auto var(--space-8);
+    padding: 0 var(--space-4);
+    font-size: var(--fs-small);
+    color: var(--color-text-muted);
+  }
+
+  .see-designs a {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .see-designs a:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 60rem) {
+    .see-designs {
+      padding: 0 var(--space-8);
+    }
+  }
+</style>

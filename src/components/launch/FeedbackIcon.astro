@@ -1,0 +1,23 @@
+---
+/**
+ * Renders one of FEEDBACK_ICONS (src/lib/feedback-icons.ts). The markup is static,
+ * developer-authored SVG — never user input — so `set:html` here is safe.
+ */
+import { FEEDBACK_ICONS, type FeedbackIconName } from '../../lib/feedback-icons';
+
+interface Props {
+  name: FeedbackIconName;
+}
+
+const { name } = Astro.props;
+const inner = FEEDBACK_ICONS[name];
+---
+
+<svg class="feedback-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="22" height="22" set:html={inner} />
+
+<style>
+  .feedback-icon {
+    display: block;
+    flex: none;
+  }
+</style>
