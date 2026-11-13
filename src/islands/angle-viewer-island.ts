@@ -182,6 +182,17 @@ export function initAngleViewer(root: HTMLElement, env: AngleViewerEnv = {}): bo
 
   let autoTimer: ReturnType<typeof setInterval> | null = null;
   if (root.hasAttribute('data-auto-advance') && navigable.length > 1) {
+    // A viewer inside a hidden ancestor (an un-opened Tabs.astro panel, or another colour's
+    // currently-hidden `[data-colour-panel]`) must not advance while nobody can see it — the
+    // timer would silently step through every view, so revealing it later lands on whichever
+    // view it happened to drift to instead of the first one. Caught live via screenshot after
+    // adding the weave tabs on /designs/mens-cotton-shirt (Micro-Dobby / Cotton Slub): switching
+    // to the second tab after a few seconds showed the material card, not the front view.
+    // `visible` starts optimistic (matches the previous unconditional-start behaviour) for
+    // environments with no IntersectionObserver; where it exists, it starts pessimistic until
+    // the observer reports the real state, which arrives within a frame or two either way.
+    let visible = typeof IntersectionObserver === 'undefined';
+    let hovering = false;
     const stopAuto = (): void => {
       if (autoTimer !== null) {
         clearInterval(autoTimer);
@@ -190,15 +201,39 @@ export function initAngleViewer(root: HTMLElement, env: AngleViewerEnv = {}): bo
     };
     const startAuto = (): void => {
       stopAuto();
-      if (reduced) return;
+      if (reduced || !visible || hovering) return;
       autoTimer = setInterval(stepLoop, AUTO_ADVANCE_MS);
     };
     reduceMq?.addEventListener?.('change', () => (reduced ? stopAuto() : startAuto()));
-    root.addEventListener('mouseenter', stopAuto);
-    root.addEventListener('mouseleave', startAuto);
-    root.addEventListener('focusin', stopAuto);
-    root.addEventListener('focusout', startAuto);
-    startAuto();
+    root.addEventListener('mouseenter', () => {
+      hovering = true;
+      stopAuto();
+    });
+    root.addEventListener('mouseleave', () => {
+      hovering = false;
+      startAuto();
+    });
+    root.addEventListener('focusin', () => {
+      hovering = true;
+      stopAuto();
+    });
+    root.addEventListener('focusout', () => {
+      hovering = false;
+      startAuto();
+    });
+    if (typeof IntersectionObserver !== 'undefined') {
+      const io = new IntersectionObserver(
+        (entries) => {
+          visible = entries[entries.length - 1]?.isIntersecting ?? false;
+          if (visible) startAuto();
+          else stopAuto();
+        },
+        { threshold: 0 },
+      );
+      io.observe(root);
+    } else {
+      startAuto();
+    }
   }
 
   const expandBtn = root.querySelector<HTMLButtonElement>('[data-av-expand]');

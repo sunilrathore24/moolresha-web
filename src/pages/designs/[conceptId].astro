@@ -34,6 +34,7 @@ import { buildColourPanels } from '../../lib/concept-colour-panels';
 import { colourPanelId } from '../../lib/colour-panel-id';
 import { CONCEPT_CATEGORIES } from '../../lib/concept-categories';
 import { CONCEPT_DESIGN_VARIANTS } from '../../lib/concept-design-variants';
+import { CONCEPT_WEAVE_VARIANTS } from '../../lib/concept-weave-variants';
 
 export const getStaticPaths = (async () => {
   const concepts = await getCollection('concepts');
@@ -82,6 +83,31 @@ for (const p of colourPanels) {
   if (closeup && closeup.status === 'file') colourPhotos[p.colour] = closeup.image;
 }
 
+// Weave variants (today, only mens-cotton-shirt — see concept-weave-variants.ts) sit ABOVE the
+// colour question, unlike design variants: each weave gets its OWN full colour-swatch gallery
+// (reusing the exact `buildColourPanels` + ColourSwatches pairing above), switched by a real
+// Tabs.astro tablist rather than a second colour-swatch row, so nesting never collides with the
+// `[data-colour-swatches]`/`[data-colour-panel]` hooks each weave's own panel uses internally.
+// A weave with no explicit `colours` (the Concept's original weave) reuses `colourPanels`
+// verbatim — zero behaviour change for Micro-Dobby's existing six-colour gallery.
+const weaveVariants = CONCEPT_WEAVE_VARIANTS[concept.id];
+const weaveGalleries = weaveVariants?.map((w) => {
+  const panels = w.colours
+    ? buildColourPanels(concept.id, w.colours.map((c) => c.key) as typeof concept.colours, maps)
+    : colourPanels;
+  const labels: Partial<Record<string, string>> = {};
+  for (const c of w.colours ?? []) labels[c.key] = c.label;
+  const photos: Partial<Record<string, ImageMetadata>> = w.colours ? {} : colourPhotos;
+  if (w.colours) {
+    for (const p of panels) {
+      const closeup = p.views.find((v) => v.view === '07-fabric-closeup' && v.status === 'file');
+      if (closeup && closeup.status === 'file') photos[p.colour] = closeup.image;
+    }
+  }
+  return { id: w.id, label: w.label, productCode: w.productCode, panels, labels, photos };
+});
+const weaveTabs = weaveGalleries?.map((w) => ({ id: w.id, label: w.label }));
+
 // The tabs that actually have content. Comfort only when `construction` exists, Testing
 // only when `testing` exists, Why This Fabric only when `whyThisFabric` exists — Tabs needs
 // at least two to enhance, which Fabric + Quality always satisfy.
@@ -121,7 +147,56 @@ const tabs = [
 
     <div class="cd-gallery">
       {
-        designPanels ? (
+        weaveGalleries && weaveTabs ? (
+          <>
+            <p class="cd-weave-note">
+              Fabric details further down this page describe {weaveGalleries[0]?.label}. Specs
+              for the other weave are coming soon.
+            </p>
+            <Tabs tabs={weaveTabs} ariaLabel={`${concept.name} weave`}>
+              {weaveGalleries.map((w) => (
+                <div role="tabpanel" data-tab-panel={w.id} id={`panel-${w.id}`} aria-labelledby={`tab-${w.id}`} tabindex="0">
+                  {w.productCode && <p class="cd-weave-code">{w.productCode}</p>}
+                  {w.panels.length > 1 ? (
+                    <div data-colour-swatches>
+                      {w.panels.map((p) => (
+                        <div data-colour-panel={p.colour} id={colourPanelId(concept.id, p.colour)}>
+                          <AngleViewer
+                            concept={concept}
+                            views={p.views}
+                            materialCard={p.materialCard}
+                            extraPhotos={p.extraPhotos}
+                            conceptIndex={0}
+                            firstCardAboveFold={false}
+                            autoAdvance
+                          />
+                        </div>
+                      ))}
+                      <ColourSwatches
+                        conceptId={concept.id}
+                        colours={w.panels.map((p) => p.colour)}
+                        photos={w.photos}
+                        labels={w.labels}
+                      />
+                    </div>
+                  ) : w.panels[0] ? (
+                    <AngleViewer
+                      concept={concept}
+                      views={w.panels[0].views}
+                      materialCard={w.panels[0].materialCard}
+                      extraPhotos={w.panels[0].extraPhotos}
+                      conceptIndex={0}
+                      firstCardAboveFold={false}
+                      autoAdvance
+                    />
+                  ) : (
+                    <AngleViewer concept={concept} conceptIndex={0} firstCardAboveFold={false} autoAdvance />
+                  )}
+                </div>
+              ))}
+            </Tabs>
+          </>
+        ) : designPanels ? (
           <div data-colour-swatches>
             {designPanels.map((p) => (
               <div data-colour-panel={p.id} id={colourPanelId(concept.id, p.id)}>
@@ -293,6 +368,24 @@ const tabs = [
   .cd-gallery {
     max-width: 44rem;
     margin-block: var(--space-4) var(--space-2);
+  }
+
+  .cd-weave-note {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    font-style: italic;
+    color: var(--color-text-muted);
+  }
+
+  .cd-weave-code {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent-text, #8f5233);
   }
 
   .cd-tabs {
