@@ -31,7 +31,6 @@ import { CONCEPT_WEAVE_VARIANTS } from '../../lib/concept-weave-variants';
 
 const concepts = (await getCollection('concepts')).map((e) => e.data).sort((a, b) => a.order - b.order);
 
-const conceptOrder = concepts.map((c) => c.id);
 const conceptNames: Record<string, string> = {};
 const priceBandLabels: Record<string, Record<string, string>> = {};
 for (const c of concepts) {
@@ -49,7 +48,6 @@ for (const variants of Object.values(CONCEPT_WEAVE_VARIANTS)) {
 }
 
 const labels = {
-  conceptOrder,
   conceptNames,
   verdictLabels: VERDICT_LABELS,
   changeLabels: CHANGE_CHIP_LABELS,
@@ -123,10 +121,6 @@ const labels = {
         <section class="admin-chart-card" aria-labelledby="chart-h-price">
           <h3 id="chart-h-price">Price Band Interest</h3>
           <div class="admin-chart" data-chart="price"></div>
-        </section>
-        <section class="admin-chart-card admin-chart-card-wide" aria-labelledby="chart-h-weave" data-chart-card="weave">
-          <h3 id="chart-h-weave">RootWeave: Micro-Dobby vs Cotton Slub</h3>
-          <div class="admin-chart" data-chart="weave"></div>
         </section>
       </div>
 

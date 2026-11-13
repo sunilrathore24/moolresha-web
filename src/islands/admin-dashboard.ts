@@ -16,7 +16,6 @@
 const TOKEN_KEY = 'moolresha_admin_token';
 
 interface Labels {
-  conceptOrder: string[];
   conceptNames: Record<string, string>;
   verdictLabels: Record<string, string>;
   changeLabels: Record<string, string>;
@@ -26,8 +25,17 @@ interface Labels {
   weaveLabels: Record<string, string>;
 }
 
-interface ConceptStats {
+// Sentinel for a weave-split row whose `weave` wasn't tagged on the underlying feedback (legacy
+// rows from before the weave field existed) — must match src/lib/admin-stats.ts's
+// `UNSPECIFIED_WEAVE` exactly. Duplicated as a literal rather than imported: this file is a
+// client island bundle, kept free of that pure-lib's other (server/date-math) exports.
+const UNSPECIFIED_WEAVE = '__unspecified__';
+
+/** One row per Concept, or per (Concept, weave) when that Concept has weave variants — see the
+ * matching `rows` doc comment in functions/api/admin/stats.json.ts. */
+interface StatsRow {
   conceptId: string;
+  weaveId: string | null;
   responses: number;
   verdictCounts: Record<string, number>;
   changeCounts: Record<string, number>;
@@ -54,16 +62,7 @@ interface StatsBody {
     frustrationSubmissions: Trend;
   };
   series: { days: string[]; feedback: number[]; comments: number[]; signups: number[] };
-  concepts: ConceptStats[];
-  weaveBreakdown: {
-    conceptId: string;
-    weaveId: string;
-    label: string;
-    responses: number;
-    verdictCounts: Record<string, number>;
-    changeCounts: Record<string, number>;
-    priorityCounts: Record<string, number>;
-  }[];
+  rows: StatsRow[];
   comments: { conceptId: string; verdict: string; comment: string; weave: string | null; updatedAt: string }[];
   otherTextEntries: { conceptId: string; verdict: string; otherText: string; weave: string | null; updatedAt: string }[];
   signups: {
@@ -148,12 +147,23 @@ function weaveCell(labels: Labels, weave: string | null): string {
   return weave === null ? '—' : labelled(labels.weaveLabels, weave);
 }
 
-/** Sums one `Record<string, number>` per Concept into one combined record, in a given key order. */
-function sumAcrossConcepts(concepts: ConceptStats[], pick: (c: ConceptStats) => Record<string, number>, order: string[]): [string, number][] {
+/** Chart-axis/legend label for one `StatsRow`: the Concept's own name, plus a weave suffix when
+ * that row is a weave split — "RootWeave 01 — Micro-Dobby", "RootWeave 01 — Cotton Slub", or
+ * "RootWeave 01 — Before weave tracking" for the `UNSPECIFIED_WEAVE` leftover row. Scales to
+ * however many weave rows a Concept has; nothing here assumes a fixed count. */
+function rowLabel(labels: Labels, row: { conceptId: string; weaveId: string | null }): string {
+  const base = labelled(labels.conceptNames, row.conceptId);
+  if (row.weaveId === null) return base;
+  if (row.weaveId === UNSPECIFIED_WEAVE) return `${base} — Before weave tracking`;
+  return `${base} — ${labelled(labels.weaveLabels, row.weaveId)}`;
+}
+
+/** Sums one `Record<string, number>` per row into one combined record, in a given key order. */
+function sumAcrossRows(rows: StatsRow[], pick: (r: StatsRow) => Record<string, number>, order: string[]): [string, number][] {
   const totals: Record<string, number> = {};
   for (const key of order) totals[key] = 0;
-  for (const c of concepts) {
-    const counts = pick(c);
+  for (const r of rows) {
+    const counts = pick(r);
     for (const [key, n] of Object.entries(counts)) totals[key] = (totals[key] ?? 0) + n;
   }
   return order.map((k) => [k, totals[k] ?? 0]);
@@ -162,16 +172,19 @@ function sumAcrossConcepts(concepts: ConceptStats[], pick: (c: ConceptStats) => 
 /** Price bands aggregated by their human LABEL, not raw id — different Concepts use different
  * id namespaces/boundaries for their own price bands, so summing by id would silently mix
  * unrelated bands together. Summing by label only combines bands that are actually the same
- * price range in different Concepts (or keeps them separate when the labels genuinely differ). */
-function priceBandsByLabel(concepts: ConceptStats[], priceBandLabels: Labels['priceBandLabels']): [string, number][] {
+ * price range in different Concepts (or keeps them separate when the labels genuinely differ).
+ * A Concept's weave-split rows all share that Concept's own price bands (the price question
+ * isn't weave-specific), so looking up `priceBandLabels` by `row.conceptId` is correct for them
+ * too. */
+function priceBandsByLabel(rows: StatsRow[], priceBandLabels: Labels['priceBandLabels']): [string, number][] {
   const totals = new Map<string, number>();
-  for (const c of concepts) {
-    const bandLabels = priceBandLabels[c.conceptId] ?? {};
-    for (const [bandId, n] of Object.entries(c.priceBandCounts)) {
+  for (const r of rows) {
+    const bandLabels = priceBandLabels[r.conceptId] ?? {};
+    for (const [bandId, n] of Object.entries(r.priceBandCounts)) {
       const label = bandLabels[bandId] ?? bandId;
       totals.set(label, (totals.get(label) ?? 0) + n);
     }
-    if (c.priceSkipCount > 0) totals.set('No answer', (totals.get('No answer') ?? 0) + c.priceSkipCount);
+    if (r.priceSkipCount > 0) totals.set('No answer', (totals.get('No answer') ?? 0) + r.priceSkipCount);
   }
   return [...totals.entries()];
 }
@@ -374,8 +387,12 @@ function horizontalBarOption(entries: [string, number][]): Record<string, unknow
   };
 }
 
-function verdictOption(concepts: ConceptStats[], labels: Labels): Record<string, unknown> {
-  const ordered = labels.conceptOrder.map((id) => concepts.find((c) => c.conceptId === id)).filter((c): c is ConceptStats => c !== undefined);
+/** x-axis has one bar per `StatsRow`, in the exact order the server sends them (Concept order,
+ * weave-split rows in variant-declaration order, any `UNSPECIFIED_WEAVE` leftover last) — so a
+ * Concept with weave variants (today, mens-cotton-shirt) shows up as separate Micro-Dobby /
+ * Cotton Slub bars instead of one combined "RootWeave 01" bar. Scales to however many rows exist;
+ * nothing here assumes a fixed count of Concepts or weaves. */
+function verdictOption(rows: StatsRow[], labels: Labels): Record<string, unknown> {
   const verdictKeys = Object.keys(labels.verdictLabels);
   return {
     color: CHART_COLORS,
@@ -384,7 +401,7 @@ function verdictOption(concepts: ConceptStats[], labels: Labels): Record<string,
     grid: { left: 36, right: 16, top: 32, bottom: 48 },
     xAxis: {
       type: 'category',
-      data: ordered.map((c) => labelled(labels.conceptNames, c.conceptId)),
+      data: rows.map((r) => rowLabel(labels, r)),
       axisLabel: { interval: 0, rotate: 20, fontSize: 11 },
     },
     yAxis: { type: 'value', minInterval: 1 },
@@ -394,35 +411,7 @@ function verdictOption(concepts: ConceptStats[], labels: Labels): Record<string,
       stack: 'verdict',
       barMaxWidth: 36,
       itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
-      data: ordered.map((c) => c.verdictCounts[key] ?? 0),
-    })),
-  };
-}
-
-/** mens-cotton-shirt now collects feedback tagged by weave (Micro-Dobby / Cotton Slub) — these
- * are two separate entries a respondent can answer independently (see concept-weave-variants.ts
- * and the hidden `weave` field feedback-island.ts syncs to whichever tab is open), so they need
- * their own side-by-side comparison rather than being folded into the all-Concepts Verdict chart
- * above. One grouped/stacked bar per weave, same verdict-key stacking as `verdictOption`. */
-function weaveVerdictOption(weaveBreakdown: StatsBody['weaveBreakdown'], labels: Labels): Record<string, unknown> {
-  const verdictKeys = Object.keys(labels.verdictLabels);
-  return {
-    color: CHART_COLORS,
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { top: 0, textStyle: { fontSize: 12 } },
-    grid: { left: 36, right: 16, top: 32, bottom: 32 },
-    xAxis: {
-      type: 'category',
-      data: weaveBreakdown.map((w) => `${w.label} (${w.responses})`),
-    },
-    yAxis: { type: 'value', minInterval: 1 },
-    series: verdictKeys.map((key, i) => ({
-      name: labelled(labels.verdictLabels, key),
-      type: 'bar',
-      stack: 'verdict',
-      barMaxWidth: 60,
-      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
-      data: weaveBreakdown.map((w) => w.verdictCounts[key] ?? 0),
+      data: rows.map((r) => r.verdictCounts[key] ?? 0),
     })),
   };
 }
@@ -482,27 +471,26 @@ async function renderCharts(stats: StatsBody, labels: Labels): Promise<void> {
     if (key) byKey.set(key, elNode);
   });
 
-  const conceptEntries: [string, number][] = labels.conceptOrder
-    .map((id) => stats.concepts.find((c) => c.conceptId === id))
-    .filter((c): c is ConceptStats => c !== undefined)
-    .map((c) => [labelled(labels.conceptNames, c.conceptId), c.responses]);
+  // `stats.rows` is already in the right order (Concept order, then that Concept's weave rows,
+  // see the server-side doc comment) — no client-side reordering needed.
+  const conceptEntries: [string, number][] = stats.rows.map((r) => [rowLabel(labels, r), r.responses]);
 
   const priorityOrder = Object.keys(labels.priorityLabels);
-  const priorityEntries = sumAcrossConcepts(stats.concepts, (c) => c.priorityCounts, priorityOrder).map(
+  const priorityEntries = sumAcrossRows(stats.rows, (r) => r.priorityCounts, priorityOrder).map(
     ([k, n]) => [labelled(labels.priorityLabels, k), n] as [string, number],
   );
 
   const changeOrder = Object.keys(labels.changeLabels);
-  const changeEntries = sumAcrossConcepts(stats.concepts, (c) => c.changeCounts, changeOrder).map(
+  const changeEntries = sumAcrossRows(stats.rows, (r) => r.changeCounts, changeOrder).map(
     ([k, n]) => [labelled(labels.changeLabels, k), n] as [string, number],
   );
 
-  const priceEntries = priceBandsByLabel(stats.concepts, labels.priceBandLabels);
+  const priceEntries = priceBandsByLabel(stats.rows, labels.priceBandLabels);
 
   const conceptEl = byKey.get('concept');
   if (conceptEl) renderChart(echarts, conceptEl, 'concept', donutOption(conceptEntries));
   const verdictEl = byKey.get('verdict');
-  if (verdictEl) renderChart(echarts, verdictEl, 'verdict', verdictOption(stats.concepts, labels));
+  if (verdictEl) renderChart(echarts, verdictEl, 'verdict', verdictOption(stats.rows, labels));
   const prioritiesEl = byKey.get('priorities');
   if (prioritiesEl) renderChart(echarts, prioritiesEl, 'priorities', horizontalBarOption(priorityEntries));
   const changesEl = byKey.get('changes');
@@ -511,18 +499,6 @@ async function renderCharts(stats: StatsBody, labels: Labels): Promise<void> {
   if (seriesEl) renderChart(echarts, seriesEl, 'series', seriesOption(stats.series));
   const priceEl = byKey.get('price');
   if (priceEl) renderChart(echarts, priceEl, 'price', donutOption(priceEntries));
-
-  // Hidden entirely (not just an empty chart) when no Concept has weave variants — today
-  // mens-cotton-shirt always does, so this is always shown, but the guard keeps the dashboard
-  // correct if that ever changes.
-  const weaveCard = document.querySelector<HTMLElement>('[data-chart-card="weave"]');
-  if (stats.weaveBreakdown.length > 0) {
-    if (weaveCard) weaveCard.hidden = false;
-    const weaveEl = byKey.get('weave');
-    if (weaveEl) renderChart(echarts, weaveEl, 'weave', weaveVerdictOption(stats.weaveBreakdown, labels));
-  } else if (weaveCard) {
-    weaveCard.hidden = true;
-  }
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,14 @@ export interface DateRange {
 
 const DAY_MS = 86_400_000;
 
+/** Sentinel `weaveId` for a Concept that HAS weave variants (concept-weave-variants.ts) but
+ * whose `weave` column wasn't tagged on this particular row — submitted before the weave field
+ * existed, or the page's sync script didn't run. Kept as its own admin-dashboard row (never
+ * silently folded into one weave or dropped) so every chart's totals still reconcile with the
+ * Concept's real response count. Shared between the server (functions/api/admin/stats.json.ts)
+ * and the client (src/islands/admin-dashboard.ts) so both agree on the one sentinel string. */
+export const UNSPECIFIED_WEAVE = '__unspecified__';
+
 /** `YYYY-MM-DD` (UTC) for a timestamp in ms. */
 export function toDateOnly(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);

@@ -13,12 +13,12 @@
  *
  * Reuses the exact same sources the CSV exports and `/api/results` already use, so none of them
  * can disagree: `exportFeedbackRowsPaged` (every feedback row — filtered here to the selected
- * range, then re-aggregated per Concept with the same pure `aggregateFeedback` `/api/results`
- * uses) plus two small timestamp-only queries for `interest` and `frustration` (no existing
- * export covered those). Per-Concept sums (top priorities, what they'd change, price bands) and
- * the price-band-by-label donut are left to the client, which already has every Concept's
- * breakdown and the label maps baked in at build time (`src/pages/admin/index.astro`) — no need
- * to duplicate that here.
+ * range, then re-aggregated per `rows` entry, one per Concept or per-Concept-per-weave, with the
+ * same pure `aggregateFeedback` `/api/results` uses) plus two small timestamp-only queries for
+ * `interest` and `frustration` (no existing export covered those). Sums across rows (top
+ * priorities, what they'd change, price bands) and the price-band-by-label donut are left to
+ * the client, which already has every row's breakdown and the label maps baked in at build time
+ * (`src/pages/admin/index.astro`) — no need to duplicate that here.
  */
 import { aggregateFeedback, type FeedbackRow } from '../../../src/lib/aggregate';
 import {
@@ -28,6 +28,7 @@ import {
   resolveRange,
   toDateOnly,
   trend,
+  UNSPECIFIED_WEAVE,
   type Trend,
 } from '../../../src/lib/admin-stats';
 import { CONCEPT_IDS, type ConceptId } from '../../../src/content/config/allow-lists';
@@ -62,28 +63,26 @@ export interface AdminStatsBody {
     comments: number[];
     signups: number[];
   };
-  concepts: {
+  /** One row per Concept, EXCEPT a Concept with weave variants (today, only mens-cotton-shirt —
+   * see concept-weave-variants.ts) contributes one row per weave instead of one combined row,
+   * so every chart (Feedback by Concept, Verdict, Price Band Interest, and the sums behind Top
+   * Priorities / What They Would Change) differentiates Micro-Dobby from Cotton Slub rather than
+   * folding both under one "RootWeave 01" number. This scales to however many weaves a Concept
+   * ever has — nothing here assumes a fixed count. `weaveId` is `null` for a Concept with no
+   * weave variants (its one row), a real weave id for a split row, or `UNSPECIFIED_WEAVE` for
+   * the leftover rows of a Concept that has weave variants but whose `weave` wasn't tagged
+   * (legacy rows from before the weave field existed) — kept as its own row rather than being
+   * silently dropped or folded into one weave, so every row's responses still sum to the
+   * Concept's real total. */
+  rows: {
     conceptId: ConceptId;
+    weaveId: string | null;
     responses: number;
     verdictCounts: Record<string, number>;
     changeCounts: Record<string, number>;
     colourCounts: Record<string, number>;
     priceBandCounts: Record<string, number>;
     priceSkipCount: number;
-    priorityCounts: Record<string, number>;
-  }[];
-  /** Per-weave breakdown for a Concept with more than one weave (today, only
-   * mens-cotton-shirt — see concept-weave-variants.ts). Empty for every other Concept. A row
-   * whose `weave` wasn't set (submitted before the weave field existed, or the sync script
-   * didn't run) isn't counted in any weaveId bucket here — it still counts in the Concept's own
-   * combined `concepts` entry above. */
-  weaveBreakdown: {
-    conceptId: ConceptId;
-    weaveId: string;
-    label: string;
-    responses: number;
-    verdictCounts: Record<string, number>;
-    changeCounts: Record<string, number>;
     priorityCounts: Record<string, number>;
   }[];
   comments: { conceptId: ConceptId; verdict: string; comment: string; weave: string | null; updatedAt: string }[];
@@ -146,11 +145,15 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
     const frustrationInRangeCount = frustrationTimestamps.filter((t) => inMs(t, range.fromMs, range.toMs)).length;
     const frustrationInPrevCount = frustrationTimestamps.filter((t) => inMs(t, prev.fromMs, prev.toMs)).length;
 
-    const aggregates = aggregateFeedback(rowsInRange);
-    const concepts = CONCEPT_IDS.map((conceptId) => {
-      const a = aggregates.get(conceptId);
+    // One row per (Concept, weave) combination actually present — see the `rows` doc comment
+    // on AdminStatsBody above. `aggregateFeedback` is the exact same pure function /api/results
+    // and the CSV exports already use; it's just called once per row here instead of once per
+    // Concept, on whatever subset of `rowsInRange` that row covers.
+    function toStatRow(conceptId: ConceptId, weaveId: string | null, subset: FeedbackRow[]) {
+      const a = aggregateFeedback(subset).get(conceptId);
       return {
         conceptId,
+        weaveId,
         responses: a?.responses ?? 0,
         verdictCounts: a?.verdictCounts ?? {},
         changeCounts: a?.changeCounts ?? {},
@@ -159,6 +162,18 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
         priceSkipCount: a?.priceSkipCount ?? 0,
         priorityCounts: a?.priorityCounts ?? {},
       };
+    }
+
+    const statRows = CONCEPT_IDS.flatMap((conceptId) => {
+      const conceptRowsInRange = rowsInRange.filter((r) => r.conceptId === conceptId);
+      const variants = CONCEPT_WEAVE_VARIANTS[conceptId];
+      if (!variants) return [toStatRow(conceptId, null, conceptRowsInRange)];
+
+      const weaveIds = new Set(variants.map((v) => v.id));
+      const out = variants.map((v) => toStatRow(conceptId, v.id, conceptRowsInRange.filter((r) => r.weave === v.id)));
+      const leftover = conceptRowsInRange.filter((r) => !weaveIds.has(r.weave ?? ''));
+      if (leftover.length > 0) out.push(toStatRow(conceptId, UNSPECIFIED_WEAVE, leftover));
+      return out;
     });
 
     const days = dailyBuckets(range);
@@ -192,27 +207,6 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
       }))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-    // Reuses the exact same pure `aggregateFeedback` the combined per-Concept numbers above use,
-    // just on a filtered subset per weave — no change to that shared function, and the public
-    // /api/results projection (which calls it too) is unaffected.
-    const weaveBreakdown = CONCEPT_IDS.flatMap((conceptId) => {
-      const variants = CONCEPT_WEAVE_VARIANTS[conceptId];
-      if (!variants) return [];
-      return variants.map((v) => {
-        const subset: FeedbackRow[] = rowsInRange.filter((r) => r.conceptId === conceptId && r.weave === v.id);
-        const agg = aggregateFeedback(subset).get(conceptId);
-        return {
-          conceptId,
-          weaveId: v.id,
-          label: v.label,
-          responses: agg?.responses ?? 0,
-          verdictCounts: agg?.verdictCounts ?? {},
-          changeCounts: agg?.changeCounts ?? {},
-          priorityCounts: agg?.priorityCounts ?? {},
-        };
-      });
-    });
-
     const signups = signupRows
       .filter((s) => inMs(s.created_at, range.fromMs, range.toMs))
       .map((s) => ({
@@ -240,8 +234,7 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
         comments: days.map((d) => commentsByDay[d] ?? 0),
         signups: days.map((d) => signupsByDay[d] ?? 0),
       },
-      concepts,
-      weaveBreakdown,
+      rows: statRows,
       comments,
       otherTextEntries,
       signups,
