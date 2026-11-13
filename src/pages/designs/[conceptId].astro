@@ -87,7 +87,11 @@ for (const p of designPanels ?? []) {
 }
 
 const colourPanels = designVariants ? [] : buildColourPanels(concept.id, concept.colours, maps);
-const hasColourPhotos = colourPanels.length > 1;
+// >= 1, not > 1: a Concept mid-way through getting its real photography (today,
+// mens-relaxed-pant — one colour, "meadow", done so far) should show that one colour's real
+// photos (with a single, harmless swatch button) rather than falling back to the flat all-
+// placeholder gallery just because there's nothing yet to switch between.
+const hasColourPhotos = colourPanels.length >= 1;
 const category = CONCEPT_CATEGORIES[concept.id];
 
 // Same circular micro-photo treatment as ConceptFeedbackForm.astro's colour swatches: a crop
