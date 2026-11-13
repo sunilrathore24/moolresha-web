@@ -4,19 +4,24 @@ Living reference for the production deployment of **moolresha-web**. Point a new
 session at this file to pick up where the last one left off. Update it whenever deployment
 state changes; don't let it go stale.
 
-Last updated: **2026-11-12**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
+Last updated: **2026-11-13**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
 
-## ✅ `0002_feedback_comment.sql` applied to production — 2026-11-12
+## ✅ `0002_feedback_comment.sql` and `0003_feedback_weave.sql` applied to production
 
-`migrations/0002_feedback_comment.sql` (adds `concept_feedback.comment_text`, the column the
-feedback form's "Any other thoughts?" field writes to) was applied directly against the live
-D1 database via the Cloudflare dashboard's Console tab (wrangler still isn't authenticated on
-this machine, so the dashboard was used instead of `wrangler d1 migrations apply`). Verified
-twice: the `ALTER TABLE` ran with "This query successfully executed", and a follow-up
-`PRAGMA table_info(concept_feedback);` confirms `comment_text` is now a real column. No further
-action needed — `redesign/mobile-premium-v1` is safe to merge/deploy without a 500 on
-comment-bearing feedback submissions. Once
-done, delete this section (or mark it done with the date) so it doesn't linger as a stale alarm.
+Both run the same way (wrangler still isn't authenticated on this machine, so the Cloudflare
+dashboard's D1 Console tab was used instead of `wrangler d1 migrations apply`), each verified
+with "This query successfully executed" followed by `PRAGMA table_info(concept_feedback);`
+showing the new column:
+
+- `0002_feedback_comment.sql` (2026-11-12) — adds `comment_text`, the feedback form's "Any
+  other thoughts?" field.
+- `0003_feedback_weave.sql` (2026-11-13) — adds `weave`, which weave (Micro-Dobby / Cotton
+  Slub) a feedback submission on mens-cotton-shirt was looking at.
+
+No further action needed for either. When adding a future migration, follow the same pattern:
+run it against production via the dashboard console *before* the deploy that needs it, verify
+with `PRAGMA table_info`, then update this section (or mark the new one done) so this file
+doesn't linger as a stale alarm.
 
 ## 1. Accounts and IDs
 
