@@ -71,8 +71,11 @@ priceBands:
   - { kind: range, id: mrp-2000-2499, lower: 2000, upper: 2499 }
   - { kind: range, id: mrp-2500-2999, lower: 2500, upper: 2999 }
   - { kind: over, id: mrp-3000-plus, lower: 3000 }
-# chalk_white listed first: its photo is the one already used as this Concept's index/homepage
-# thumbnail (buildColourPanels + the index/teaser pages' "first colour with a 01-front" pick —
-# see /designs/index.astro and DesignLabTeaser.astro) — keeping it first here keeps that
-# thumbnail exactly as it was before meadow's photos were added, not swapped to meadow's.
-colours: [chalk_white, flax, clay, meadow, indigo_dusk]
+# meadow listed first: its 01-front is a proper full hanger shot, framed the same way every
+# other Concept's index/homepage thumbnail is (buildColourPanels + the index/teaser pages' "first
+# colour with a 01-front" pick — see /designs/index.astro and DesignLabTeaser.astro). Chalk
+# White's only photo is a tight waistband/pocket close-up, not a full garment shot — cropped into
+# the same tile ratio as every other Concept it looked zoomed-in and inconsistent, not just a
+# different colour. Chalk White stays a fully real, selectable colour on the detail page; this
+# order only changes which one represents the Concept on the index/homepage tile.
+colours: [meadow, chalk_white, flax, clay, indigo_dusk]
