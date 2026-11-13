@@ -193,6 +193,16 @@ export function initAngleViewer(root: HTMLElement, env: AngleViewerEnv = {}): bo
     // the observer reports the real state, which arrives within a frame or two either way.
     let visible = typeof IntersectionObserver === 'undefined';
     let hovering = false;
+    // Still not enough on its own: Tabs.astro (the weave tabs) hides every non-first panel
+    // from JS, not from the server-rendered HTML (its own no-JS fallback is "show every panel
+    // stacked"), so the FIRST IntersectionObserver callback can fire before that hide has
+    // happened — a real race, caught live a second time even after the fix above landed, this
+    // time against the actual deployed site rather than localhost (the extra network latency
+    // made the window wide enough to matter). A `requestAnimationFrame` defers the whole gate
+    // by one frame, after every other island's own DOMContentLoaded-time setup — including
+    // Tabs.astro's synchronous hide — has already run, so the very first visibility read
+    // reflects the real, settled layout instead of the instant before it was hidden.
+    const defer = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (fn: () => void) => setTimeout(fn, 0);
     const stopAuto = (): void => {
       if (autoTimer !== null) {
         clearInterval(autoTimer);
@@ -221,19 +231,22 @@ export function initAngleViewer(root: HTMLElement, env: AngleViewerEnv = {}): bo
       hovering = false;
       startAuto();
     });
-    if (typeof IntersectionObserver !== 'undefined') {
-      const io = new IntersectionObserver(
-        (entries) => {
-          visible = entries[entries.length - 1]?.isIntersecting ?? false;
-          if (visible) startAuto();
-          else stopAuto();
-        },
-        { threshold: 0 },
-      );
-      io.observe(root);
-    } else {
-      startAuto();
-    }
+    defer(() => {
+      if (typeof IntersectionObserver !== 'undefined') {
+        const io = new IntersectionObserver(
+          (entries) => {
+            visible = entries[entries.length - 1]?.isIntersecting ?? false;
+            if (visible) startAuto();
+            else stopAuto();
+          },
+          { threshold: 0 },
+        );
+        io.observe(root);
+      } else {
+        visible = root.offsetParent !== null;
+        startAuto();
+      }
+    });
   }
 
   const expandBtn = root.querySelector<HTMLButtonElement>('[data-av-expand]');
