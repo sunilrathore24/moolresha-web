@@ -18,6 +18,16 @@ export type ConceptId = (typeof CONCEPT_IDS)[number];
 export const VERDICTS = ['would_wear', 'maybe', 'not_for_me'] as const;
 export type Verdict = (typeof VERDICTS)[number];
 
+/**
+ * Weave variants (2026-11): today only `mens-cotton-shirt` has more than one (Micro-Dobby,
+ * Cotton Slub — see src/lib/concept-weave-variants.ts). Global, not per-Concept, same as
+ * PALETTE — a second Concept with weaves later would add its ids here too. The feedback form
+ * sends whichever weave was selected when a Concept has more than one, so the admin export can
+ * tell them apart; a Concept with only one weave never sends this field at all.
+ */
+export const WEAVE_IDS = ['micro-dobby', 'cotton-slub'] as const;
+export type WeaveId = (typeof WEAVE_IDS)[number];
+
 export const CHANGE_CHIPS = ['fit', 'fabric_weight', 'colour', 'pockets', 'price', 'other'] as const;
 export type ChangeChip = (typeof CHANGE_CHIPS)[number];
 

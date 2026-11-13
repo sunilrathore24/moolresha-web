@@ -11,6 +11,7 @@ import DesignIndexCard from '../designs/DesignIndexCard.astro';
 import { conceptColourViews, conceptExtraPhotos, conceptMaterialCards, conceptViews } from '../../lib/concept-images';
 import { buildColourPanels } from '../../lib/concept-colour-panels';
 import { CONCEPT_SHORT_NAMES, conceptSpecLine, conceptWeaveLabel } from '../../lib/concept-categories';
+import { CONCEPT_WEAVE_VARIANTS } from '../../lib/concept-weave-variants';
 import featuredLifestylePhoto from '../../assets/concepts/mens-cotton-shirt/lifestyle-featured.png';
 
 const maps = { conceptColourViews, conceptMaterialCards, conceptExtraPhotos };
@@ -31,6 +32,14 @@ const cards = concepts.map((concept) => {
 
 const featured = cards.find((c) => c.concept.featured);
 const rest = cards.filter((c) => !c.concept.featured);
+
+// See the identical comment in /designs/index.astro: a Concept with more than one weave gets
+// a weave-neutral headline here instead of one weave's name standing in for the garment.
+const featuredHeadline = featured
+  ? CONCEPT_WEAVE_VARIANTS[featured.concept.id]
+    ? 'Cotton Shirt'
+    : conceptWeaveLabel(featured.concept.fabricNotes.weave)
+  : undefined;
 ---
 
 <section class="section dlt" data-section="design-lab" id="design-lab" aria-labelledby="design-lab-h">
@@ -45,7 +54,7 @@ const rest = cards.filter((c) => !c.concept.featured);
         conceptId={featured.concept.id}
         name={featured.concept.name}
         productCode={featured.concept.productCode}
-        weave={conceptWeaveLabel(featured.concept.fabricNotes.weave)}
+        weave={featuredHeadline}
         specLine={conceptSpecLine(featured.concept.fabricNotes)}
         featured
         laterProduct={featured.concept.laterProduct}

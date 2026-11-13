@@ -13,6 +13,17 @@
  * elaborated content (still "the main thing we're pointing out"), but tucked behind a tab
  * click instead of consuming default scroll space, matching the reference's minimal default
  * view ("no information upfront... it will give a long scroll").
+ *
+ * Weave variants (today, only mens-cotton-shirt — see concept-weave-variants.ts): picking a
+ * weave now changes EVERYTHING below the page header — gallery, spec grid, and the Fabric/Why
+ * tab content — not just photos. Each weave gets its own full copy of all of it, nested inside
+ * its own panel of a weave `<Tabs>`; the inner Fabric/Comfort/Quality/Testing/Why `<Tabs>` is
+ * duplicated per weave too (ids suffixed with the weave id — `detailTabs()` below — so the two
+ * copies never collide). Comfort/Quality/Testing aren't weave-specific content (no override
+ * exists for them), so both weaves show the same real copy there; only Fabric and Why This
+ * Fabric actually differ when a weave provides its own. The feedback form stays a SINGLE
+ * shared instance after all of this, not duplicated — see the hidden `weave` field and its
+ * sync script near the bottom of this file.
  */
 import type { GetStaticPaths, ImageMetadata } from 'astro';
 import { getCollection } from 'astro:content';
@@ -35,6 +46,7 @@ import { colourPanelId } from '../../lib/colour-panel-id';
 import { CONCEPT_CATEGORIES } from '../../lib/concept-categories';
 import { CONCEPT_DESIGN_VARIANTS } from '../../lib/concept-design-variants';
 import { CONCEPT_WEAVE_VARIANTS } from '../../lib/concept-weave-variants';
+import type { FabricNotesData, WhyThisFabricData } from '../../lib/concept-schema';
 
 export const getStaticPaths = (async () => {
   const concepts = await getCollection('concepts');
@@ -85,11 +97,10 @@ for (const p of colourPanels) {
 
 // Weave variants (today, only mens-cotton-shirt — see concept-weave-variants.ts) sit ABOVE the
 // colour question, unlike design variants: each weave gets its OWN full colour-swatch gallery
-// (reusing the exact `buildColourPanels` + ColourSwatches pairing above), switched by a real
-// Tabs.astro tablist rather than a second colour-swatch row, so nesting never collides with the
-// `[data-colour-swatches]`/`[data-colour-panel]` hooks each weave's own panel uses internally.
-// A weave with no explicit `colours` (the Concept's original weave) reuses `colourPanels`
-// verbatim — zero behaviour change for Micro-Dobby's existing six-colour gallery.
+// (reusing the exact `buildColourPanels` + ColourSwatches pairing above), AND its own fabric
+// facts, switched together by one weave `<Tabs>` tablist. A weave with no explicit `colours`
+// (the Concept's original weave) reuses `colourPanels` verbatim — zero behaviour change for
+// Micro-Dobby's existing six-colour gallery and fabric facts.
 const weaveVariants = CONCEPT_WEAVE_VARIANTS[concept.id];
 const weaveGalleries = weaveVariants?.map((w) => {
   const panels = w.colours
@@ -104,20 +115,31 @@ const weaveGalleries = weaveVariants?.map((w) => {
       if (closeup && closeup.status === 'file') photos[p.colour] = closeup.image;
     }
   }
-  return { id: w.id, label: w.label, productCode: w.productCode, panels, labels, photos };
+  const fabricNotes: FabricNotesData = w.fabricNotes ?? concept.fabricNotes;
+  const whyThisFabric: WhyThisFabricData | undefined = w.whyThisFabric ?? concept.whyThisFabric;
+  return { id: w.id, label: w.label, productCode: w.productCode, panels, labels, photos, fabricNotes, whyThisFabric };
 });
 const weaveTabs = weaveGalleries?.map((w) => ({ id: w.id, label: w.label }));
 
-// The tabs that actually have content. Comfort only when `construction` exists, Testing
-// only when `testing` exists, Why This Fabric only when `whyThisFabric` exists — Tabs needs
-// at least two to enhance, which Fabric + Quality always satisfy.
-const tabs = [
-  { id: 'fabric', label: 'Fabric' },
-  ...(concept.construction ? [{ id: 'comfort', label: 'Comfort' }] : []),
-  { id: 'quality', label: 'Quality' },
-  ...(concept.testing && concept.testing.length > 0 ? [{ id: 'testing', label: 'Testing' }] : []),
-  ...(concept.whyThisFabric ? [{ id: 'why', label: 'Why This Fabric' }] : []),
-];
+/** The Fabric/Comfort/Quality/Testing/Why tab list. Comfort/Quality/Testing aren't
+ * weave-specific (no override exists for them, so both weaves show the same real copy);
+ * Fabric always exists; Why only when `whyThisFabric` exists for THIS weave specifically.
+ * `suffix` (a weave id) keeps two copies of this tablist from colliding when weave variants
+ * exist — every id must still be unique across the whole page. */
+// `concept` is passed in explicitly, not read from the closure: a nested function
+// declaration doesn't reliably keep an outer `if (!x) throw` guard's narrowing under strict
+// null checks (the same reason admin-dashboard.ts's wireUpDashboard takes its elements as
+// parameters instead of reading them from the enclosing scope).
+function detailTabs(hasConstruction: boolean, hasTesting: boolean, whyThisFabric: WhyThisFabricData | undefined, suffix?: string) {
+  const id = (base: string) => (suffix ? `${base}-${suffix}` : base);
+  return [
+    { id: id('fabric'), label: 'Fabric' },
+    ...(hasConstruction ? [{ id: id('comfort'), label: 'Comfort' }] : []),
+    { id: id('quality'), label: 'Quality' },
+    ...(hasTesting ? [{ id: id('testing'), label: 'Testing' }] : []),
+    ...(whyThisFabric ? [{ id: id('why'), label: 'Why This Fabric' }] : []),
+  ];
+}
 ---
 
 <BaseLayout
@@ -145,18 +167,27 @@ const tabs = [
       <p class="cd-research">Research-stage design concept</p>
     </header>
 
-    <div class="cd-gallery">
-      {
-        weaveGalleries && weaveTabs ? (
-          <>
-            <p class="cd-weave-note">
-              Fabric details further down this page describe {weaveGalleries[0]?.label}. Specs
-              for the other weave are coming soon.
-            </p>
-            <Tabs tabs={weaveTabs} ariaLabel={`${concept.name} weave`}>
-              {weaveGalleries.map((w) => (
-                <div role="tabpanel" data-tab-panel={w.id} id={`panel-${w.id}`} aria-labelledby={`tab-${w.id}`} tabindex="0">
-                  {w.productCode && <p class="cd-weave-code">{w.productCode}</p>}
+    {
+      weaveGalleries && weaveTabs ? (
+        <div id="weave-tabs-root">
+          <Tabs tabs={weaveTabs} ariaLabel={`${concept.name} weave`}>
+            {weaveGalleries.map((w) => (
+              // `data-concept-id` here (not inside QualityCard.astro itself) is purely for
+              // Content_Check's CC-18 rule: it climbs ancestors looking for this attribute
+              // before falling back to parsing a card's `aria-labelledby="qc-<id>"`, and that
+              // fallback would otherwise see QualityCard's WEAVE-SUFFIXED `qc-mens-cotton-
+              // shirt-micro-dobby` (needed so the two weaves' headings don't share one HTML id)
+              // and report "no Quality_Card found for mens-cotton-shirt" — caught by the build.
+              <div
+                role="tabpanel"
+                data-tab-panel={w.id}
+                id={`panel-${w.id}`}
+                aria-labelledby={`tab-${w.id}`}
+                tabindex="0"
+                data-concept-id={concept.id}
+              >
+                {w.productCode && <p class="cd-weave-code">{w.productCode}</p>}
+                <div class="cd-gallery">
                   {w.panels.length > 1 ? (
                     <div data-colour-swatches>
                       {w.panels.map((p) => (
@@ -193,104 +224,156 @@ const tabs = [
                     <AngleViewer concept={concept} conceptIndex={0} firstCardAboveFold={false} autoAdvance />
                   )}
                 </div>
-              ))}
+
+                <ProductSpecificationGrid fabricNotes={w.fabricNotes} />
+
+                <section class="cd-tabs" aria-label={`${concept.name} ${w.label} details`}>
+                  <Tabs tabs={detailTabs(!!concept.construction, !!(concept.testing && concept.testing.length > 0), w.whyThisFabric, w.id)} ariaLabel={`${concept.name} ${w.label} details`}>
+                    <div role="tabpanel" data-tab-panel={`fabric-${w.id}`} id={`panel-fabric-${w.id}`} aria-labelledby={`tab-fabric-${w.id}`} tabindex="0">
+                      <FabricNotes fabricNotes={w.fabricNotes} conceptId={`${concept.id}-${w.id}`} />
+                    </div>
+
+                    {
+                      concept.construction && (
+                        <div role="tabpanel" data-tab-panel={`comfort-${w.id}`} id={`panel-comfort-${w.id}`} aria-labelledby={`tab-comfort-${w.id}`} tabindex="0">
+                          <ConstructionNotes construction={concept.construction} conceptId={`${concept.id}-${w.id}`} />
+                        </div>
+                      )
+                    }
+
+                    <div role="tabpanel" data-tab-panel={`quality-${w.id}`} id={`panel-quality-${w.id}`} aria-labelledby={`tab-quality-${w.id}`} tabindex="0">
+                      <QualityCard quality={concept.quality} conceptId={`${concept.id}-${w.id}`} />
+                      <HowWeCheck />
+                    </div>
+
+                    {
+                      concept.testing && concept.testing.length > 0 && (
+                        <div role="tabpanel" data-tab-panel={`testing-${w.id}`} id={`panel-testing-${w.id}`} aria-labelledby={`tab-testing-${w.id}`} tabindex="0">
+                          <h2 class="cd-testing-h">Testing plan</h2>
+                          <p class="cd-testing-intro">
+                            What we intend to test on this concept, and the pass criteria. A result is only
+                            marked Verified once we have the evidence.
+                          </p>
+                          <TestingList testing={concept.testing} />
+                        </div>
+                      )
+                    }
+
+                    {
+                      w.whyThisFabric && (
+                        <div role="tabpanel" data-tab-panel={`why-${w.id}`} id={`panel-why-${w.id}`} aria-labelledby={`tab-why-${w.id}`} tabindex="0">
+                          <WhyThisFabric whyThisFabric={w.whyThisFabric} conceptId={`${concept.id}-${w.id}`} />
+                        </div>
+                      )
+                    }
+                  </Tabs>
+                </section>
+              </div>
+            ))}
+          </Tabs>
+        </div>
+      ) : (
+        <>
+          <div class="cd-gallery">
+            {
+              designPanels ? (
+                <div data-colour-swatches>
+                  {designPanels.map((p) => (
+                    <div data-colour-panel={p.id} id={colourPanelId(concept.id, p.id)}>
+                      <AngleViewer
+                        concept={concept}
+                        views={p.views}
+                        materialCard={p.materialCard}
+                        extraPhotos={p.extraPhotos}
+                        conceptIndex={0}
+                        firstCardAboveFold={false}
+                        autoAdvance
+                      />
+                    </div>
+                  ))}
+                  <ColourSwatches
+                    conceptId={concept.id}
+                    colours={designPanels.map((p) => p.id)}
+                    photos={designThumbs}
+                    labels={designLabels}
+                  />
+                </div>
+              ) : hasColourPhotos ? (
+                <div data-colour-swatches>
+                  {colourPanels.map((p) => (
+                    <div data-colour-panel={p.colour} id={colourPanelId(concept.id, p.colour)}>
+                      <AngleViewer
+                        concept={concept}
+                        views={p.views}
+                        materialCard={p.materialCard}
+                        extraPhotos={p.extraPhotos}
+                        conceptIndex={0}
+                        firstCardAboveFold={false}
+                        autoAdvance
+                      />
+                    </div>
+                  ))}
+                  {/* Below the photos, per explicit instruction — was above them. */}
+                  <ColourSwatches conceptId={concept.id} colours={colourPanels.map((p) => p.colour)} photos={colourPhotos} />
+                </div>
+              ) : (
+                <AngleViewer concept={concept} conceptIndex={0} firstCardAboveFold={false} autoAdvance />
+              )
+            }
+          </div>
+
+          <ProductSpecificationGrid fabricNotes={concept.fabricNotes} />
+
+          <section class="cd-tabs" aria-label={`${concept.name} details`}>
+            <Tabs tabs={detailTabs(!!concept.construction, !!(concept.testing && concept.testing.length > 0), concept.whyThisFabric)} ariaLabel={`${concept.name} details`}>
+              <div role="tabpanel" data-tab-panel="fabric" id="panel-fabric" aria-labelledby="tab-fabric" tabindex="0">
+                <FabricNotes fabricNotes={concept.fabricNotes} conceptId={concept.id} />
+              </div>
+
+              {
+                concept.construction && (
+                  <div role="tabpanel" data-tab-panel="comfort" id="panel-comfort" aria-labelledby="tab-comfort" tabindex="0">
+                    <ConstructionNotes construction={concept.construction} conceptId={concept.id} />
+                  </div>
+                )
+              }
+
+              <div role="tabpanel" data-tab-panel="quality" id="panel-quality" aria-labelledby="tab-quality" tabindex="0">
+                <QualityCard quality={concept.quality} conceptId={concept.id} />
+                <HowWeCheck />
+              </div>
+
+              {
+                concept.testing && concept.testing.length > 0 && (
+                  <div role="tabpanel" data-tab-panel="testing" id="panel-testing" aria-labelledby="tab-testing" tabindex="0">
+                    <h2 class="cd-testing-h">Testing plan</h2>
+                    <p class="cd-testing-intro">
+                      What we intend to test on this concept, and the pass criteria. A result is only
+                      marked Verified once we have the evidence.
+                    </p>
+                    <TestingList testing={concept.testing} />
+                  </div>
+                )
+              }
+
+              {
+                concept.whyThisFabric && (
+                  <div role="tabpanel" data-tab-panel="why" id="panel-why" aria-labelledby="tab-why" tabindex="0">
+                    <WhyThisFabric whyThisFabric={concept.whyThisFabric} conceptId={concept.id} />
+                  </div>
+                )
+              }
             </Tabs>
-          </>
-        ) : designPanels ? (
-          <div data-colour-swatches>
-            {designPanels.map((p) => (
-              <div data-colour-panel={p.id} id={colourPanelId(concept.id, p.id)}>
-                <AngleViewer
-                  concept={concept}
-                  views={p.views}
-                  materialCard={p.materialCard}
-                  extraPhotos={p.extraPhotos}
-                  conceptIndex={0}
-                  firstCardAboveFold={false}
-                  autoAdvance
-                />
-              </div>
-            ))}
-            <ColourSwatches
-              conceptId={concept.id}
-              colours={designPanels.map((p) => p.id)}
-              photos={designThumbs}
-              labels={designLabels}
-            />
-          </div>
-        ) : hasColourPhotos ? (
-          <div data-colour-swatches>
-            {colourPanels.map((p) => (
-              <div data-colour-panel={p.colour} id={colourPanelId(concept.id, p.colour)}>
-                <AngleViewer
-                  concept={concept}
-                  views={p.views}
-                  materialCard={p.materialCard}
-                  extraPhotos={p.extraPhotos}
-                  conceptIndex={0}
-                  firstCardAboveFold={false}
-                  autoAdvance
-                />
-              </div>
-            ))}
-            {/* Below the photos, per explicit instruction — was above them. */}
-            <ColourSwatches conceptId={concept.id} colours={colourPanels.map((p) => p.colour)} photos={colourPhotos} />
-          </div>
-        ) : (
-          <AngleViewer concept={concept} conceptIndex={0} firstCardAboveFold={false} autoAdvance />
-        )
-      }
-    </div>
-
-    <ProductSpecificationGrid fabricNotes={concept.fabricNotes} />
-
-    <section class="cd-tabs" aria-label={`${concept.name} details`}>
-      <Tabs tabs={tabs} ariaLabel={`${concept.name} details`}>
-        <div role="tabpanel" data-tab-panel="fabric" id="panel-fabric" aria-labelledby="tab-fabric" tabindex="0">
-          <FabricNotes fabricNotes={concept.fabricNotes} conceptId={concept.id} />
-        </div>
-
-        {
-          concept.construction && (
-            <div role="tabpanel" data-tab-panel="comfort" id="panel-comfort" aria-labelledby="tab-comfort" tabindex="0">
-              <ConstructionNotes construction={concept.construction} conceptId={concept.id} />
-            </div>
-          )
-        }
-
-        <div role="tabpanel" data-tab-panel="quality" id="panel-quality" aria-labelledby="tab-quality" tabindex="0">
-          <QualityCard quality={concept.quality} conceptId={concept.id} />
-          <HowWeCheck />
-        </div>
-
-        {
-          concept.testing && concept.testing.length > 0 && (
-            <div role="tabpanel" data-tab-panel="testing" id="panel-testing" aria-labelledby="tab-testing" tabindex="0">
-              <h2 class="cd-testing-h">Testing plan</h2>
-              <p class="cd-testing-intro">
-                What we intend to test on this concept, and the pass criteria. A result is only
-                marked Verified once we have the evidence.
-              </p>
-              <TestingList testing={concept.testing} />
-            </div>
-          )
-        }
-
-        {
-          concept.whyThisFabric && (
-            <div role="tabpanel" data-tab-panel="why" id="panel-why" aria-labelledby="tab-why" tabindex="0">
-              <WhyThisFabric whyThisFabric={concept.whyThisFabric} conceptId={concept.id} />
-            </div>
-          )
-        }
-      </Tabs>
-    </section>
+          </section>
+        </>
+      )
+    }
 
     <section class="cd-voice">
       {/* No page-level heading here on purpose — ConceptFeedbackForm renders its own "Share
          Your Opinion" title + intro right below it; a second copy above it duplicated the same
          words (caught via live screenshot review, 2026-11). */}
-      <ConceptFeedbackForm concept={concept} />
+      <ConceptFeedbackForm concept={concept} weaveIds={weaveVariants?.map((w) => w.id)} />
     </section>
   </article>
 </BaseLayout>
@@ -301,6 +384,24 @@ const tabs = [
   // this page was missing it, so the submit button never left `hidden` and the form never came
   // alive (caught via live Playwright check, 2026-11).
   import '../../islands/feedback-island';
+
+  // Keeps the feedback form's hidden `weave` field in sync with whichever weave tab is open —
+  // only relevant when the page actually has weave variants (#weave-tabs-root then exists).
+  // A MutationObserver on `aria-selected`, not a click listener on the tab buttons: that also
+  // catches a keyboard-driven tab change (Left/Right/Home/End, tabs-island.ts), not just a
+  // click, with zero coupling to how Tabs.astro itself decides to switch panels.
+  const weaveTabsRoot = document.getElementById('weave-tabs-root');
+  const weaveHiddenInput = document.querySelector<HTMLInputElement>('input[name="weave"]');
+  if (weaveTabsRoot && weaveHiddenInput) {
+    const tabButtons = Array.from(weaveTabsRoot.querySelectorAll<HTMLButtonElement>(':scope > .tabs > [data-tabs-list] [data-tab-id]'));
+    const sync = (): void => {
+      const active = tabButtons.find((b) => b.getAttribute('aria-selected') === 'true');
+      if (active?.dataset.tabId) weaveHiddenInput.value = active.dataset.tabId;
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    tabButtons.forEach((b) => observer.observe(b, { attributes: true, attributeFilter: ['aria-selected'] }));
+  }
 </script>
 
 <style>
@@ -370,16 +471,8 @@ const tabs = [
     margin-block: var(--space-4) var(--space-2);
   }
 
-  .cd-weave-note {
-    margin: 0 0 var(--space-3);
-    font-family: var(--font-sans);
-    font-size: var(--fs-small);
-    font-style: italic;
-    color: var(--color-text-muted);
-  }
-
   .cd-weave-code {
-    margin: 0 0 var(--space-2);
+    margin: var(--space-4) 0 0;
     font-family: var(--font-sans);
     font-size: var(--fs-label);
     font-weight: 600;

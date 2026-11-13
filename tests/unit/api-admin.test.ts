@@ -178,17 +178,23 @@ function toFeedbackRowsFromCsv(csv: string): FeedbackRow[] {
   expect(header).toEqual([...FEEDBACK_CSV_HEADER]);
   const split = (s: string | undefined): string[] => (s ? s.split('|') : []);
   return records.map((c) => {
-    const [anon, concept, verdict, changes, colour, priorities, band, skipped, other, us, um, uc, updated] = c;
+    // Named by FEEDBACK_CSV_HEADER's real order, not a positional destructure with fewer names
+    // than columns — that silently shifted every field after `other_text` by one (comment_text
+    // was never given its own name) well before `weave` existed; adding `weave` only made the
+    // drift one column worse and finally surfaced it, via the priority counts this test checks.
+    const [anon, concept, verdict, changes, colour, weave, priorities, band, skipped, other, comment, us, um, uc, updated] = c;
     return {
       anonId: anon as string,
       conceptId: concept as ConceptId,
       verdict: verdict as FeedbackRow['verdict'],
       changes: split(changes) as FeedbackRow['changes'],
       colour: colour ? (colour as FeedbackRow['colour']) : null,
+      weave: weave ? weave : null,
       priorities: split(priorities) as FeedbackRow['priorities'],
       priceBandId: band ? band : null,
       priceSkipped: skipped === '1',
       otherText: other ? denormalise(other) : null,
+      comment: comment ? denormalise(comment) : null,
       utm: { source: us as string, medium: um as string, campaign: uc as string },
       updatedAt: updated as string,
     };
@@ -354,12 +360,12 @@ describe('export endpoints', () => {
     expect(text.split('\r\n')[0]).toBe(FEEDBACK_CSV_HEADER.join(','));
     expect(text).not.toMatch(/person@example\.test|9876543210|email|phone/i);
     expect(FEEDBACK_CSV_HEADER).toEqual([
-      'anon_id', 'concept_id', 'verdict', 'changes', 'colour', 'priorities', 'price_band_id',
+      'anon_id', 'concept_id', 'verdict', 'changes', 'colour', 'weave', 'priorities', 'price_band_id',
       'price_skipped', 'other_text', 'comment_text', 'utm_source', 'utm_medium', 'utm_campaign', 'updated_at',
     ]);
     const records = parseCsv(text);
     expect(records).toHaveLength(1 + 4);
-    for (const r of records) expect(r).toHaveLength(14);
+    for (const r of records) expect(r).toHaveLength(15);
   });
 
   it('neutralises formulas in free text, keeps multi-line quoted text intact, and empties band on skip', async () => {
@@ -367,16 +373,16 @@ describe('export endpoints', () => {
     await seed(db);
     const res = await createFeedbackCsvHandler({ now: () => NOW, db })({ request: req(bearer), env: baseEnv(db) });
     const records = parseCsv(await res.text()).slice(1);
-    const others = records.map((r) => r[8]);
+    const others = records.map((r) => r[9]);
     expect(others).toContain(`'=cmd|' /C calc'!A0`);
     expect(others.some((o) => o?.startsWith('='))).toBe(false);
     expect(others).toContain('plain, "quoted"\nsecond line');
     for (const r of records) {
-      if (r[7] === '1') expect(r[6]).toBe('');
-      expect(['0', '1']).toContain(r[7]);
+      if (r[8] === '1') expect(r[7]).toBe('');
+      expect(['0', '1']).toContain(r[8]);
     }
     const shirt = records.find((r) => r[3] === 'colour|fit');
-    expect(shirt?.[5]).toBe('easy_care|softness');
+    expect(shirt?.[6]).toBe('easy_care|softness');
   });
 
   it('aggregate CSV has the right columns, one priority row per chip (zeros too), and keeps skips apart from bands', async () => {

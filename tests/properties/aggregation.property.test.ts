@@ -295,21 +295,25 @@ function aggregateCsvCounts(csv: string): Map<string, number> {
 
 /** Turns feedback CSV text back into rows, the way an analyst's script would. */
 function rowsFromFeedbackCsv(csv: string): FeedbackRow[] {
-  const split = (s: string | undefined): string[] => (s ? s.split('|') : []);
+  // Named by the real column order (see the identical fix + explanation in
+  // tests/unit/api-admin.test.ts's own toFeedbackRowsFromCsv): a positional destructure with
+  // fewer names than columns silently shifts everything after the missing name.
   return parseCsv(csv)
     .slice(1)
     .map((c): FeedbackRow => {
-      const [anon, concept, verdict, changes, colour, priorities, band, skipped, other, us, um, uc, updated] = c;
+      const [anon, concept, verdict, changes, colour, weave, priorities, band, skipped, other, comment, us, um, uc, updated] = c;
       return {
         anonId: anon as string,
         conceptId: concept as ConceptId,
         verdict: verdict as FeedbackRow['verdict'],
         changes: decodeChipSet(changes as string, CHANGE_CHIPS),
         colour: colour ? (colour as FeedbackRow['colour']) : null,
+        weave: weave ? weave : null,
         priorities: decodeChipSet(priorities as string, PRIORITY_CHIPS),
         priceBandId: band ? band : null,
         priceSkipped: skipped === '1',
         otherText: other ? denormalise(other) : null,
+        comment: comment ? denormalise(comment) : null,
         utm: { source: us as string, medium: um as string, campaign: uc as string },
         updatedAt: updated as string,
       };

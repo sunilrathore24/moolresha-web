@@ -1,0 +1,15 @@
+-- Adds the optional `weave` column to concept_feedback (2026-11): which weave (Micro-Dobby /
+-- Cotton Slub, see src/lib/concept-weave-variants.ts) the person was looking at when they
+-- submitted feedback on mens-cotton-shirt. NULL for every Concept with only one weave.
+--
+-- Not a closed-enum CHECK against WEAVE_IDS on purpose: WEAVE_IDS lives in
+-- src/content/config/allow-lists.ts (the server already validates against it before this column
+-- is ever written to), and a DB-level CHECK duplicating that list would need its own migration
+-- every time a weave is added or renamed — the same reasoning `colour`'s CHECK constraint
+-- predates but `comment_text`'s plain length() CHECK already follows.
+--
+-- MANUAL STEP (wrangler is not authenticated on this machine): run this directly against the
+-- live D1 database via the Cloudflare dashboard's D1 console (Storage & databases → D1 SQLite
+-- Database → moolresha_feedback → Console tab) before this deploys — a submission that includes
+-- a weave will fail with a DB error until this column exists.
+ALTER TABLE concept_feedback ADD COLUMN weave TEXT;

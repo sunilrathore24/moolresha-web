@@ -33,6 +33,10 @@ export interface FeedbackRow {
   verdict: Verdict;
   changes: ChangeChip[];
   colour: PaletteColour | null;
+  /** Which weave the person was looking at — only set for a Concept with more than one (see
+   * src/lib/concept-weave-variants.ts); null for every other Concept. Admin-export-only, like
+   * `comment`: never part of the public ConceptAggregate below. */
+  weave?: string | null;
   priorities: PriorityChip[]; // duplicate-free; [] when none chosen
   priceBandId: string | null;
   priceSkipped: boolean; // never both set with priceBandId

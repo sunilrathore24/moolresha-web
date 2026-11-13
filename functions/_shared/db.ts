@@ -64,13 +64,13 @@ export interface Utm {
 // ---------------------------------------------------------------------------
 
 const SQL_FEEDBACK_UPSERT = `
-INSERT INTO concept_feedback (anon_id, concept_id, verdict, changes, other_text, comment_text, colour, priorities, price_band_id, price_skipped,
+INSERT INTO concept_feedback (anon_id, concept_id, verdict, changes, other_text, comment_text, colour, weave, priorities, price_band_id, price_skipped,
                               utm_source, utm_medium, utm_campaign, created_at, updated_at)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?15)
 ON CONFLICT (anon_id, concept_id) DO UPDATE SET
   verdict = excluded.verdict, changes = excluded.changes, other_text = excluded.other_text,
   comment_text = excluded.comment_text,
-  colour = excluded.colour, priorities = excluded.priorities,
+  colour = excluded.colour, weave = excluded.weave, priorities = excluded.priorities,
   price_band_id = excluded.price_band_id, price_skipped = excluded.price_skipped,
   updated_at = excluded.updated_at`;
 
@@ -144,7 +144,7 @@ LIMIT ?1`;
 
 // Column list matches the feedback CSV (Req 17.3): no email or phone.
 const SQL_EXPORT_FEEDBACK = `
-SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
+SELECT anon_id, concept_id, verdict, changes, colour, weave, priorities, price_band_id, price_skipped, other_text, comment_text,
        utm_source, utm_medium, utm_campaign, created_at, updated_at
 FROM concept_feedback
 ORDER BY concept_id, anon_id`;
@@ -162,6 +162,11 @@ export interface FeedbackInput {
   /** The general "Any other thoughts?" field — distinct from `otherText`. */
   comment: string | null;
   colour: PaletteColour | null;
+  /** Which weave the person was looking at — only set for a Concept with more than one
+   * (see src/lib/concept-weave-variants.ts); omit or null for every other Concept. Optional
+   * (not required-and-nullable like `colour`) so existing callers that predate this field don't
+   * all need updating just to pass `null`. */
+  weave?: string | null;
   priorities: readonly PriorityChip[];
   priceBandId: string | null;
   /** Stored as 1 only for an explicit skip. The table CHECK rejects a skip that also has a band. */
@@ -183,6 +188,7 @@ export function feedbackUpsertStatement(db: D1Like, f: FeedbackInput): D1Prepare
       f.otherText,
       f.comment,
       f.colour,
+      f.weave ?? null,
       encodeChipSet(f.priorities),
       f.priceBandId,
       f.priceSkipped ? 1 : 0,
@@ -472,6 +478,7 @@ interface ExportRow {
   verdict: string;
   changes: string;
   colour: string | null;
+  weave: string | null;
   priorities: string;
   price_band_id: string | null;
   price_skipped: number;
@@ -497,6 +504,7 @@ export async function exportFeedbackRows(db: D1Like): Promise<FeedbackRow[]> {
     verdict: r.verdict as Verdict,
     changes: decodeChipSet(r.changes, CHANGE_CHIPS),
     colour: r.colour as PaletteColour | null,
+    weave: r.weave,
     priorities: decodeChipSet(r.priorities, PRIORITY_CHIPS),
     priceBandId: r.price_band_id,
     priceSkipped: r.price_skipped === 1,

@@ -24,6 +24,7 @@ import {
   SECTIONS,
   SIZES,
   VERDICTS,
+  WEAVE_IDS,
 } from '../../src/content/config/allow-lists';
 import { PRICE_BAND_IDS } from '../../src/content/config/allow-lists.generated';
 import { EMAIL_PATTERN, IN_MOBILE, MAX_EMAIL, UTM_VALUE, UUID_V4 } from '../../src/lib/interest-rules';
@@ -85,6 +86,9 @@ export const FeedbackBody = z
     /** General "Any other thoughts?" field — optional, not tied to any chip. */
     comment: CommentText.optional(),
     colour: z.enum(PALETTE).optional(),
+    /** Which weave the person was looking at (only concepts with more than one weave send
+     * this — see src/lib/concept-weave-variants.ts). Omitted, never an empty string. */
+    weave: z.enum(WEAVE_IDS).optional(),
     priorities: z.array(z.enum(PRIORITY_CHIPS)).max(PRIORITY_CHIPS.length).default([]),
     // The price answer is a band id for this Concept, the literal `true` skip, or nothing.
     // There is deliberately no free-text or numeric price field (Requirement 9.5).

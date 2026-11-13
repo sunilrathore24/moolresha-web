@@ -97,9 +97,16 @@ interface Props {
     priceBands: readonly PriceBand[];
     colours?: readonly PaletteColour[];
   };
+  /** Weave ids this Concept has (concept-weave-variants.ts), in display order, when it has
+   * more than one — e.g. `['micro-dobby', 'cotton-slub']`. Renders a hidden `weave` field
+   * defaulting to the first one; the page that renders this form keeps it in sync with
+   * whichever weave tab is open (see [conceptId].astro's own script). Omitted for every
+   * Concept without weave variants — the field (and the `weave` it would send) just doesn't
+   * exist, exactly like before this feature existed. */
+  weaveIds?: readonly string[];
 }
 
-const { concept } = Astro.props;
+const { concept, weaveIds } = Astro.props;
 const model = feedbackFormModel(concept.priceBands, concept.colours);
 
 /**
@@ -148,6 +155,7 @@ for (const [colour, views] of Object.entries(conceptColourViews[id] ?? {})) {
   data-concept-id={id}
   aria-label={`Feedback on ${concept.name}`}
 >
+  {weaveIds && weaveIds.length > 1 && <input type="hidden" name="weave" value={weaveIds[0]} />}
   <header class="cff-head">
     <Picture
       src={headerBg}

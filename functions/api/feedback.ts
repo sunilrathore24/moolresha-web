@@ -30,6 +30,7 @@ export async function storeFeedback(data: FeedbackData, ctx: StoreContext): Prom
       otherText: data.otherText ? data.otherText : null,
       comment: data.comment ? data.comment : null,
       colour: data.colour ?? null,
+      weave: data.weave ?? null,
       priorities: data.priorities,
       priceBandId: data.priceBandId ?? null,
       priceSkipped: data.priceSkipped === true,

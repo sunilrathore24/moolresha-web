@@ -122,6 +122,10 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
   };
   const text = (): string => form.querySelector<HTMLInputElement>('input[name="otherText"]')?.value.trim() ?? '';
   const comment = (): string => form.querySelector<HTMLInputElement>('input[name="comment"]')?.value.trim() ?? '';
+  // Only present at all for a Concept with weave variants (ConceptFeedbackForm.astro's
+  // `weaveIds` prop) — kept in sync with whichever weave tab is open by the page that renders
+  // this form, not by this island.
+  const weave = (): string => form.querySelector<HTMLInputElement>('input[name="weave"]')?.value.trim() ?? '';
 
   // Redesign (2026-11): live "N/250" counter next to the general comment field. Plain
   // presentational update, no save/validate side effects (collect() re-reads the input value).
@@ -223,6 +227,7 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
       ...(changes.includes('other') && text() ? { otherText: text() } : {}),
       ...(fullComment ? { comment: fullComment } : {}),
       ...(colour ? { colour } : {}),
+      ...(weave() ? { weave: weave() } : {}),
       ...(band ? { priceBandId: band } : skipped ? { priceSkipped: true } : {}),
     };
   }

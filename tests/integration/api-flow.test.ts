@@ -514,13 +514,13 @@ describe('admin CSV export', () => {
     const r = rows[1]!;
     expect(r[0]).toBe(ANON);
     expect(r[1]).toBe('mens-cotton-shirt');
-    expect(r[6]).toBe(BAND);
+    expect(r[7]).toBe(BAND);
     // Contact details from the interest form never appear in the feedback export.
     expect(text).not.toContain(EMAIL);
     expect(text).not.toContain('9812345678');
     // A spreadsheet formula in free text is neutralised, not exported raw at the start of a cell.
-    expect(r[8]).not.toMatch(/^=/);
-    expect(r[8]).toContain('HYPERLINK');
+    expect(r[9]).not.toMatch(/^=/);
+    expect(r[9]).toContain('HYPERLINK');
   });
 
   it('with the bearer token returns the aggregate CSV with the counts of what was posted', async () => {

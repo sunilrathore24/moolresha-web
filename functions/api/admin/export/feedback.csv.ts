@@ -23,6 +23,7 @@ export const FEEDBACK_CSV_HEADER = [
   'verdict',
   'changes',
   'colour',
+  'weave',
   'priorities',
   'price_band_id',
   'price_skipped',
@@ -44,6 +45,7 @@ export function buildFeedbackCsv(rows: readonly FeedbackRow[]): string {
       r.verdict,
       encodeChipSet(r.changes),
       r.colour ?? '',
+      r.weave ?? '',
       encodeChipSet(r.priorities),
       // A skip never carries a band.
       r.priceSkipped ? '' : (r.priceBandId ?? ''),
@@ -65,7 +67,7 @@ export function buildFeedbackCsv(rows: readonly FeedbackRow[]): string {
 // Same columns and order as `exportFeedbackRows` in db.ts (no email or phone).
 // Keyset paging avoids OFFSET scans and stays correct if rows change between pages.
 const SQL_EXPORT_PAGE = `
-SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
+SELECT anon_id, concept_id, verdict, changes, colour, weave, priorities, price_band_id, price_skipped, other_text, comment_text,
        utm_source, utm_medium, utm_campaign, created_at, updated_at
 FROM concept_feedback
 WHERE (concept_id, anon_id) > (?1, ?2)
@@ -78,6 +80,7 @@ interface ExportRow {
   verdict: string;
   changes: string;
   colour: string | null;
+  weave: string | null;
   priorities: string;
   price_band_id: string | null;
   price_skipped: number;
@@ -97,6 +100,7 @@ function toFeedbackRow(r: ExportRow): FeedbackRow {
     verdict: r.verdict as Verdict,
     changes: decodeChipSet(r.changes, CHANGE_CHIPS),
     colour: r.colour as PaletteColour | null,
+    weave: r.weave,
     priorities: decodeChipSet(r.priorities, PRIORITY_CHIPS),
     priceBandId: r.price_band_id,
     priceSkipped: r.price_skipped === 1,
