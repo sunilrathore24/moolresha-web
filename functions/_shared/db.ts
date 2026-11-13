@@ -133,20 +133,19 @@ const SQL_RESULTS_PRIORITIES = `SELECT concept_id, priorities, COUNT(*) AS n FRO
 const SQL_RESULTS_CHANGES = `SELECT concept_id, changes, COUNT(*) AS n FROM concept_feedback WHERE changes <> '' GROUP BY concept_id, changes`;
 const SQL_RESULTS_RESPONSES = `SELECT concept_id, COUNT(*) AS n FROM concept_feedback GROUP BY concept_id`;
 
-// Admin dashboard only (requireAdmin-gated callers): counts and a recent-signups page.
-// No percentages, no public exposure — see functions/api/admin/stats.json.ts.
-const SQL_INTEREST_COUNT = `SELECT COUNT(*) AS n FROM interest`;
+// Admin dashboard only (requireAdmin-gated callers): a recent-signups page, plus the
+// timestamp-only queries below. No percentages, no public exposure — see
+// functions/api/admin/stats.json.ts.
 const SQL_INTEREST_RECENT = `
 SELECT email, phone, size, linked, ml_sync, created_at
 FROM interest
 ORDER BY created_at DESC
 LIMIT ?1`;
-const SQL_FRUSTRATION_COUNT = `SELECT COUNT(*) AS n FROM frustration`;
 
 // Column list matches the feedback CSV (Req 17.3): no email or phone.
 const SQL_EXPORT_FEEDBACK = `
 SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
-       utm_source, utm_medium, utm_campaign, updated_at
+       utm_source, utm_medium, utm_campaign, created_at, updated_at
 FROM concept_feedback
 ORDER BY concept_id, anon_id`;
 
@@ -442,12 +441,6 @@ export interface InterestSummaryRow {
   created_at: string;
 }
 
-/** Total interest (email/WhatsApp signup) rows. Admin-only: see admin-auth.ts. */
-export async function countInterest(db: D1Like): Promise<number> {
-  const row = await db.prepare(SQL_INTEREST_COUNT).first<{ n: number }>();
-  return row?.n ?? 0;
-}
-
 /** The most recent `limit` interest rows, newest first. Admin-only: carries email/phone (Req 17.3
  * deliberately does not apply here — that requirement is about the public-facing feedback export). */
 export async function recentInterestSignups(db: D1Like, limit = 200): Promise<InterestSummaryRow[]> {
@@ -455,10 +448,18 @@ export async function recentInterestSignups(db: D1Like, limit = 200): Promise<In
   return results;
 }
 
-/** Total frustration-form submissions. Admin-only. */
-export async function countFrustration(db: D1Like): Promise<number> {
-  const row = await db.prepare(SQL_FRUSTRATION_COUNT).first<{ n: number }>();
-  return row?.n ?? 0;
+/** Every interest row's `created_at`, no other column — just enough for the admin dashboard's
+ * date-range totals and "Responses over time" series. No PII: see `recentInterestSignups` for
+ * the (separately limited, PII-carrying) signups table itself. */
+export async function allInterestCreatedAt(db: D1Like): Promise<string[]> {
+  const { results } = await db.prepare(`SELECT created_at FROM interest`).all<{ created_at: string }>();
+  return results.map((r) => r.created_at);
+}
+
+/** Every frustration row's `created_at`, no other column — same purpose as `allInterestCreatedAt`. */
+export async function allFrustrationCreatedAt(db: D1Like): Promise<string[]> {
+  const { results } = await db.prepare(`SELECT created_at FROM frustration`).all<{ created_at: string }>();
+  return results.map((r) => r.created_at);
 }
 
 // ---------------------------------------------------------------------------
@@ -479,6 +480,7 @@ interface ExportRow {
   utm_source: string;
   utm_medium: string;
   utm_campaign: string;
+  created_at: string;
   updated_at: string;
 }
 
@@ -502,5 +504,6 @@ export async function exportFeedbackRows(db: D1Like): Promise<FeedbackRow[]> {
     comment: r.comment_text,
     utm: { source: r.utm_source, medium: r.utm_medium, campaign: r.utm_campaign },
     updatedAt: r.updated_at,
+    createdAt: r.created_at,
   }));
 }

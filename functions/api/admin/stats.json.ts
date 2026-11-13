@@ -3,25 +3,37 @@
  *
  * Same auth/rate-limit gate as the CSV exports (`requireAdmin`): a Cloudflare Access JWT, or
  * `Authorization: Bearer <ADMIN_BEARER_SECRET>`. JSON, not CSV, because the dashboard renders it
- * directly as summary tiles, bar charts and tables instead of asking the admin to open a
- * spreadsheet — see `src/pages/admin/index.astro` and `src/islands/admin-dashboard.ts`.
+ * directly as trend tiles, charts and tables instead of asking the admin to open a spreadsheet —
+ * see `src/pages/admin/index.astro` and `src/islands/admin-dashboard.ts`.
  *
- * Reuses the exact same sources the CSV exports use, so the two can never disagree:
- * `queryAggregates` (per-Concept verdict/colour/band/priority counts, the same grouped SQL
- * `/api/results` uses) and `exportFeedbackRowsPaged` (every feedback row, for the free-text
- * "Any other thoughts?" comments — there is no separate comments table). `interest` (email/
- * WhatsApp signups) and `frustration` totals have no existing export; the two small counting
- * queries and the recent-signups page live in `db.ts` next to the others.
+ * Optional `?from=YYYY-MM-DD&to=YYYY-MM-DD` (both inclusive) scope every number in the response
+ * to that window; missing/invalid falls back to the last 30 days ending today (UTC) — see
+ * `resolveRange` in `src/lib/admin-stats.ts`. The resolved range is echoed back in `range` so
+ * the dashboard's date inputs always reflect what the numbers actually cover.
  *
- * Unlike the feedback CSV (Req 17.3, no email/phone), this endpoint does return email/phone from
- * `interest` — that is the whole point of the signups table — but it stays behind the same admin
- * gate as everything else here, never served to the public site.
+ * Reuses the exact same sources the CSV exports and `/api/results` already use, so none of them
+ * can disagree: `exportFeedbackRowsPaged` (every feedback row — filtered here to the selected
+ * range, then re-aggregated per Concept with the same pure `aggregateFeedback` `/api/results`
+ * uses) plus two small timestamp-only queries for `interest` and `frustration` (no existing
+ * export covered those). Per-Concept sums (top priorities, what they'd change, price bands) and
+ * the price-band-by-label donut are left to the client, which already has every Concept's
+ * breakdown and the label maps baked in at build time (`src/pages/admin/index.astro`) — no need
+ * to duplicate that here.
  */
+import { aggregateFeedback } from '../../../src/lib/aggregate';
+import {
+  bucketByDay,
+  dailyBuckets,
+  previousRange,
+  resolveRange,
+  toDateOnly,
+  trend,
+  type Trend,
+} from '../../../src/lib/admin-stats';
 import { CONCEPT_IDS, type ConceptId } from '../../../src/content/config/allow-lists';
 import {
-  countFrustration,
-  countInterest,
-  queryAggregates,
+  allFrustrationCreatedAt,
+  allInterestCreatedAt,
   recentInterestSignups,
   type D1Like,
 } from '../../_shared/db';
@@ -36,11 +48,18 @@ import { exportFeedbackRowsPaged } from './export/feedback.csv';
 export interface AdminStatsBody {
   ok: true;
   generatedAt: string;
+  range: { from: string; to: string };
   totals: {
-    feedbackResponses: number;
-    feedbackComments: number;
-    emailSignups: number;
-    frustrationSubmissions: number;
+    feedbackResponses: Trend;
+    feedbackComments: Trend;
+    emailSignups: Trend;
+    frustrationSubmissions: Trend;
+  };
+  series: {
+    days: string[];
+    feedback: number[];
+    comments: number[];
+    signups: number[];
   };
   concepts: {
     conceptId: ConceptId;
@@ -63,21 +82,49 @@ export interface AdminStatsBody {
   }[];
 }
 
+function inMs(iso: string, fromMs: number, toMs: number): boolean {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) && t >= fromMs && t < toMs;
+}
+
 export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
   return async (ctx: AdminExportContext): Promise<Response> => {
     const denied = await requireAdmin(ctx.request, ctx.env, deps);
     if (denied !== null) return denied;
 
     const db = deps.db ?? (ctx.env.DB as unknown as D1Like);
+    const now = (deps.now ?? (() => new Date()))();
+    const url = new URL(ctx.request.url);
+    const range = resolveRange(url.searchParams.get('from'), url.searchParams.get('to'), now.getTime());
+    const prev = previousRange(range);
 
-    const [aggregates, rows, emailSignups, signupRows, frustrationSubmissions] = await Promise.all([
-      queryAggregates(db),
+    const [rows, interestTimestamps, signupRows, frustrationTimestamps] = await Promise.all([
       exportFeedbackRowsPaged(db, deps.pageSize),
-      countInterest(db),
+      allInterestCreatedAt(db),
+      // Most-recent-200 convenience list, same as the signups TABLE always used — fine while
+      // total signups stay well under 200 (true today); documented in db.ts.
       recentInterestSignups(db, 200),
-      countFrustration(db),
+      allFrustrationCreatedAt(db),
     ]);
 
+    // Feedback "when it happened" uses createdAt (first submission) for the stat tile and the
+    // time series — a resubmission editing an existing answer shouldn't look like a brand new
+    // respondent. Comments use updatedAt (when that specific comment text was written), since a
+    // comment can be added/changed on a resubmission after the original createdAt.
+    const rowsInRange = rows.filter((r) => r.createdAt !== undefined && inMs(r.createdAt, range.fromMs, range.toMs));
+    const rowsInPrev = rows.filter((r) => r.createdAt !== undefined && inMs(r.createdAt, prev.fromMs, prev.toMs));
+
+    const commentsAll = rows.filter((r) => r.comment !== null && r.comment.trim() !== '');
+    const commentsInRange = commentsAll.filter((r) => inMs(r.updatedAt, range.fromMs, range.toMs));
+    const commentsInPrev = commentsAll.filter((r) => inMs(r.updatedAt, prev.fromMs, prev.toMs));
+
+    const signupsInRangeCount = interestTimestamps.filter((t) => inMs(t, range.fromMs, range.toMs)).length;
+    const signupsInPrevCount = interestTimestamps.filter((t) => inMs(t, prev.fromMs, prev.toMs)).length;
+
+    const frustrationInRangeCount = frustrationTimestamps.filter((t) => inMs(t, range.fromMs, range.toMs)).length;
+    const frustrationInPrevCount = frustrationTimestamps.filter((t) => inMs(t, prev.fromMs, prev.toMs)).length;
+
+    const aggregates = aggregateFeedback(rowsInRange);
     const concepts = CONCEPT_IDS.map((conceptId) => {
       const a = aggregates.get(conceptId);
       return {
@@ -92,30 +139,51 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
       };
     });
 
-    const comments = rows
-      .filter((r): r is typeof r & { comment: string } => r.comment !== null && r.comment.trim() !== '')
-      .map((r) => ({ conceptId: r.conceptId, verdict: r.verdict, comment: r.comment, updatedAt: r.updatedAt }))
+    const days = dailyBuckets(range);
+    const feedbackByDay = bucketByDay(
+      rowsInRange.map((r) => r.createdAt as string),
+      days,
+    );
+    const commentsByDay = bucketByDay(
+      commentsInRange.map((r) => r.updatedAt),
+      days,
+    );
+    const signupsByDay = bucketByDay(interestTimestamps, days);
+
+    const comments = commentsInRange
+      .map((r) => ({ conceptId: r.conceptId, verdict: r.verdict, comment: r.comment as string, updatedAt: r.updatedAt }))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-    const body: AdminStatsBody = {
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      totals: {
-        feedbackResponses: concepts.reduce((sum, c) => sum + c.responses, 0),
-        feedbackComments: comments.length,
-        emailSignups,
-        frustrationSubmissions,
-      },
-      concepts,
-      comments,
-      signups: signupRows.map((s) => ({
+    const signups = signupRows
+      .filter((s) => inMs(s.created_at, range.fromMs, range.toMs))
+      .map((s) => ({
         email: s.email,
         phone: s.phone,
         size: s.size,
         linked: s.linked === 1,
         mlSync: s.ml_sync,
         createdAt: s.created_at,
-      })),
+      }));
+
+    const body: AdminStatsBody = {
+      ok: true,
+      generatedAt: now.toISOString(),
+      range: { from: toDateOnly(range.fromMs), to: toDateOnly(range.toMs - 1) },
+      totals: {
+        feedbackResponses: trend(rowsInRange.length, rowsInPrev.length),
+        feedbackComments: trend(commentsInRange.length, commentsInPrev.length),
+        emailSignups: trend(signupsInRangeCount, signupsInPrevCount),
+        frustrationSubmissions: trend(frustrationInRangeCount, frustrationInPrevCount),
+      },
+      series: {
+        days,
+        feedback: days.map((d) => feedbackByDay[d] ?? 0),
+        comments: days.map((d) => commentsByDay[d] ?? 0),
+        signups: days.map((d) => signupsByDay[d] ?? 0),
+      },
+      concepts,
+      comments,
+      signups,
     };
     return json(200, body);
   };

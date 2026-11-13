@@ -66,7 +66,7 @@ export function buildFeedbackCsv(rows: readonly FeedbackRow[]): string {
 // Keyset paging avoids OFFSET scans and stays correct if rows change between pages.
 const SQL_EXPORT_PAGE = `
 SELECT anon_id, concept_id, verdict, changes, colour, priorities, price_band_id, price_skipped, other_text, comment_text,
-       utm_source, utm_medium, utm_campaign, updated_at
+       utm_source, utm_medium, utm_campaign, created_at, updated_at
 FROM concept_feedback
 WHERE (concept_id, anon_id) > (?1, ?2)
 ORDER BY concept_id, anon_id
@@ -86,6 +86,7 @@ interface ExportRow {
   utm_source: string;
   utm_medium: string;
   utm_campaign: string;
+  created_at: string;
   updated_at: string;
 }
 
@@ -103,6 +104,7 @@ function toFeedbackRow(r: ExportRow): FeedbackRow {
     comment: r.comment_text,
     utm: { source: r.utm_source, medium: r.utm_medium, campaign: r.utm_campaign },
     updatedAt: r.updated_at,
+    createdAt: r.created_at,
   };
 }
 

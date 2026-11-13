@@ -1,20 +1,21 @@
 ---
 /**
- * /admin — internal dashboard for the three forms this site collects (concept feedback,
- * the frustration/opinion form, email/WhatsApp interest signups). Not linked from any nav,
- * not in the sitemap, `noindex`'d — reachable only by typing the URL.
+ * /admin — internal analytics dashboard for the three forms this site collects (concept
+ * feedback, the frustration/opinion form, email/WhatsApp interest signups). Not linked from any
+ * nav, not in the sitemap, `noindex`'d — reachable only by typing the URL.
  *
  * No server-side login: the gate is the same one `/api/admin/*` already enforces
  * (`ADMIN_BEARER_SECRET`, functions/_shared/admin-auth.ts). This page just asks for that
  * secret once, keeps it in `sessionStorage` (cleared when the tab closes) and sends it as
  * `Authorization: Bearer <secret>` on every call to `/api/admin/stats.json` — see
- * `src/islands/admin-dashboard.ts`. If the secret isn't set in the environment yet, every
- * attempt gets a clear "not unlocked yet" error instead of silently failing.
+ * `src/islands/admin-dashboard.ts`. The passphrase screen is UI only; the actual enforcement
+ * happens server-side on every request, same as the CSV exports always worked.
  *
- * All of the actual numbers (totals, per-Concept charts, comments, signups) are rendered
- * client-side from that one JSON endpoint, which reuses the exact same `queryAggregates` /
- * `exportFeedbackRowsPaged` the public results endpoint and the CSV exports already use —
- * nothing here is a second, divergent source of truth.
+ * Every number (totals, trends, charts, comments, signups) is rendered client-side from that
+ * one JSON endpoint, which reuses the exact same `aggregateFeedback` / `exportFeedbackRowsPaged`
+ * the public results endpoint and the CSV exports already use — nothing here is a second,
+ * divergent source of truth. Charts are Apache ECharts (loaded only once unlocked, so it never
+ * touches the public site's JS budget — this page isn't part of that budget check at all).
  */
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
@@ -52,11 +53,24 @@ const labels = {
 
 <BaseLayout title="Admin dashboard — MoolResha" noindex>
   <section class="admin" aria-labelledby="admin-h">
-    <h1 id="admin-h">Admin dashboard</h1>
-    <p class="admin-intro">
-      Live totals from the concept feedback, opinion and email-signup forms. Visible only to
-      whoever has the admin passphrase — nothing here is public.
-    </p>
+    <div class="admin-head">
+      <div>
+        <h1 id="admin-h">Admin Analytics</h1>
+        <p class="admin-intro">Feedback, comments and signup insights at a glance.</p>
+      </div>
+      <form class="admin-range" data-admin-range hidden>
+        <label class="admin-range-field">
+          <span class="visually-hidden">From date</span>
+          <input type="date" data-admin-range-from required />
+        </label>
+        <span class="admin-range-sep" aria-hidden="true">–</span>
+        <label class="admin-range-field">
+          <span class="visually-hidden">To date</span>
+          <input type="date" data-admin-range-to required />
+        </label>
+        <button type="submit" class="admin-btn">Apply</button>
+      </form>
+    </div>
 
     <form class="admin-unlock" data-admin-unlock>
       <label for="admin-secret">Admin passphrase</label>
@@ -76,17 +90,44 @@ const labels = {
 
       <div class="admin-tiles" data-admin-totals></div>
 
-      <div class="admin-concepts" data-admin-concepts></div>
+      <div class="admin-chart-grid">
+        <section class="admin-chart-card" aria-labelledby="chart-h-concept">
+          <h3 id="chart-h-concept">Feedback by Concept</h3>
+          <div class="admin-chart" data-chart="concept"></div>
+        </section>
+        <section class="admin-chart-card" aria-labelledby="chart-h-verdict">
+          <h3 id="chart-h-verdict">Verdict</h3>
+          <div class="admin-chart" data-chart="verdict"></div>
+        </section>
+        <section class="admin-chart-card" aria-labelledby="chart-h-priorities">
+          <h3 id="chart-h-priorities">Top Priorities (Across All Feedback)</h3>
+          <div class="admin-chart admin-chart-tall" data-chart="priorities"></div>
+        </section>
+        <section class="admin-chart-card" aria-labelledby="chart-h-changes">
+          <h3 id="chart-h-changes">What They Would Change</h3>
+          <div class="admin-chart admin-chart-tall" data-chart="changes"></div>
+        </section>
+        <section class="admin-chart-card admin-chart-card-wide" aria-labelledby="chart-h-series">
+          <h3 id="chart-h-series">Responses Over Time</h3>
+          <div class="admin-chart" data-chart="series"></div>
+        </section>
+        <section class="admin-chart-card" aria-labelledby="chart-h-price">
+          <h3 id="chart-h-price">Price Band Interest</h3>
+          <div class="admin-chart" data-chart="price"></div>
+        </section>
+      </div>
 
-      <section class="admin-table-section" aria-labelledby="admin-comments-h">
-        <h2 id="admin-comments-h">Comments ("Any other thoughts?")</h2>
-        <div data-admin-comments></div>
-      </section>
+      <div class="admin-table-grid">
+        <section class="admin-table-section" aria-labelledby="admin-comments-h">
+          <h2 id="admin-comments-h">Comments ("Any other thoughts?")</h2>
+          <div data-admin-comments></div>
+        </section>
 
-      <section class="admin-table-section" aria-labelledby="admin-signups-h">
-        <h2 id="admin-signups-h">Email / WhatsApp signups</h2>
-        <div data-admin-signups></div>
-      </section>
+        <section class="admin-table-section" aria-labelledby="admin-signups-h">
+          <h2 id="admin-signups-h">Email / WhatsApp signups</h2>
+          <div data-admin-signups></div>
+        </section>
+      </div>
     </div>
   </section>
 
@@ -105,6 +146,15 @@ const labels = {
     padding: var(--space-8) var(--space-4) var(--space-12);
   }
 
+  .admin-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-6);
+  }
+
   h1 {
     margin: 0 0 var(--space-2);
     font-family: var(--font-serif);
@@ -113,8 +163,41 @@ const labels = {
   }
 
   .admin-intro {
-    margin: 0 0 var(--space-6);
+    margin: 0;
     max-width: 38rem;
+    color: var(--color-text-muted);
+  }
+
+  .admin-range {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  @media (min-width: 40rem) {
+    .admin-range {
+      width: auto;
+    }
+  }
+
+  .admin-range[hidden] {
+    display: none;
+  }
+
+  .admin-range-field input {
+    width: 100%;
+    max-width: 9rem;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-small);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .admin-range-sep {
     color: var(--color-text-muted);
   }
 
@@ -192,19 +275,32 @@ const labels = {
 
   .admin-tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
     gap: var(--space-3);
-    margin: 0 0 var(--space-7);
+    margin: 0 0 var(--space-6);
   }
 
-  .admin-concepts {
+  .admin-chart-grid {
     display: grid;
-    gap: var(--space-5);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
     margin: 0 0 var(--space-8);
   }
 
-  .admin-table-section {
-    margin: 0 0 var(--space-8);
+  @media (max-width: 56rem) {
+    .admin-chart-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .admin-chart-card-wide {
+    grid-column: 1 / -1;
+  }
+
+  .admin-table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: var(--space-5);
   }
 
   .admin-table-section h2 {
@@ -214,8 +310,8 @@ const labels = {
     color: var(--color-text);
   }
 
-  /* Shared by the stat tiles and the per-Concept chart cards — the tone colours are the same
-     light-tint-of-token technique as NavCards.astro / ProductSpecificationGrid.astro. */
+  /* Shared by the stat tiles and the chart cards — the tone colours are the same light-tint-
+     of-token technique as NavCards.astro / ProductSpecificationGrid.astro. */
   :global(.admin-tile) {
     padding: var(--space-4);
     border-radius: var(--radius-lg, 10px);
@@ -235,37 +331,53 @@ const labels = {
 
   :global(.admin-tile-label) {
     display: block;
+    margin: 0 0 var(--space-1);
     font-size: var(--fs-small);
     color: var(--color-text-muted);
   }
 
-  :global(.admin-concept-card) {
+  :global(.admin-tile-trend) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    font-size: var(--fs-label);
+    font-weight: 600;
+  }
+
+  :global(.admin-tile-trend-up) {
+    color: #3a7a3a;
+  }
+
+  :global(.admin-tile-trend-down) {
+    color: #a24b3a;
+  }
+
+  :global(.admin-tile-trend-flat) {
+    color: var(--color-text-muted);
+  }
+
+  .admin-chart-card {
     padding: var(--space-5);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
+    min-width: 0;
   }
 
-  :global(.admin-concept-card h3) {
-    margin: 0 0 var(--space-4);
+  .admin-chart-card h3 {
+    margin: 0 0 var(--space-3);
     font-family: var(--font-serif);
-    font-size: var(--fs-h4, var(--fs-card-title, 1rem));
+    font-size: var(--fs-card-title, 1rem);
     color: var(--color-text);
   }
 
-  :global(.admin-chart-grid) {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: var(--space-5);
+  .admin-chart {
+    width: 100%;
+    height: 18rem;
   }
 
-  :global(.admin-chart-group h4) {
-    margin: 0 0 var(--space-2);
-    font-size: var(--fs-label);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
+  .admin-chart-tall {
+    height: 14rem;
   }
 
   :global(.admin-empty) {

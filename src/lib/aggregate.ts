@@ -42,6 +42,10 @@ export interface FeedbackRow {
   comment: string | null;
   utm: { source: string; medium: string; campaign: string };
   updatedAt: string;
+  /** ISO 8601 UTC, first write. Optional: only the admin dashboard's time-series query
+   * (functions/api/admin/stats.json.ts) asks for it; every other reader of `FeedbackRow`
+   * (the CSV export, `aggregateFeedback`) already ignores fields it doesn't name. */
+  createdAt?: string;
 }
 
 export interface ConceptAggregate {
