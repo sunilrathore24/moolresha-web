@@ -234,6 +234,40 @@ const mediaStyle = image ? `aspect-ratio: ${image.width} / ${image.height}` : un
     margin-left: var(--space-2);
   }
 
+  /* The featured card's photo is noticeably SHORT on a phone (the real image is wide/landscape,
+     ~165px tall at 393px wide — see mediaStyle above), but the overlay typography/spacing was
+     sized for a desktop-height box: at the mobile `--fs-product` size the two-word-wrapped
+     headline alone was ~48px tall, crowding the eyebrow, spec line and CTA into what was left.
+     Caught live via screenshot: tighten the whole overlay specifically on narrow viewports
+     instead of just shrinking one piece — same four pieces of information, less space between
+     and under them. */
+  @media (max-width: 26rem) {
+    .dic-overlay {
+      inset: auto var(--space-4) var(--space-4) var(--space-4);
+    }
+
+    .dic-overlay-status {
+      margin-bottom: var(--space-1);
+    }
+
+    .dic-overlay-weave {
+      margin-bottom: var(--space-1);
+      font-size: 1.0625rem; /* 17px — one line for every real weave name at this card width,
+        instead of `--fs-product`'s 19px wrapping to two. */
+      line-height: 1.25;
+      max-width: none; /* the 18ch cap exists to keep a desktop-width line short; on a narrow
+        card it only forces an avoidable wrap. */
+    }
+
+    .dic-overlay-spec {
+      margin-bottom: var(--space-2);
+    }
+
+    .dic-overlay-cta {
+      padding-inline: var(--space-4);
+    }
+  }
+
   /* ---- Grid tile: photo top, cream panel below ---- */
   .dic:not(.dic-featured) .dic-media-link {
     display: block;
