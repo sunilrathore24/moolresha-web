@@ -50,7 +50,18 @@ const {
   descriptor,
 } = Astro.props;
 const href = `/designs/${conceptId}`;
-const sizes = featured ? '100vw' : minimal ? '20vw' : '(min-width: 48rem) 22rem, 45vw';
+// Both grid tile layouts (the homepage's `minimal` 2x2 and the `/designs` index's 2-col grid)
+// are the SAME real container size: a 2-column grid inside `.section` (max-width `--wide-width`
+// = 72rem, padding-inline `--space-5` = 1.5rem each side), gap `--space-3` = 0.75rem. That caps
+// out at exactly 546px per tile once the viewport reaches 72rem, and scales down below that as
+// `50vw` minus the padding+gap share. The previous `20vw` (minimal) / `45vw` (grid) values both
+// UNDER-claimed the real size — caught live: measuring the actual rendered box on a 1440px-wide
+// desktop view showed a 546px box pulling in only a ~288px-wide source image (minimal) or a
+// ~352px one (grid), both visibly blurry once upscaled that far by the browser. Mobile looked
+// fine only because the real mobile box is small enough that even the old, smaller `widths`
+// candidates still covered it.
+const sizes = featured ? '100vw' : '(min-width: 72rem) 546px, calc(50vw - 30px)';
+const gridWidths = [320, 480, 640, 960, 1280];
 // Each image's OWN real aspect ratio, not a guessed fixed box — a hardcoded 4/3 (or 4/5, or
 // anything else) crops or stretches whatever doesn't happen to match it. These five photos
 // are two different real shapes (the lifestyle shot is ~2:1, the other four are 3:2), so a
@@ -69,7 +80,7 @@ const mediaStyle = image ? `aspect-ratio: ${image.width} / ${image.height}` : un
             alt={alt}
             formats={['avif', 'webp']}
             fallbackFormat="webp"
-            widths={minimal ? [160, 240, 320] : featured ? [640, 960, 1280, 1600] : [360, 540, 720, 1080]}
+            widths={featured ? [640, 960, 1280, 1600] : gridWidths}
             sizes={sizes}
             width={image.width}
             height={image.height}
