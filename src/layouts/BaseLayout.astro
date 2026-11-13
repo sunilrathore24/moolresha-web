@@ -30,7 +30,21 @@ const ogImage = new URL("/images/og-image.jpg", Astro.site).href;
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="canonical" href={canonical} />
+    <!-- Google Search's favicon crawler only supports ICO/PNG/APNG/GIF/WebP, not SVG-only
+         (https://developers.google.com/search/docs/appearance/favicon-in-search) — this is why
+         Search was showing a generic globe/page icon instead of the real one. `favicon.ico`
+         (16/32/48, PNG-in-ICO) covers Search and any client that still auto-probes /favicon.ico
+         directly; the SVG stays first for modern browser tabs, which prefer a vector icon when
+         offered one; the explicit PNG sizes and the manifest's android-chrome icons cover
+         everything else (iOS home-screen, Android/PWA, older browsers). All generated from the
+         one favicon.svg via scripts/generate-favicons.mjs — regenerate from there if the source
+         SVG ever changes, don't hand-edit the PNGs/ICO. -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <!-- Marks scripting as available before first paint, so the header can switch to its
          JS layout (fixed overlay bar, mobile menu button) without a flash. -->
     <script is:inline>document.documentElement.classList.add("js");</script>
