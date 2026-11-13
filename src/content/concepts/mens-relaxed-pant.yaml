@@ -71,4 +71,8 @@ priceBands:
   - { kind: range, id: mrp-2000-2499, lower: 2000, upper: 2499 }
   - { kind: range, id: mrp-2500-2999, lower: 2500, upper: 2999 }
   - { kind: over, id: mrp-3000-plus, lower: 3000 }
-colours: [flax, clay, meadow, indigo_dusk, chalk_white]
+# chalk_white listed first: its photo is the one already used as this Concept's index/homepage
+# thumbnail (buildColourPanels + the index/teaser pages' "first colour with a 01-front" pick —
+# see /designs/index.astro and DesignLabTeaser.astro) — keeping it first here keeps that
+# thumbnail exactly as it was before meadow's photos were added, not swapped to meadow's.
+colours: [chalk_white, flax, clay, meadow, indigo_dusk]
