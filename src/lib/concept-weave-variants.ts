@@ -43,7 +43,7 @@
  * Plain TypeScript, no Astro import, so Vitest can load it directly.
  */
 import type { ConceptId, WeaveId } from '../content/config/allow-lists';
-import type { FabricNotesData, WhyThisFabricData } from './concept-schema';
+import type { FabricNotesData, QualityCardData, TestingData, WhyThisFabricData } from './concept-schema';
 
 export interface WeaveColour {
   /** The `conceptColourViews`/`buildColourPanels` key — a real subfolder name, resolved the
@@ -66,6 +66,15 @@ export interface WeaveVariant {
   fabricNotes?: FabricNotesData;
   /** Omit to mean "use the Concept's own `whyThisFabric`" (Micro-Dobby). */
   whyThisFabric?: WhyThisFabricData;
+  /** Omit to mean "use the Concept's own `quality` rows" (Micro-Dobby). Needed whenever the
+   * Concept's real quality rows name the weave directly — mens-cotton-shirt's `fabric` row says
+   * "Fine diamond micro-dobby weave", which is simply wrong under a Cotton Slub panel, so Cotton
+   * Slub provides its own seven rows (same shape/order the real QualityCard schema requires). */
+  quality?: QualityCardData;
+  /** Omit to mean "use the Concept's own `testing` entries" (Micro-Dobby). Needed when an entry's
+   * criteria names the weave directly (mens-cotton-shirt's "Pilling resistance" row says "on the
+   * diamond micro-dobby weave"). */
+  testing?: TestingData;
 }
 
 export const CONCEPT_WEAVE_VARIANTS: Partial<Record<ConceptId, WeaveVariant[]>> = {
@@ -92,12 +101,76 @@ export const CONCEPT_WEAVE_VARIANTS: Partial<Record<ConceptId, WeaveVariant[]>> 
         care: 'Machine wash cold, dry in shade, warm iron on the reverse side',
       },
       whyThisFabric: {
-        lead: 'Some fabrics make an impression through colour. Others through patterns. Cotton Slub finds its character in the yarn itself — subtle thick-and-thin variations that give a solid colour its own quiet depth.',
+        lead: "Some fabrics make an impression through colour or pattern. Cotton Slub finds its character in the yarn itself. Slub yarn is deliberately spun with gentle thick-and-thin irregularities — once a mark of hand-spun cotton, now recreated by mills on purpose — so a single, solid colour still carries a quiet, natural texture instead of a flat, uniform surface.",
         onSkin:
-          'This is a research-stage concept, so here is our design intent rather than a tested result: we expect the fine combed cotton and lightweight weave to feel soft and breathable against skin, with a relaxed, natural drape. We have not run wear trials to confirm this yet.',
+          "This is a research-stage concept, so here is our design intent, not a tested result: the looser, irregular slub yarn tends to sit lightly against the skin and let air move more easily than a tightly woven fabric, and because it isn't held in a dense dobby pattern, we expect it to drape more loosely and soften with wear. We have not run wear trials to confirm any of this yet.",
         premiumDifference:
-          "What we think sets this apart is the yarn, not a print: the thick-and-thin slub variation is woven in, so the texture stays quiet and natural rather than announcing itself. The fabric itself stays simple — 100% cotton, no polyester or synthetic blends.",
+          "What we think sets this apart is the yarn, not a print or a label: the thick-and-thin variation is spun into the cotton before it's ever woven, so no two slub shirts look perfectly identical — a quiet, almost handmade quality a printed or heat-set texture can't fake. The fabric itself stays simple: 100% cotton, no polyester or synthetic blends.",
       },
+      // Both weaves share the same cut, buttons and embroidery, so `construction` stays the
+      // Concept's own (no override needed) — but these two sections name the weave directly in
+      // their Micro-Dobby wording, so Cotton Slub needs its own correct copy of both. Same
+      // seven-row shape/order the real QualityCard schema (concept-schema.ts) requires.
+      quality: [
+        { row: 'fibre', label: 'Target', text: '100% cotton, no blended fibres' },
+        {
+          row: 'yarn',
+          label: 'Target',
+          text: 'Fine combed cotton, spun as a slub yarn with intentional thick-and-thin variation; exact count to be confirmed with our mill',
+        },
+        {
+          row: 'fabric',
+          label: 'Target',
+          text: 'Fine cotton slub weave, lightweight for everyday comfort',
+        },
+        { row: 'on_your_skin', label: 'Target', text: 'Soft hand feel with a visible slub texture; breathes in warm weather' },
+        {
+          row: 'shrinkage',
+          label: 'WeWillTest',
+          text: 'Pre-washed to limit shrinkage, aiming for 2 percent or less',
+          test: {
+            what: 'length and width after five home washes',
+            publish: 'the measurements, garment by garment',
+          },
+        },
+        {
+          row: 'after_a_year',
+          label: 'WeWillTest',
+          text: 'Colour, pilling and seams over time',
+          test: {
+            what: 'colour, pilling and seams after repeated washes',
+            publish: 'photos after each round of washing',
+          },
+        },
+        { row: 'care', label: 'Target', text: 'Machine wash cold, dry in shade' },
+      ],
+      testing: [
+        {
+          name: 'Shrinkage after washing',
+          criteria: 'Length and width change after five home washes, measured garment by garment.',
+          status: 'planned',
+        },
+        {
+          name: 'Colourfastness',
+          criteria: 'Colour change after repeated washing and exposure to light, checked against the original swatch.',
+          status: 'planned',
+        },
+        {
+          name: 'Pilling resistance',
+          criteria: 'Surface pilling on the cotton slub weave after repeated wash-and-wear cycles.',
+          status: 'planned',
+        },
+        {
+          name: 'Seam strength',
+          criteria: 'Seam and button strength after repeated wear and washing, checked for loosening or popping.',
+          status: 'planned',
+        },
+        {
+          name: 'Embroidery durability',
+          criteria: 'Interlocking-thread embroidery checked for fraying or colour loss after repeated washing.',
+          status: 'planned',
+        },
+      ],
     },
   ],
 };

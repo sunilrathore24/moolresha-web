@@ -23,6 +23,7 @@ interface Labels {
   colourLabels: Record<string, string>;
   priorityLabels: Record<string, string>;
   priceBandLabels: Record<string, Record<string, string>>;
+  weaveLabels: Record<string, string>;
 }
 
 interface ConceptStats {
@@ -54,7 +55,17 @@ interface StatsBody {
   };
   series: { days: string[]; feedback: number[]; comments: number[]; signups: number[] };
   concepts: ConceptStats[];
-  comments: { conceptId: string; verdict: string; comment: string; updatedAt: string }[];
+  weaveBreakdown: {
+    conceptId: string;
+    weaveId: string;
+    label: string;
+    responses: number;
+    verdictCounts: Record<string, number>;
+    changeCounts: Record<string, number>;
+    priorityCounts: Record<string, number>;
+  }[];
+  comments: { conceptId: string; verdict: string; comment: string; weave: string | null; updatedAt: string }[];
+  otherTextEntries: { conceptId: string; verdict: string; otherText: string; weave: string | null; updatedAt: string }[];
   signups: {
     email: string | null;
     phone: string | null;
@@ -131,6 +142,12 @@ function labelled(labels: Record<string, string>, key: string): string {
   return labels[key] ?? key;
 }
 
+/** '—' for a Concept with no weave variants (every `weave` on its rows is null); the real
+ * label otherwise, so the mens-cotton-shirt rows read "Micro-Dobby" / "Cotton Slub". */
+function weaveCell(labels: Labels, weave: string | null): string {
+  return weave === null ? '—' : labelled(labels.weaveLabels, weave);
+}
+
 /** Sums one `Record<string, number>` per Concept into one combined record, in a given key order. */
 function sumAcrossConcepts(concepts: ConceptStats[], pick: (c: ConceptStats) => Record<string, number>, order: string[]): [string, number][] {
   const totals: Record<string, number> = {};
@@ -201,16 +218,47 @@ function renderComments(root: HTMLElement, comments: StatsBody['comments'], labe
   const table = el('table', undefined, 'admin-table');
   const thead = el('thead');
   const headRow = el('tr');
-  headRow.append(el('th', 'Concept'), el('th', 'Verdict'), el('th', 'Comment'), el('th', 'Updated'));
+  headRow.append(el('th', 'Concept'), el('th', 'Weave'), el('th', 'Verdict'), el('th', 'Comment'), el('th', 'Updated'));
   thead.appendChild(headRow);
   const tbody = el('tbody');
   for (const c of comments) {
     const row = el('tr');
     row.append(
       el('td', labelled(labels.conceptNames, c.conceptId)),
+      el('td', weaveCell(labels, c.weave)),
       el('td', labelled(labels.verdictLabels, c.verdict)),
       el('td', c.comment),
       el('td', new Date(c.updatedAt).toLocaleString()),
+    );
+    tbody.appendChild(row);
+  }
+  table.append(thead, tbody);
+  wrap.appendChild(table);
+  root.replaceChildren(wrap);
+}
+
+/** Same shape as `renderComments`, for the "What would you change?" question's "Other" free-text
+ * box — a separate field (`otherText`), previously collected but never shown in this dashboard. */
+function renderOtherText(root: HTMLElement, entries: StatsBody['otherTextEntries'], labels: Labels): void {
+  if (entries.length === 0) {
+    root.replaceChildren(el('p', 'No "Other" entries in this range.', 'admin-empty'));
+    return;
+  }
+  const wrap = el('div', undefined, 'admin-table-wrap');
+  const table = el('table', undefined, 'admin-table');
+  const thead = el('thead');
+  const headRow = el('tr');
+  headRow.append(el('th', 'Concept'), el('th', 'Weave'), el('th', 'Verdict'), el('th', 'Text'), el('th', 'Updated'));
+  thead.appendChild(headRow);
+  const tbody = el('tbody');
+  for (const e of entries) {
+    const row = el('tr');
+    row.append(
+      el('td', labelled(labels.conceptNames, e.conceptId)),
+      el('td', weaveCell(labels, e.weave)),
+      el('td', labelled(labels.verdictLabels, e.verdict)),
+      el('td', e.otherText),
+      el('td', new Date(e.updatedAt).toLocaleString()),
     );
     tbody.appendChild(row);
   }
@@ -351,6 +399,34 @@ function verdictOption(concepts: ConceptStats[], labels: Labels): Record<string,
   };
 }
 
+/** mens-cotton-shirt now collects feedback tagged by weave (Micro-Dobby / Cotton Slub) — these
+ * are two separate entries a respondent can answer independently (see concept-weave-variants.ts
+ * and the hidden `weave` field feedback-island.ts syncs to whichever tab is open), so they need
+ * their own side-by-side comparison rather than being folded into the all-Concepts Verdict chart
+ * above. One grouped/stacked bar per weave, same verdict-key stacking as `verdictOption`. */
+function weaveVerdictOption(weaveBreakdown: StatsBody['weaveBreakdown'], labels: Labels): Record<string, unknown> {
+  const verdictKeys = Object.keys(labels.verdictLabels);
+  return {
+    color: CHART_COLORS,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { top: 0, textStyle: { fontSize: 12 } },
+    grid: { left: 36, right: 16, top: 32, bottom: 32 },
+    xAxis: {
+      type: 'category',
+      data: weaveBreakdown.map((w) => `${w.label} (${w.responses})`),
+    },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: verdictKeys.map((key, i) => ({
+      name: labelled(labels.verdictLabels, key),
+      type: 'bar',
+      stack: 'verdict',
+      barMaxWidth: 60,
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
+      data: weaveBreakdown.map((w) => w.verdictCounts[key] ?? 0),
+    })),
+  };
+}
+
 function seriesOption(series: StatsBody['series']): Record<string, unknown> {
   const fmt = (d: string) => {
     const dt = new Date(`${d}T00:00:00Z`);
@@ -435,6 +511,18 @@ async function renderCharts(stats: StatsBody, labels: Labels): Promise<void> {
   if (seriesEl) renderChart(echarts, seriesEl, 'series', seriesOption(stats.series));
   const priceEl = byKey.get('price');
   if (priceEl) renderChart(echarts, priceEl, 'price', donutOption(priceEntries));
+
+  // Hidden entirely (not just an empty chart) when no Concept has weave variants — today
+  // mens-cotton-shirt always does, so this is always shown, but the guard keeps the dashboard
+  // correct if that ever changes.
+  const weaveCard = document.querySelector<HTMLElement>('[data-chart-card="weave"]');
+  if (stats.weaveBreakdown.length > 0) {
+    if (weaveCard) weaveCard.hidden = false;
+    const weaveEl = byKey.get('weave');
+    if (weaveEl) renderChart(echarts, weaveEl, 'weave', weaveVerdictOption(stats.weaveBreakdown, labels));
+  } else if (weaveCard) {
+    weaveCard.hidden = true;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +535,7 @@ export function initAdminDashboard(): void {
   const content = document.querySelector<HTMLElement>('[data-admin-content]');
   const totalsRoot = document.querySelector<HTMLElement>('[data-admin-totals]');
   const commentsRoot = document.querySelector<HTMLElement>('[data-admin-comments]');
+  const otherTextRoot = document.querySelector<HTMLElement>('[data-admin-other-text]');
   const signupsRoot = document.querySelector<HTMLElement>('[data-admin-signups]');
   const refreshBtn = document.querySelector<HTMLButtonElement>('[data-admin-refresh]');
   const lockBtn = document.querySelector<HTMLButtonElement>('[data-admin-lock]');
@@ -455,11 +544,23 @@ export function initAdminDashboard(): void {
   const rangeTo = document.querySelector<HTMLInputElement>('[data-admin-range-to]');
   const labels = readLabels();
 
-  if (!form || !status || !content || !totalsRoot || !commentsRoot || !signupsRoot || !rangeForm || !rangeFrom || !rangeTo || !labels) {
+  if (
+    !form ||
+    !status ||
+    !content ||
+    !totalsRoot ||
+    !commentsRoot ||
+    !otherTextRoot ||
+    !signupsRoot ||
+    !rangeForm ||
+    !rangeFrom ||
+    !rangeTo ||
+    !labels
+  ) {
     return;
   }
 
-  wireUpDashboard(form, status, content, totalsRoot, commentsRoot, signupsRoot, refreshBtn, lockBtn, rangeForm, rangeFrom, rangeTo, labels);
+  wireUpDashboard(form, status, content, totalsRoot, commentsRoot, otherTextRoot, signupsRoot, refreshBtn, lockBtn, rangeForm, rangeFrom, rangeTo, labels);
 }
 
 function wireUpDashboard(
@@ -468,6 +569,7 @@ function wireUpDashboard(
   content: HTMLElement,
   totalsRoot: HTMLElement,
   commentsRoot: HTMLElement,
+  otherTextRoot: HTMLElement,
   signupsRoot: HTMLElement,
   refreshBtn: HTMLButtonElement | null,
   lockBtn: HTMLButtonElement | null,
@@ -494,6 +596,7 @@ function wireUpDashboard(
       rangeForm.hidden = false;
       renderTotals(totalsRoot, stats.totals);
       renderComments(commentsRoot, stats.comments, labels);
+      renderOtherText(otherTextRoot, stats.otherTextEntries, labels);
       renderSignups(signupsRoot, stats.signups);
       // Unhide BEFORE initialising the charts: `echarts.init()` measures the container's real
       // layout box immediately, and a `hidden` ancestor measures as 0x0 — caught live via the

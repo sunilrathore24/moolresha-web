@@ -38,9 +38,9 @@ construction:
     - "Clean, unbranded back"
 # ⚠️ founder copy: the wording below is a draft for the founder to finalise.
 whyThisFabric:
-  lead: "We chose a fine diamond micro-dobby weave for this shirt because its close, woven structure gives plain cotton a subtle all-over pattern and a little more body, while keeping the cloth in the light-to-mid weight range we're targeting for a shirt meant for everyday wear, not just special occasions."
-  onSkin: "This is a research-stage concept, so here is our design intent rather than a tested result: we expect the fine, even dobby structure to feel smooth and breathable against skin, to suit warm weather, and to soften gradually with repeated washing. We have not run wear trials to confirm this yet."
-  premiumDifference: "What we think sets this apart from a plain cotton shirt is construction, not a label: the diamond micro-dobby texture is woven into the cloth rather than printed on, and the interlocking-thread embroidery on the left chest is a quiet, considered detail rather than a logo. Together they are meant to give the shirt a more tactile, intentional feel while the fabric itself stays simple: 100% cotton."
+  lead: "We chose a fine diamond micro-dobby weave for this shirt because a dobby loom weaves a small geometric motif directly into the cloth using extra harnesses, not a print added afterward. That gives plain cotton a subtle all-over texture and more body, while keeping the cloth in the light-to-mid weight range we're targeting for everyday wear, not just special occasions."
+  onSkin: "This is a research-stage concept, so here is our design intent rather than a tested result: we expect the fine, even dobby structure — woven tightly but without added weight — to feel smooth and breathable against skin, suit warm weather, and soften gradually with repeated washing. We have not run wear trials to confirm this yet."
+  premiumDifference: "What we think sets this apart from a plain cotton shirt is construction, not a label: a dobby loom weaves the diamond micro-pattern into the yarn itself, so it's there even in a solid colour, unlike a plain weave with a print on top. The left-chest embroidery is a quiet, considered detail, not a logo. Together they're meant to feel tactile and intentional; the fabric stays simple: 100% cotton."
 testing:
   - name: "Shrinkage after washing"
     criteria: "Length and width change after five home washes, measured garment by garment."

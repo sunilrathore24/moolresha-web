@@ -19,9 +19,11 @@
  * tab content — not just photos. Each weave gets its own full copy of all of it, nested inside
  * its own panel of a weave `<Tabs>`; the inner Fabric/Comfort/Quality/Testing/Why `<Tabs>` is
  * duplicated per weave too (ids suffixed with the weave id — `detailTabs()` below — so the two
- * copies never collide). Comfort/Quality/Testing aren't weave-specific content (no override
- * exists for them), so both weaves show the same real copy there; only Fabric and Why This
- * Fabric actually differ when a weave provides its own. The feedback form stays a SINGLE
+ * copies never collide). Comfort (`construction`) isn't weave-specific (same cut, buttons and
+ * embroidery either way, no override exists) so both weaves show the Concept's one copy there;
+ * Fabric, Quality, Testing and Why This Fabric all differ when a weave provides its own override
+ * (see concept-weave-variants.ts) — Quality/Testing need one whenever the Concept's own rows
+ * name the weave directly (mens-cotton-shirt's do). The feedback form stays a SINGLE
  * shared instance after all of this, not duplicated — see the hidden `weave` field and its
  * sync script near the bottom of this file.
  */
@@ -42,11 +44,12 @@ import ProductSpecificationGrid from '../../components/designs/ProductSpecificat
 import TestingList from '../../components/designs/TestingList.astro';
 import { conceptColourViews, conceptExtraPhotos, conceptMaterialCards, conceptViews } from '../../lib/concept-images';
 import { buildColourPanels } from '../../lib/concept-colour-panels';
+import type { ResolvedView } from '../../lib/concept-image-resolver';
 import { colourPanelId } from '../../lib/colour-panel-id';
 import { CONCEPT_CATEGORIES } from '../../lib/concept-categories';
 import { CONCEPT_DESIGN_VARIANTS } from '../../lib/concept-design-variants';
 import { CONCEPT_WEAVE_VARIANTS } from '../../lib/concept-weave-variants';
-import type { FabricNotesData, WhyThisFabricData } from '../../lib/concept-schema';
+import type { FabricNotesData, QualityCardData, TestingData, WhyThisFabricData } from '../../lib/concept-schema';
 
 export const getStaticPaths = (async () => {
   const concepts = await getCollection('concepts');
@@ -88,11 +91,21 @@ const hasColourPhotos = colourPanels.length > 1;
 const category = CONCEPT_CATEGORIES[concept.id];
 
 // Same circular micro-photo treatment as ConceptFeedbackForm.astro's colour swatches: a crop
-// of each colour's own `07-fabric-closeup` shot, not a flat CSS fill.
+// of each colour's own `07-fabric-closeup` shot, not a flat CSS fill. A colour whose photo set
+// doesn't have a closeup yet (e.g. Cotton Slub's charcoal/blue, mid-way through getting its
+// full set) falls back to the `01-front` shot rather than a plain circle — any real photo beats
+// none, and the closeup is still preferred whenever it exists.
+function swatchPhoto(p: { views: ResolvedView<ImageMetadata>[] }): ImageMetadata | undefined {
+  const closeup = p.views.find((v) => v.view === '07-fabric-closeup' && v.status === 'file');
+  if (closeup && closeup.status === 'file') return closeup.image;
+  const front = p.views.find((v) => v.view === '01-front' && v.status === 'file');
+  return front && front.status === 'file' ? front.image : undefined;
+}
+
 const colourPhotos: Partial<Record<(typeof colourPanels)[number]['colour'], ImageMetadata>> = {};
 for (const p of colourPanels) {
-  const closeup = p.views.find((v) => v.view === '07-fabric-closeup' && v.status === 'file');
-  if (closeup && closeup.status === 'file') colourPhotos[p.colour] = closeup.image;
+  const photo = swatchPhoto(p);
+  if (photo) colourPhotos[p.colour] = photo;
 }
 
 // Weave variants (today, only mens-cotton-shirt — see concept-weave-variants.ts) sit ABOVE the
@@ -111,13 +124,15 @@ const weaveGalleries = weaveVariants?.map((w) => {
   const photos: Partial<Record<string, ImageMetadata>> = w.colours ? {} : colourPhotos;
   if (w.colours) {
     for (const p of panels) {
-      const closeup = p.views.find((v) => v.view === '07-fabric-closeup' && v.status === 'file');
-      if (closeup && closeup.status === 'file') photos[p.colour] = closeup.image;
+      const photo = swatchPhoto(p);
+      if (photo) photos[p.colour] = photo;
     }
   }
   const fabricNotes: FabricNotesData = w.fabricNotes ?? concept.fabricNotes;
   const whyThisFabric: WhyThisFabricData | undefined = w.whyThisFabric ?? concept.whyThisFabric;
-  return { id: w.id, label: w.label, productCode: w.productCode, panels, labels, photos, fabricNotes, whyThisFabric };
+  const quality: QualityCardData = w.quality ?? concept.quality;
+  const testing: TestingData | undefined = w.testing ?? concept.testing;
+  return { id: w.id, label: w.label, productCode: w.productCode, panels, labels, photos, fabricNotes, whyThisFabric, quality, testing };
 });
 const weaveTabs = weaveGalleries?.map((w) => ({ id: w.id, label: w.label }));
 
@@ -228,7 +243,7 @@ function detailTabs(hasConstruction: boolean, hasTesting: boolean, whyThisFabric
                 <ProductSpecificationGrid fabricNotes={w.fabricNotes} />
 
                 <section class="cd-tabs" aria-label={`${concept.name} ${w.label} details`}>
-                  <Tabs tabs={detailTabs(!!concept.construction, !!(concept.testing && concept.testing.length > 0), w.whyThisFabric, w.id)} ariaLabel={`${concept.name} ${w.label} details`}>
+                  <Tabs tabs={detailTabs(!!concept.construction, !!(w.testing && w.testing.length > 0), w.whyThisFabric, w.id)} ariaLabel={`${concept.name} ${w.label} details`}>
                     <div role="tabpanel" data-tab-panel={`fabric-${w.id}`} id={`panel-fabric-${w.id}`} aria-labelledby={`tab-fabric-${w.id}`} tabindex="0">
                       <FabricNotes fabricNotes={w.fabricNotes} conceptId={`${concept.id}-${w.id}`} />
                     </div>
@@ -242,19 +257,19 @@ function detailTabs(hasConstruction: boolean, hasTesting: boolean, whyThisFabric
                     }
 
                     <div role="tabpanel" data-tab-panel={`quality-${w.id}`} id={`panel-quality-${w.id}`} aria-labelledby={`tab-quality-${w.id}`} tabindex="0">
-                      <QualityCard quality={concept.quality} conceptId={`${concept.id}-${w.id}`} />
+                      <QualityCard quality={w.quality} conceptId={`${concept.id}-${w.id}`} />
                       <HowWeCheck />
                     </div>
 
                     {
-                      concept.testing && concept.testing.length > 0 && (
+                      w.testing && w.testing.length > 0 && (
                         <div role="tabpanel" data-tab-panel={`testing-${w.id}`} id={`panel-testing-${w.id}`} aria-labelledby={`tab-testing-${w.id}`} tabindex="0">
                           <h2 class="cd-testing-h">Testing plan</h2>
                           <p class="cd-testing-intro">
                             What we intend to test on this concept, and the pass criteria. A result is only
                             marked Verified once we have the evidence.
                           </p>
-                          <TestingList testing={concept.testing} />
+                          <TestingList testing={w.testing} />
                         </div>
                       )
                     }

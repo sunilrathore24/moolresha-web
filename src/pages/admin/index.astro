@@ -27,6 +27,7 @@ import {
 import { CONCEPT_SHORT_NAMES } from '../../lib/concept-categories';
 import { PRIORITY_LABELS } from '../../content/config/allow-lists';
 import { bandLabel } from '../../lib/price-bands';
+import { CONCEPT_WEAVE_VARIANTS } from '../../lib/concept-weave-variants';
 
 const concepts = (await getCollection('concepts')).map((e) => e.data).sort((a, b) => a.order - b.order);
 
@@ -40,6 +41,13 @@ for (const c of concepts) {
   priceBandLabels[c.id] = bands;
 }
 
+// Weave ids ('micro-dobby', 'cotton-slub') are shared across every Concept that has weave
+// variants (today, only mens-cotton-shirt), so one flat id → label map is enough.
+const weaveLabels: Record<string, string> = {};
+for (const variants of Object.values(CONCEPT_WEAVE_VARIANTS)) {
+  for (const v of variants ?? []) weaveLabels[v.id] = v.label;
+}
+
 const labels = {
   conceptOrder,
   conceptNames,
@@ -48,6 +56,7 @@ const labels = {
   colourLabels: PALETTE_LABELS,
   priorityLabels: PRIORITY_LABELS,
   priceBandLabels,
+  weaveLabels,
 };
 ---
 
@@ -115,12 +124,21 @@ const labels = {
           <h3 id="chart-h-price">Price Band Interest</h3>
           <div class="admin-chart" data-chart="price"></div>
         </section>
+        <section class="admin-chart-card admin-chart-card-wide" aria-labelledby="chart-h-weave" data-chart-card="weave">
+          <h3 id="chart-h-weave">RootWeave: Micro-Dobby vs Cotton Slub</h3>
+          <div class="admin-chart" data-chart="weave"></div>
+        </section>
       </div>
 
       <div class="admin-table-grid">
         <section class="admin-table-section" aria-labelledby="admin-comments-h">
           <h2 id="admin-comments-h">Comments ("Any other thoughts?")</h2>
           <div data-admin-comments></div>
+        </section>
+
+        <section class="admin-table-section" aria-labelledby="admin-other-text-h">
+          <h2 id="admin-other-text-h">"What would you change?" — Other (free text)</h2>
+          <div data-admin-other-text></div>
         </section>
 
         <section class="admin-table-section" aria-labelledby="admin-signups-h">

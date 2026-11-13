@@ -20,7 +20,7 @@
  * breakdown and the label maps baked in at build time (`src/pages/admin/index.astro`) — no need
  * to duplicate that here.
  */
-import { aggregateFeedback } from '../../../src/lib/aggregate';
+import { aggregateFeedback, type FeedbackRow } from '../../../src/lib/aggregate';
 import {
   bucketByDay,
   dailyBuckets,
@@ -31,6 +31,7 @@ import {
   type Trend,
 } from '../../../src/lib/admin-stats';
 import { CONCEPT_IDS, type ConceptId } from '../../../src/content/config/allow-lists';
+import { CONCEPT_WEAVE_VARIANTS } from '../../../src/lib/concept-weave-variants';
 import {
   allFrustrationCreatedAt,
   allInterestCreatedAt,
@@ -71,7 +72,25 @@ export interface AdminStatsBody {
     priceSkipCount: number;
     priorityCounts: Record<string, number>;
   }[];
-  comments: { conceptId: ConceptId; verdict: string; comment: string; updatedAt: string }[];
+  /** Per-weave breakdown for a Concept with more than one weave (today, only
+   * mens-cotton-shirt — see concept-weave-variants.ts). Empty for every other Concept. A row
+   * whose `weave` wasn't set (submitted before the weave field existed, or the sync script
+   * didn't run) isn't counted in any weaveId bucket here — it still counts in the Concept's own
+   * combined `concepts` entry above. */
+  weaveBreakdown: {
+    conceptId: ConceptId;
+    weaveId: string;
+    label: string;
+    responses: number;
+    verdictCounts: Record<string, number>;
+    changeCounts: Record<string, number>;
+    priorityCounts: Record<string, number>;
+  }[];
+  comments: { conceptId: ConceptId; verdict: string; comment: string; weave: string | null; updatedAt: string }[];
+  /** The free-text box that opens under the "What would you change?" question's "Other" chip —
+   * distinct from `comments`' general "Any other thoughts?" field. Previously collected
+   * (CSV-exportable) but never shown anywhere in this dashboard. */
+  otherTextEntries: { conceptId: ConceptId; verdict: string; otherText: string; weave: string | null; updatedAt: string }[];
   signups: {
     email: string | null;
     phone: string | null;
@@ -118,6 +137,9 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
     const commentsInRange = commentsAll.filter((r) => inMs(r.updatedAt, range.fromMs, range.toMs));
     const commentsInPrev = commentsAll.filter((r) => inMs(r.updatedAt, prev.fromMs, prev.toMs));
 
+    const otherTextAll = rows.filter((r) => r.otherText !== null && r.otherText.trim() !== '');
+    const otherTextInRange = otherTextAll.filter((r) => inMs(r.updatedAt, range.fromMs, range.toMs));
+
     const signupsInRangeCount = interestTimestamps.filter((t) => inMs(t, range.fromMs, range.toMs)).length;
     const signupsInPrevCount = interestTimestamps.filter((t) => inMs(t, prev.fromMs, prev.toMs)).length;
 
@@ -151,8 +173,45 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
     const signupsByDay = bucketByDay(interestTimestamps, days);
 
     const comments = commentsInRange
-      .map((r) => ({ conceptId: r.conceptId, verdict: r.verdict, comment: r.comment as string, updatedAt: r.updatedAt }))
+      .map((r) => ({
+        conceptId: r.conceptId,
+        verdict: r.verdict,
+        comment: r.comment as string,
+        weave: r.weave ?? null,
+        updatedAt: r.updatedAt,
+      }))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+    const otherTextEntries = otherTextInRange
+      .map((r) => ({
+        conceptId: r.conceptId,
+        verdict: r.verdict,
+        otherText: r.otherText as string,
+        weave: r.weave ?? null,
+        updatedAt: r.updatedAt,
+      }))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+    // Reuses the exact same pure `aggregateFeedback` the combined per-Concept numbers above use,
+    // just on a filtered subset per weave — no change to that shared function, and the public
+    // /api/results projection (which calls it too) is unaffected.
+    const weaveBreakdown = CONCEPT_IDS.flatMap((conceptId) => {
+      const variants = CONCEPT_WEAVE_VARIANTS[conceptId];
+      if (!variants) return [];
+      return variants.map((v) => {
+        const subset: FeedbackRow[] = rowsInRange.filter((r) => r.conceptId === conceptId && r.weave === v.id);
+        const agg = aggregateFeedback(subset).get(conceptId);
+        return {
+          conceptId,
+          weaveId: v.id,
+          label: v.label,
+          responses: agg?.responses ?? 0,
+          verdictCounts: agg?.verdictCounts ?? {},
+          changeCounts: agg?.changeCounts ?? {},
+          priorityCounts: agg?.priorityCounts ?? {},
+        };
+      });
+    });
 
     const signups = signupRows
       .filter((s) => inMs(s.created_at, range.fromMs, range.toMs))
@@ -182,7 +241,9 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
         signups: days.map((d) => signupsByDay[d] ?? 0),
       },
       concepts,
+      weaveBreakdown,
       comments,
+      otherTextEntries,
       signups,
     };
     return json(200, body);
