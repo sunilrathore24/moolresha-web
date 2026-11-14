@@ -48,6 +48,12 @@
  *   name="comment"      general "Any other thoughts?" text input, maxlength="250", always
  *                       available once [data-progressive] is revealed (not conditional).
  *   [data-comment-count] live "N" character count, updated by the island.
+ *   [data-contact-field] wrapper around the optional "want us to follow up?" email + its
+ *                       consent checkbox, added 2026-11. name="email", maxlength 254.
+ *   [data-contact-consent] the consent `<label>` wrapping the checkbox (name="emailConsent"),
+ *                       starts `hidden`; the island reveals it once the email field has a value.
+ *   [data-contact-hint] starts `hidden`; the island shows it (and blocks submission, no server
+ *                       round trip) if email is filled in but the consent box isn't ticked.
  *   name="colour"       radios (Palette_Colour). Values from PALETTE.
  *   name="priorities"   checkboxes (Priority_Chips), inside the
  *                       "What matters most to you?" fieldset.
@@ -74,6 +80,10 @@ import type { PriceBand } from '../../lib/price-bands';
 import {
   COMMENT_LABEL,
   COMMENT_MAX_LENGTH,
+  EMAIL_CONSENT_LABEL,
+  EMAIL_LABEL,
+  EMAIL_MAX_LENGTH,
+  EMAIL_PLACEHOLDER,
   FIELD_NAMES,
   FORM_INTRO,
   FORM_TITLE,
@@ -129,6 +139,8 @@ const otherId = fieldId(id, 'other-field');
 const otherTextId = fieldId(id, FIELD_NAMES.otherText);
 const commentId = fieldId(id, FIELD_NAMES.comment);
 const commentCountId = fieldId(id, 'comment-count');
+const emailId = fieldId(id, FIELD_NAMES.email);
+const emailConsentId = fieldId(id, FIELD_NAMES.emailConsent);
 const liveId = fieldId(id, 'live');
 
 /**
@@ -389,6 +401,24 @@ for (const [colour, views] of Object.entries(conceptColourViews[id] ?? {})) {
         autocomplete="off"
       />
       <p class="cff-comment-count"><span id={commentCountId} data-comment-count>0</span> / {COMMENT_MAX_LENGTH}</p>
+    </div>
+
+    <div class="cff-contact" data-contact-field>
+      <label class="cff-text-label" for={emailId}>{EMAIL_LABEL} <span class="cff-optional">Optional</span></label>
+      <input
+        class="cff-input"
+        type="email"
+        id={emailId}
+        name={FIELD_NAMES.email}
+        maxlength={EMAIL_MAX_LENGTH}
+        autocomplete="email"
+        placeholder={EMAIL_PLACEHOLDER}
+      />
+      <label class="cff-contact-consent" for={emailConsentId} data-contact-consent hidden>
+        <input type="checkbox" id={emailConsentId} name={FIELD_NAMES.emailConsent} value="true" />
+        <span>{EMAIL_CONSENT_LABEL}</span>
+      </label>
+      <p class="cff-contact-hint" data-contact-hint hidden>Tick the box above so we can store your email.</p>
     </div>
 
     <div data-turnstile></div>
@@ -829,6 +859,54 @@ for (const [colour, views] of Object.entries(conceptColourViews[id] ?? {})) {
     color: var(--color-text-muted);
     text-align: right;
     max-width: 28rem;
+  }
+
+  /* ---- Optional "want us to follow up?" email — same visual rhythm as .cff-comment (its own
+     top separator), added 2026-11. The consent checkbox and its hint both start `hidden` in the
+     markup; the island reveals the checkbox once the email field has a value, and the hint only
+     if someone tries to submit with an email but no tick (feedback-island.ts). ---- */
+  .cff-contact {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cff-contact-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    max-width: 28rem;
+    font-size: var(--fs-small);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .cff-contact-consent[hidden] {
+    display: none;
+  }
+
+  .cff-contact-consent input {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0.125rem 0 0;
+    cursor: pointer;
+  }
+
+  .cff-contact-consent input:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .cff-contact-hint {
+    margin: var(--space-2) 0 0;
+    max-width: 28rem;
+    font-size: var(--fs-label);
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  .cff-contact-hint[hidden] {
+    display: none;
   }
 
   /* ---- Price question: this card now lives on an inner div, not the fieldset (see the

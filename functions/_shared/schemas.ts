@@ -72,6 +72,35 @@ export const ConceptId = z.enum(CONCEPT_IDS);
 
 const hasDuplicates = (xs: readonly unknown[]): boolean => new Set(xs).size !== xs.length;
 
+/** Same shape the Interest form's email uses (defined once here, re-used by Feedback,
+ * Frustration and Interest below) — trimmed, lower-cased, one conservative pattern. */
+const Email = z
+  .string()
+  .max(MAX_EMAIL)
+  .transform((s) => s.trim().toLowerCase())
+  .pipe(z.string().regex(EMAIL_PATTERN).refine((s) => !s.includes('..') && !s.includes('.@')));
+
+/** Shared by FeedbackBody and FrustrationBody: an optional, NOT required, email the person can
+ * leave so MoolResha can follow up about this specific answer — distinct from the Interest
+ * form's standing "email me about launch" signup. Requires its own consent tick whenever an
+ * email is given (never implied by the general Turnstile/submit action), same spirit as the
+ * Interest form's `consents.email`, but as a single combined "contact me about this" checkbox
+ * rather than that form's separate email/WhatsApp/adult consents — this is a narrower, one-off
+ * purpose tied to one feedback row, not a standing subscription. */
+function requireEmailConsent<T extends { email?: string; emailConsent?: boolean }>(
+  b: T,
+  ctx: z.RefinementCtx,
+): void {
+  if (b.email !== undefined && b.emailConsent !== true) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['emailConsent'],
+      message: 'tick the consent box to let us store your email',
+      params: { code: CONSENT_REQUIRED },
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/feedback
 // ---------------------------------------------------------------------------
@@ -94,6 +123,9 @@ export const FeedbackBody = z
     // There is deliberately no free-text or numeric price field (Requirement 9.5).
     priceBandId: z.string().max(64).optional(),
     priceSkipped: z.literal(true).optional(),
+    /** Optional — see `requireEmailConsent` above. Not stored anywhere public; admin-only. */
+    email: Email.optional(),
+    emailConsent: z.boolean().default(false),
     utm: Utm.optional(),
     turnstileToken: Token,
   })
@@ -119,6 +151,7 @@ export const FeedbackBody = z
     if (b.otherText !== undefined && !changes.includes('other')) {
       ctx.addIssue({ code: 'custom', path: ['otherText'], message: 'other text needs the other chip' });
     }
+    requireEmailConsent(b, ctx);
   });
 export type FeedbackInput = z.input<typeof FeedbackBody>;
 export type FeedbackData = z.output<typeof FeedbackBody>;
@@ -132,6 +165,8 @@ export const FrustrationBody = z
     anonId: AnonId,
     chips: z.array(z.enum(FRUSTRATION_CHIPS)).min(1).max(FRUSTRATION_CHIPS.length),
     otherText: FreeText.optional(),
+    email: Email.optional(),
+    emailConsent: z.boolean().default(false),
     utm: Utm.optional(),
     turnstileToken: Token,
   })
@@ -143,6 +178,7 @@ export const FrustrationBody = z
     if (b.otherText !== undefined && !chips.includes('other')) {
       ctx.addIssue({ code: 'custom', path: ['otherText'], message: 'other text needs the other chip' });
     }
+    requireEmailConsent(b, ctx);
   });
 export type FrustrationInput = z.input<typeof FrustrationBody>;
 export type FrustrationData = z.output<typeof FrustrationBody>;
@@ -150,12 +186,6 @@ export type FrustrationData = z.output<typeof FrustrationBody>;
 // ---------------------------------------------------------------------------
 // POST /api/interest (shared with the browser island)
 // ---------------------------------------------------------------------------
-
-const Email = z
-  .string()
-  .max(MAX_EMAIL)
-  .transform((s) => s.trim().toLowerCase())
-  .pipe(z.string().regex(EMAIL_PATTERN).refine((s) => !s.includes('..') && !s.includes('.@')));
 
 /** Spaces and hyphens are removed before the Indian mobile check. */
 const Whatsapp = z

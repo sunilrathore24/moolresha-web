@@ -12,7 +12,14 @@ import {
   type Size,
 } from '../content/config/allow-lists';
 
-export { NOSCRIPT_NOTE, OTHER_TEXT_MAX_LENGTH } from './feedback-form';
+export {
+  NOSCRIPT_NOTE,
+  OTHER_TEXT_MAX_LENGTH,
+  EMAIL_CONSENT_LABEL,
+  EMAIL_LABEL,
+  EMAIL_MAX_LENGTH,
+  EMAIL_PLACEHOLDER,
+} from './feedback-form';
 
 export const FRUSTRATION_LABELS: Record<FrustrationChip, string> = {
   see_through: 'Goes see-through',
@@ -36,7 +43,12 @@ export const SIZE_LABELS: Record<Size, string> = {
 };
 
 /** `name` attributes on the frustration form. The island (task 16.8) reads these. */
-export const FRUSTRATION_FIELDS = { chips: 'chips', otherText: 'otherText' } as const;
+export const FRUSTRATION_FIELDS = {
+  chips: 'chips',
+  otherText: 'otherText',
+  email: 'email',
+  emailConsent: 'emailConsent',
+} as const;
 
 // The interest field names and helpers live in a zod-free module so the interest island can
 // import them without pulling zod into the browser bundle. Re-exported here for existing imports.
@@ -52,6 +64,8 @@ export {
 export const FRUSTRATION_IDS = {
   otherField: 'frustration-other-field',
   otherInput: 'frustration-other',
+  email: 'frustration-email',
+  emailConsent: 'frustration-email-consent',
 } as const;
 
 export function frustrationChipId(chip: FrustrationChip): string {

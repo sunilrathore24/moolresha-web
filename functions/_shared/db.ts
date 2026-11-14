@@ -65,20 +65,43 @@ export interface Utm {
 
 const SQL_FEEDBACK_UPSERT = `
 INSERT INTO concept_feedback (anon_id, concept_id, verdict, changes, other_text, comment_text, colour, weave, priorities, price_band_id, price_skipped,
-                              utm_source, utm_medium, utm_campaign, created_at, updated_at)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?15)
+                              email, utm_source, utm_medium, utm_campaign, created_at, updated_at)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16)
 ON CONFLICT (anon_id, concept_id) DO UPDATE SET
   verdict = excluded.verdict, changes = excluded.changes, other_text = excluded.other_text,
   comment_text = excluded.comment_text,
   colour = excluded.colour, weave = excluded.weave, priorities = excluded.priorities,
   price_band_id = excluded.price_band_id, price_skipped = excluded.price_skipped,
+  email = excluded.email,
   updated_at = excluded.updated_at`;
 
+// Resolves cross-device deduplication (see migrations/0004_feedback_email.sql): a submission
+// that gives an email already used for this Concept should update that SAME row, not create a
+// second one under a different anon_id (a different browser/device). Called before the upsert
+// above; its result picks WHICH anon_id the upsert writes to. A plain SELECT, not folded into
+// the upsert's own ON CONFLICT target: D1 does not support matching more than one unique
+// constraint in a single statement, and this keeps the lookup trivially testable on its own.
+const SQL_FEEDBACK_ANON_ID_BY_EMAIL = `
+SELECT anon_id FROM concept_feedback WHERE concept_id = ?1 AND email = ?2 LIMIT 1`;
+
+export async function findFeedbackAnonIdByEmail(db: D1Like, conceptId: string, email: string): Promise<string | null> {
+  const row = await db.prepare(SQL_FEEDBACK_ANON_ID_BY_EMAIL).bind(conceptId, email).first<{ anon_id: string }>();
+  return row?.anon_id ?? null;
+}
+
 const SQL_FRUSTRATION_UPSERT = `
-INSERT INTO frustration (anon_id, chips, other_text, utm_source, utm_medium, utm_campaign, created_at, updated_at)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+INSERT INTO frustration (anon_id, chips, other_text, email, utm_source, utm_medium, utm_campaign, created_at, updated_at)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
 ON CONFLICT (anon_id) DO UPDATE SET
-  chips = excluded.chips, other_text = excluded.other_text, updated_at = excluded.updated_at`;
+  chips = excluded.chips, other_text = excluded.other_text, email = excluded.email, updated_at = excluded.updated_at`;
+
+// Same purpose as SQL_FEEDBACK_ANON_ID_BY_EMAIL, for the one-row-per-person frustration table.
+const SQL_FRUSTRATION_ANON_ID_BY_EMAIL = `SELECT anon_id FROM frustration WHERE email = ?1 LIMIT 1`;
+
+export async function findFrustrationAnonIdByEmail(db: D1Like, email: string): Promise<string | null> {
+  const row = await db.prepare(SQL_FRUSTRATION_ANON_ID_BY_EMAIL).bind(email).first<{ anon_id: string }>();
+  return row?.anon_id ?? null;
+}
 
 const SQL_EVENT_INCREMENT = `
 INSERT INTO event_counts (day, event, concept_id, section, utm_source, utm_medium, utm_campaign, count)
@@ -171,17 +194,29 @@ export interface FeedbackInput {
   priceBandId: string | null;
   /** Stored as 1 only for an explicit skip. The table CHECK rejects a skip that also has a band. */
   priceSkipped: boolean;
+  /** Optional, like `weave` — only present when the person chose to leave one and ticked the
+   * consent box (functions/_shared/schemas.ts enforces that pairing before this is ever built). */
+  email?: string | null;
   utm: Utm;
   /** ISO 8601 UTC. */
   now: string;
 }
 
-/** The prepared (unexecuted) statement, for use in `db.batch`. */
-export function feedbackUpsertStatement(db: D1Like, f: FeedbackInput): D1PreparedStatementLike {
+/** The prepared (unexecuted) statement, for use in `db.batch`. `anonIdOverride`, when given,
+ * is used in place of `f.anonId` as the row's key — the caller (functions/api/feedback.ts) sets
+ * this to an existing row's anon_id when `f.email` matched one via `findFeedbackAnonIdByEmail`,
+ * so the write merges into that row instead of creating a new one under the submitter's own
+ * (different-device) anon_id. `f.anonId` itself is untouched either way — only which row gets
+ * written changes. */
+export function feedbackUpsertStatement(
+  db: D1Like,
+  f: FeedbackInput,
+  anonIdOverride?: string,
+): D1PreparedStatementLike {
   return db
     .prepare(SQL_FEEDBACK_UPSERT)
     .bind(
-      f.anonId,
+      anonIdOverride ?? f.anonId,
       f.conceptId,
       f.verdict,
       encodeChipSet(f.changes),
@@ -192,6 +227,7 @@ export function feedbackUpsertStatement(db: D1Like, f: FeedbackInput): D1Prepare
       encodeChipSet(f.priorities),
       f.priceBandId,
       f.priceSkipped ? 1 : 0,
+      f.email ?? null,
       f.utm.source,
       f.utm.medium,
       f.utm.campaign,
@@ -212,14 +248,30 @@ export interface FrustrationInput {
   anonId: string;
   chips: readonly string[];
   otherText: string | null;
+  /** Optional — see the matching field on `FeedbackInput`. */
+  email?: string | null;
   utm: Utm;
   now: string;
 }
 
-export function frustrationUpsertStatement(db: D1Like, f: FrustrationInput): D1PreparedStatementLike {
+/** `anonIdOverride`: see the matching parameter on `feedbackUpsertStatement`. */
+export function frustrationUpsertStatement(
+  db: D1Like,
+  f: FrustrationInput,
+  anonIdOverride?: string,
+): D1PreparedStatementLike {
   return db
     .prepare(SQL_FRUSTRATION_UPSERT)
-    .bind(f.anonId, encodeChipSet(f.chips), f.otherText, f.utm.source, f.utm.medium, f.utm.campaign, f.now);
+    .bind(
+      anonIdOverride ?? f.anonId,
+      encodeChipSet(f.chips),
+      f.otherText,
+      f.email ?? null,
+      f.utm.source,
+      f.utm.medium,
+      f.utm.campaign,
+      f.now,
+    );
 }
 
 export async function upsertFrustration(db: D1Like, f: FrustrationInput): Promise<void> {
@@ -466,6 +518,40 @@ export async function allInterestCreatedAt(db: D1Like): Promise<string[]> {
 export async function allFrustrationCreatedAt(db: D1Like): Promise<string[]> {
   const { results } = await db.prepare(`SELECT created_at FROM frustration`).all<{ created_at: string }>();
   return results.map((r) => r.created_at);
+}
+
+export interface FeedbackContactRow {
+  concept_id: string;
+  weave: string | null;
+  verdict: string;
+  email: string;
+  updated_at: string;
+}
+
+/** Every Concept-feedback row that has a (consented) email, newest first — admin-only, for
+ * following up about a specific answer. Deliberately separate from `exportFeedbackRows` /
+ * `exportFeedbackRowsPaged`: those two feed the public results projection and the PII-free
+ * feedback CSV (Req 17.3), and must never carry this column. */
+export async function feedbackContactsWithEmail(db: D1Like): Promise<FeedbackContactRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT concept_id, weave, verdict, email, updated_at FROM concept_feedback WHERE email IS NOT NULL ORDER BY updated_at DESC`,
+    )
+    .all<FeedbackContactRow>();
+  return results;
+}
+
+export interface FrustrationContactRow {
+  email: string;
+  updated_at: string;
+}
+
+/** Same purpose as `feedbackContactsWithEmail`, for the frustration ("Share your opinion") form. */
+export async function frustrationContactsWithEmail(db: D1Like): Promise<FrustrationContactRow[]> {
+  const { results } = await db
+    .prepare(`SELECT email, updated_at FROM frustration WHERE email IS NOT NULL ORDER BY updated_at DESC`)
+    .all<FrustrationContactRow>();
+  return results;
 }
 
 // ---------------------------------------------------------------------------

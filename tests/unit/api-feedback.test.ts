@@ -196,6 +196,76 @@ describe('POST /api/feedback: success', () => {
   });
 });
 
+describe('POST /api/feedback: optional email and cross-device dedup', () => {
+  it('rejects an email with no consent tick (400 consent_required, fields.emailConsent), storing nothing', async () => {
+    const { call } = feedback();
+    const res = await call(makeRequest('/api/feedback', { body: feedbackBody({ email: 'alice@example.com' }) }));
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: string; fields: Record<string, string> };
+    // Every failing issue here is consent-coded (schemas.ts's requireEmailConsent), so this
+    // follows the same rule InterestBody's own consent checks already do — see validate.ts's
+    // validationErrorResponse: 'consent_required' only when EVERY issue is, 'invalid_request'
+    // for a mix or any non-consent problem.
+    expect(json.error).toBe('consent_required');
+    expect(json.fields).toHaveProperty('emailConsent');
+    expect(count(db, 'concept_feedback')).toBe(0);
+  });
+
+  it('stores the email when consent is ticked', async () => {
+    const { call } = feedback();
+    const res = await call(
+      makeRequest('/api/feedback', { body: feedbackBody({ email: 'Alice@Example.com', emailConsent: true }) }),
+    );
+    expect(res.status).toBe(200);
+    const row = db.raw.prepare('SELECT email FROM concept_feedback').get() as { email: string };
+    expect(row.email).toBe('alice@example.com'); // lower-cased by the Email schema
+  });
+
+  it('merges a second submission with the same email (different device/Anonymous_ID) into the same row', async () => {
+    const { call } = feedback();
+    await call(
+      makeRequest('/api/feedback', {
+        body: feedbackBody({ anonId: ANON_A, email: 'alice@example.com', emailConsent: true, verdict: 'maybe' }),
+      }),
+    );
+    // A second device: different Anonymous_ID, same email, same Concept.
+    await call(
+      makeRequest('/api/feedback', {
+        body: feedbackBody({ anonId: ANON_B, email: 'alice@example.com', emailConsent: true, verdict: 'would_wear' }),
+      }),
+    );
+    expect(count(db, 'concept_feedback')).toBe(1); // merged, not a second row
+    const row = db.raw.prepare('SELECT anon_id, verdict, email FROM concept_feedback').get() as Record<string, unknown>;
+    // The row keeps its ORIGINAL anon_id (the first device to use this email); only the answer updates.
+    expect(row).toEqual({ anon_id: ANON_A, verdict: 'would_wear', email: 'alice@example.com' });
+  });
+
+  it('does not merge different emails, and does not merge across different Concepts for the same email', async () => {
+    const { call } = feedback();
+    await call(makeRequest('/api/feedback', { body: feedbackBody({ anonId: ANON_A, email: 'alice@example.com', emailConsent: true }) }));
+    await call(makeRequest('/api/feedback', { body: feedbackBody({ anonId: ANON_B, email: 'bob@example.com', emailConsent: true }) }));
+    await call(
+      makeRequest('/api/feedback', {
+        body: feedbackBody({
+          anonId: 'a1111111-9a4d-4b7e-8f21-6c0d5e4a9b13',
+          conceptId: 'mens-relaxed-pant',
+          priceBandId: 'mrp-1500-1999',
+          email: 'alice@example.com',
+          emailConsent: true,
+        }),
+      }),
+    );
+    expect(count(db, 'concept_feedback')).toBe(3);
+  });
+
+  it('a submission with no email still works exactly as before (email column stays NULL)', async () => {
+    const { call } = feedback();
+    await call(makeRequest('/api/feedback', { body: feedbackBody() }));
+    const row = db.raw.prepare('SELECT email FROM concept_feedback').get() as { email: string | null };
+    expect(row.email).toBeNull();
+  });
+});
+
 describe('POST /api/feedback: rejections store nothing', () => {
   const expectNothingStored = () => {
     expect(count(db, 'concept_feedback')).toBe(0);
@@ -437,6 +507,29 @@ describe('POST /api/frustration', () => {
     expect(res.headers.get('Retry-After')).toBeTruthy();
   });
 
+  it('rejects an email with no consent tick, and merges by email across Anonymous_IDs like feedback does', async () => {
+    const { call } = frustration();
+    const rejected = await call(
+      makeRequest('/api/frustration', { body: frustrationBody({ email: 'alice@example.com' }) }),
+    );
+    expect(rejected.status).toBe(400);
+    expect(count(db, 'frustration')).toBe(0);
+
+    await call(
+      makeRequest('/api/frustration', {
+        body: frustrationBody({ anonId: ANON_A, email: 'alice@example.com', emailConsent: true, chips: ['fades'], otherText: undefined }),
+      }),
+    );
+    await call(
+      makeRequest('/api/frustration', {
+        body: frustrationBody({ anonId: ANON_B, email: 'alice@example.com', emailConsent: true, chips: ['shrinks'], otherText: undefined }),
+      }),
+    );
+    expect(count(db, 'frustration')).toBe(1);
+    const row = db.raw.prepare('SELECT anon_id, chips, email FROM frustration').get();
+    expect(row).toEqual({ anon_id: ANON_A, chips: 'shrinks', email: 'alice@example.com' });
+  });
+
   it('403 bot_check_failed and 503 storage_unavailable store nothing', async () => {
     const bot = frustration({ fetchImpl: mockFetch(turnstileFail) });
     expect((await bot.call(makeRequest('/api/frustration', { body: frustrationBody() }))).status).toBe(403);
@@ -463,6 +556,11 @@ describe('logging', () => {
     await f.call(makeRequest('/api/feedback', { body: feedbackBody() })); // 429
     await f.call(makeRequest('/api/feedback', { method: 'GET' })); // 405
     await f.call(makeRequest('/api/feedback', { origin: 'https://evil.example', body: feedbackBody() })); // 403
+    // A real submitted email, both accepted (with consent) and rejected (without) — the
+    // rejection's `fields.emailConsent` message is a static string, never the submitted value,
+    // but this proves it, rather than just asserting it from reading the code.
+    await f.call(makeRequest('/api/feedback', { body: feedbackBody({ anonId: 'd4444444-9a4d-4b7e-8f21-6c0d5e4a9b13', email: 'carol@example.in' }) })); // 400, no consent
+    await f.call(makeRequest('/api/feedback', { body: feedbackBody({ anonId: 'd5555555-9a4d-4b7e-8f21-6c0d5e4a9b13', email: 'carol@example.in', emailConsent: true }) })); // 200
 
     const bot = feedback({ fetchImpl: mockFetch(turnstileFail), db: createTestD1() });
     await bot.call(makeRequest('/api/feedback', { body: feedbackBody() })); // 403 bot
@@ -477,7 +575,7 @@ describe('logging', () => {
     await down.call(makeRequest('/api/feedback', { body: feedbackBody({ anonId: ANON_B }) })); // 503
 
     const logged = allLogged();
-    for (const secret of [ANON_A, ANON_B, TEST_IP, TEST_UA, TOKEN, 'test-secret', 'someone@example.in', 'Slightly longer sleeves', 'instagram']) {
+    for (const secret of [ANON_A, ANON_B, TEST_IP, TEST_UA, TOKEN, 'test-secret', 'someone@example.in', 'carol@example.in', 'Slightly longer sleeves', 'instagram']) {
       expect(logged).not.toContain(secret);
     }
   });

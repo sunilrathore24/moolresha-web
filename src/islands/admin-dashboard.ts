@@ -65,6 +65,14 @@ interface StatsBody {
   rows: StatsRow[];
   comments: { conceptId: string; verdict: string; comment: string; weave: string | null; updatedAt: string }[];
   otherTextEntries: { conceptId: string; verdict: string; otherText: string; weave: string | null; updatedAt: string }[];
+  contacts: {
+    source: 'feedback' | 'frustration';
+    conceptId: string | null;
+    weave: string | null;
+    verdict: string | null;
+    email: string;
+    updatedAt: string;
+  }[];
   signups: {
     email: string | null;
     phone: string | null;
@@ -272,6 +280,46 @@ function renderOtherText(root: HTMLElement, entries: StatsBody['otherTextEntries
       el('td', labelled(labels.verdictLabels, e.verdict)),
       el('td', e.otherText),
       el('td', new Date(e.updatedAt).toLocaleString()),
+    );
+    tbody.appendChild(row);
+  }
+  table.append(thead, tbody);
+  wrap.appendChild(table);
+  root.replaceChildren(wrap);
+}
+
+/** Everyone who left a consented email with a feedback or "Share your opinion" answer, added
+ * 2026-11 — the admin-visible counterpart to functions/_shared/db.ts's
+ * `feedbackContactsWithEmail`/`frustrationContactsWithEmail`. The whole point of collecting this
+ * (unlike `comments`/`otherTextEntries`, which are read-only context) is to actually use it, so
+ * it gets its own clearly-labelled table rather than being folded into either of those. */
+function renderContacts(root: HTMLElement, contacts: StatsBody['contacts'], labels: Labels): void {
+  if (contacts.length === 0) {
+    root.replaceChildren(el('p', 'No contacts in this range.', 'admin-empty'));
+    return;
+  }
+  const wrap = el('div', undefined, 'admin-table-wrap');
+  const table = el('table', undefined, 'admin-table');
+  const thead = el('thead');
+  const headRow = el('tr');
+  headRow.append(
+    el('th', 'Email'),
+    el('th', 'From'),
+    el('th', 'Weave'),
+    el('th', 'Verdict'),
+    el('th', 'Updated'),
+  );
+  thead.appendChild(headRow);
+  const tbody = el('tbody');
+  for (const c of contacts) {
+    const row = el('tr');
+    const from = c.source === 'feedback' && c.conceptId ? labelled(labels.conceptNames, c.conceptId) : 'Share your opinion';
+    row.append(
+      el('td', c.email),
+      el('td', from),
+      el('td', weaveCell(labels, c.weave)),
+      el('td', c.verdict ? labelled(labels.verdictLabels, c.verdict) : '—'),
+      el('td', new Date(c.updatedAt).toLocaleString()),
     );
     tbody.appendChild(row);
   }
@@ -512,6 +560,7 @@ export function initAdminDashboard(): void {
   const totalsRoot = document.querySelector<HTMLElement>('[data-admin-totals]');
   const commentsRoot = document.querySelector<HTMLElement>('[data-admin-comments]');
   const otherTextRoot = document.querySelector<HTMLElement>('[data-admin-other-text]');
+  const contactsRoot = document.querySelector<HTMLElement>('[data-admin-contacts]');
   const signupsRoot = document.querySelector<HTMLElement>('[data-admin-signups]');
   const refreshBtn = document.querySelector<HTMLButtonElement>('[data-admin-refresh]');
   const lockBtn = document.querySelector<HTMLButtonElement>('[data-admin-lock]');
@@ -527,6 +576,7 @@ export function initAdminDashboard(): void {
     !totalsRoot ||
     !commentsRoot ||
     !otherTextRoot ||
+    !contactsRoot ||
     !signupsRoot ||
     !rangeForm ||
     !rangeFrom ||
@@ -536,7 +586,22 @@ export function initAdminDashboard(): void {
     return;
   }
 
-  wireUpDashboard(form, status, content, totalsRoot, commentsRoot, otherTextRoot, signupsRoot, refreshBtn, lockBtn, rangeForm, rangeFrom, rangeTo, labels);
+  wireUpDashboard(
+    form,
+    status,
+    content,
+    totalsRoot,
+    commentsRoot,
+    otherTextRoot,
+    contactsRoot,
+    signupsRoot,
+    refreshBtn,
+    lockBtn,
+    rangeForm,
+    rangeFrom,
+    rangeTo,
+    labels,
+  );
 }
 
 function wireUpDashboard(
@@ -546,6 +611,7 @@ function wireUpDashboard(
   totalsRoot: HTMLElement,
   commentsRoot: HTMLElement,
   otherTextRoot: HTMLElement,
+  contactsRoot: HTMLElement,
   signupsRoot: HTMLElement,
   refreshBtn: HTMLButtonElement | null,
   lockBtn: HTMLButtonElement | null,
@@ -573,6 +639,7 @@ function wireUpDashboard(
       renderTotals(totalsRoot, stats.totals);
       renderComments(commentsRoot, stats.comments, labels);
       renderOtherText(otherTextRoot, stats.otherTextEntries, labels);
+      renderContacts(contactsRoot, stats.contacts, labels);
       renderSignups(signupsRoot, stats.signups);
       // Unhide BEFORE initialising the charts: `echarts.init()` measures the container's real
       // layout box immediately, and a `hidden` ancestor measures as 0x0 — caught live via the

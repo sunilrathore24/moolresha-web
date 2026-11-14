@@ -4,7 +4,7 @@
  * One row per Anonymous_ID: a repeat submission replaces the chips. The row and the
  * `frustration_submitted` event counter are written in one D1 batch.
  */
-import { eventIncrementStatement, frustrationUpsertStatement, type D1Like } from '../_shared/db';
+import { eventIncrementStatement, frustrationUpsertStatement, findFrustrationAnonIdByEmail, type D1Like } from '../_shared/db';
 import {
   createWriteHandler,
   utmOrEmpty,
@@ -20,14 +20,22 @@ const EVENT: ServerEvent = 'frustration_submitted';
 export async function storeFrustration(data: FrustrationData, ctx: StoreContext): Promise<void> {
   const db: D1Like = ctx.db;
   const utm = utmOrEmpty(data.utm);
+  // See storeFeedback's matching comment in functions/api/feedback.ts — same cross-device
+  // dedup, same reason this is a separate awaited lookup rather than a subquery in the batch.
+  const anonIdOverride = data.email ? (await findFrustrationAnonIdByEmail(db, data.email)) ?? undefined : undefined;
   await db.batch([
-    frustrationUpsertStatement(db, {
-      anonId: data.anonId,
-      chips: data.chips,
-      otherText: data.otherText ? data.otherText : null,
-      utm,
-      now: ctx.nowIso,
-    }),
+    frustrationUpsertStatement(
+      db,
+      {
+        anonId: data.anonId,
+        chips: data.chips,
+        otherText: data.otherText ? data.otherText : null,
+        email: data.email ?? null,
+        utm,
+        now: ctx.nowIso,
+      },
+      anonIdOverride,
+    ),
     eventIncrementStatement(db, { day: ctx.day, event: EVENT, utm }),
   ]);
 }

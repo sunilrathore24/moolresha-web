@@ -36,6 +36,8 @@ import { CONCEPT_WEAVE_VARIANTS } from '../../../src/lib/concept-weave-variants'
 import {
   allFrustrationCreatedAt,
   allInterestCreatedAt,
+  feedbackContactsWithEmail,
+  frustrationContactsWithEmail,
   recentInterestSignups,
   type D1Like,
 } from '../../_shared/db';
@@ -90,6 +92,18 @@ export interface AdminStatsBody {
    * distinct from `comments`' general "Any other thoughts?" field. Previously collected
    * (CSV-exportable) but never shown anywhere in this dashboard. */
   otherTextEntries: { conceptId: ConceptId; verdict: string; otherText: string; weave: string | null; updatedAt: string }[];
+  /** Everyone who left an (consented) email with a feedback or "Share your opinion" submission
+   * and asked to be followed up — added 2026-11. Deliberately separate from `rows`/`comments`/
+   * `otherTextEntries` (all built from the PII-free `exportFeedbackRowsPaged`): see
+   * functions/_shared/db.ts's `feedbackContactsWithEmail`/`frustrationContactsWithEmail`. */
+  contacts: {
+    source: 'feedback' | 'frustration';
+    conceptId: ConceptId | null;
+    weave: string | null;
+    verdict: string | null;
+    email: string;
+    updatedAt: string;
+  }[];
   signups: {
     email: string | null;
     phone: string | null;
@@ -116,14 +130,17 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
     const range = resolveRange(url.searchParams.get('from'), url.searchParams.get('to'), now.getTime());
     const prev = previousRange(range);
 
-    const [rows, interestTimestamps, signupRows, frustrationTimestamps] = await Promise.all([
-      exportFeedbackRowsPaged(db, deps.pageSize),
-      allInterestCreatedAt(db),
-      // Most-recent-200 convenience list, same as the signups TABLE always used — fine while
-      // total signups stay well under 200 (true today); documented in db.ts.
-      recentInterestSignups(db, 200),
-      allFrustrationCreatedAt(db),
-    ]);
+    const [rows, interestTimestamps, signupRows, frustrationTimestamps, feedbackContacts, frustrationContacts] =
+      await Promise.all([
+        exportFeedbackRowsPaged(db, deps.pageSize),
+        allInterestCreatedAt(db),
+        // Most-recent-200 convenience list, same as the signups TABLE always used — fine while
+        // total signups stay well under 200 (true today); documented in db.ts.
+        recentInterestSignups(db, 200),
+        allFrustrationCreatedAt(db),
+        feedbackContactsWithEmail(db),
+        frustrationContactsWithEmail(db),
+      ]);
 
     // Feedback "when it happened" uses createdAt (first submission) for the stat tile and the
     // time series — a resubmission editing an existing answer shouldn't look like a brand new
@@ -207,6 +224,27 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
       }))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
+    const contacts = [
+      ...feedbackContacts.map((c) => ({
+        source: 'feedback' as const,
+        conceptId: c.concept_id as ConceptId,
+        weave: c.weave,
+        verdict: c.verdict as string | null,
+        email: c.email,
+        updatedAt: c.updated_at,
+      })),
+      ...frustrationContacts.map((c) => ({
+        source: 'frustration' as const,
+        conceptId: null,
+        weave: null,
+        verdict: null,
+        email: c.email,
+        updatedAt: c.updated_at,
+      })),
+    ]
+      .filter((c) => inMs(c.updatedAt, range.fromMs, range.toMs))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
     const signups = signupRows
       .filter((s) => inMs(s.created_at, range.fromMs, range.toMs))
       .map((s) => ({
@@ -237,6 +275,7 @@ export function createAdminStatsHandler(deps: AdminExportDeps = {}) {
       rows: statRows,
       comments,
       otherTextEntries,
+      contacts,
       signups,
     };
     return json(200, body);

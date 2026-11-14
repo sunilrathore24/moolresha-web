@@ -18,6 +18,7 @@ const MSG_SAVED = 'Thank you. Your answer is saved.';
 const MSG_REVEALED = " Similar pieces' prices are now shown below.";
 const MSG_NEED_VERDICT = 'Please choose whether you would wear it.';
 const MSG_NEED_CHIP = 'Please tick at least one option.';
+const MSG_NEED_EMAIL_CONSENT = 'Please tick the consent box, or clear the email field to submit without it.';
 
 /** Concept ids whose price question was answered or skipped, kept when storage throws. */
 let memoryAnswered = new Set<ConceptId>();
@@ -136,6 +137,26 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
   };
   commentInput?.addEventListener('input', updateCommentCounter);
 
+  // Optional "want us to follow up?" email (2026-11), present identically in both forms
+  // (ConceptFeedbackForm.astro's [data-contact-field] / FrustrationForm.astro's own copy).
+  // The consent checkbox starts `hidden` in the markup and only appears once there's something
+  // to consent to — most people leave the email blank and never see it at all.
+  const emailInput = form.querySelector<HTMLInputElement>('input[name="email"]');
+  const emailConsentInput = form.querySelector<HTMLInputElement>('input[name="emailConsent"]');
+  const emailConsentLabel = form.querySelector<HTMLElement>('[data-contact-consent]');
+  const contactHint = form.querySelector<HTMLElement>('[data-contact-hint]');
+  const email = (): string => emailInput?.value.trim() ?? '';
+  const emailConsent = (): boolean => emailConsentInput?.checked === true;
+  const syncEmailConsent = (): void => {
+    const has = email() !== '';
+    if (emailConsentLabel) emailConsentLabel.hidden = !has;
+    if (!has && contactHint) contactHint.hidden = true;
+  };
+  emailInput?.addEventListener('input', () => {
+    syncEmailConsent();
+    if (contactHint) contactHint.hidden = true; // editing again clears a previous warning
+  });
+
   function setSkip(on: boolean): void {
     skipped = on;
     skipBtn?.setAttribute('aria-pressed', String(on));
@@ -195,10 +216,18 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
       .map((i) => ({ value: i.value, label: i.dataset.designLabel ?? null }));
   }
 
+  /** Shared by both forms' `collect()`: the optional email + its consent flag, only present at
+   * all when the field has a value (an empty/absent email never sends `emailConsent` either —
+   * matches every other optional field's "omit, don't send empty" convention in this file). */
+  function emailFields(): Record<string, unknown> {
+    const e = email();
+    return e ? { email: e, emailConsent: emailConsent() } : {};
+  }
+
   function collect(): Record<string, unknown> {
     if (!isConcept) {
       const chips = inOrder(FRUSTRATION_CHIPS, picked(form, 'chips'));
-      return { chips, ...(chips.includes('other') && text() ? { otherText: text() } : {}) };
+      return { chips, ...(chips.includes('other') && text() ? { otherText: text() } : {}), ...emailFields() };
     }
     const changes = inOrder(CHANGE_CHIPS, picked(form, 'changes'));
     // `name="colour"` only ever submits ONE real value (no backend change) — when the
@@ -229,12 +258,22 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
       ...(colour ? { colour } : {}),
       ...(weave() ? { weave: weave() } : {}),
       ...(band ? { priceBandId: band } : skipped ? { priceSkipped: true } : {}),
+      ...emailFields(),
     };
   }
 
   async function submit(): Promise<void> {
     if (busy) return;
     if (submitBtn?.getAttribute('aria-disabled') === 'true') return say(isConcept ? MSG_NEED_VERDICT : MSG_NEED_CHIP);
+    // Caught here, before ever touching the network: an email with no consent tick would just
+    // come back from the server as a consent_required error anyway (schemas.ts's
+    // requireEmailConsent), but checking client-side first means that specific, fixable mistake
+    // never costs a round trip — and lets the hint point at exactly the checkbox to tick.
+    if (email() !== '' && !emailConsent()) {
+      if (contactHint) contactHint.hidden = false;
+      emailConsentInput?.focus();
+      return say(MSG_NEED_EMAIL_CONSENT);
+    }
     busy = true;
     try {
       const fields = collect();
@@ -276,6 +315,7 @@ function initForm(form: HTMLFormElement, isConcept: boolean): void {
 
   restore();
   refresh();
+  syncEmailConsent(); // after restore(): a session-restored email should reveal the consent box too
   submitBtn?.removeAttribute('hidden');
 
   form.addEventListener('change', (e) => {

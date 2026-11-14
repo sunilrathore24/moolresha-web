@@ -9,8 +9,8 @@
 # and the Grievance_Contact address below are PLACEHOLDERS. Each one carries the
 # marker text so it cannot be missed. Remove the marker only after sign-off.
 
-version: "0.2"
-lastUpdated: "2026-11-11"
+version: "0.3"
+lastUpdated: "2026-11-14"
 
 intro: >-
   MoolResha is a research project, not a shop. This page says what we collect
@@ -41,6 +41,20 @@ dataItems:
     storedIn: "Cloudflare D1 database"
     retention: "Same as your concept answers. ⚠️ founder and lawyer to confirm"
     personal: false
+    placeholder: true
+  - id: feedback-contact-email
+    name: "Email address left with feedback (optional)"
+    detail: >-
+      Only if you choose to fill in the "Want us to follow up about this?"
+      field under a design or opinion answer, and tick its consent box. This
+      is separate from the interest form's email signup: it is not sent to
+      MailerLite and does not add you to any mailing list. If you leave the
+      same email again later, we use it to update your earlier answer
+      instead of counting it twice.
+    purpose: "Following up about one specific answer you gave; avoiding duplicate answers from the same person"
+    storedIn: "Cloudflare D1 database"
+    retention: "Same as the feedback it is stored with. ⚠️ founder and lawyer to confirm"
+    personal: true
     placeholder: true
   - id: anonymous-id
     name: "Anonymous ID"
@@ -165,7 +179,10 @@ deletion:
   anonymousNote: >-
     Answers that were never linked to your contact details are anonymous. We
     cannot tell which answers are yours, so we cannot find or delete them
-    for you.
+    for you. The exception is a feedback or opinion answer where you chose to
+    leave an email under "Want us to follow up about this?" — write to the
+    Grievance Contact from that address and we can find and delete that
+    specific answer.
 
 responseTimes:
   acknowledgeDays: 7

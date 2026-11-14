@@ -4,23 +4,35 @@ Living reference for the production deployment of **moolresha-web**. Point a new
 session at this file to pick up where the last one left off. Update it whenever deployment
 state changes; don't let it go stale.
 
-Last updated: **2026-11-13**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
+Last updated: **2026-11-14**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
 
-## ✅ `0002_feedback_comment.sql` and `0003_feedback_weave.sql` applied to production
+## ✅ `0002_feedback_comment.sql` through `0004_feedback_email.sql` applied to production
 
-Both run the same way (wrangler still isn't authenticated on this machine, so the Cloudflare
+All three run the same way (wrangler still isn't authenticated on this machine, so the Cloudflare
 dashboard's D1 Console tab was used instead of `wrangler d1 migrations apply`), each verified
-with "This query successfully executed" followed by `PRAGMA table_info(concept_feedback);`
-showing the new column:
+with "This query successfully executed" followed by `PRAGMA table_info(...)` showing the new
+column(s):
 
 - `0002_feedback_comment.sql` (2026-11-12) — adds `comment_text`, the feedback form's "Any
   other thoughts?" field.
 - `0003_feedback_weave.sql` (2026-11-13) — adds `weave`, which weave (Micro-Dobby / Cotton
   Slub) a feedback submission on mens-cotton-shirt was looking at.
+- `0004_feedback_email.sql` (2026-11-14) — adds `email` to both `concept_feedback` and
+  `frustration`: an optional "want us to follow up about this?" email, with its own consent
+  checkbox (functions/_shared/schemas.ts's `requireEmailConsent`), used for (1) admin follow-up
+  (the `/admin` dashboard's new "Contacts" table, `functions/_shared/db.ts`'s
+  `feedbackContactsWithEmail`/`frustrationContactsWithEmail`) and (2) cross-device
+  deduplication — a second submission with the same email, for the same Concept, updates that
+  existing row instead of creating a new one (`findFeedbackAnonIdByEmail`/
+  `findFrustrationAnonIdByEmail`). Deliberately kept OUT of `exportFeedbackRows`/
+  `exportFeedbackRowsPaged` and the public feedback CSV (Req 17.3's "no email or phone" stays
+  intact for that path) — the two new `*ContactsWithEmail` functions are a separate, admin-only
+  query path. Privacy notice bumped 0.2 → 0.3 (`src/content/config/privacy.yaml`) for the new
+  `feedback-contact-email` disclosure.
 
-No further action needed for either. When adding a future migration, follow the same pattern:
-run it against production via the dashboard console *before* the deploy that needs it, verify
-with `PRAGMA table_info`, then update this section (or mark the new one done) so this file
+No further action needed for any of the three. When adding a future migration, follow the same
+pattern: run it against production via the dashboard console *before* the deploy that needs it,
+verify with `PRAGMA table_info`, then update this section (or mark the new one done) so this file
 doesn't linger as a stale alarm.
 
 ## 1. Accounts and IDs

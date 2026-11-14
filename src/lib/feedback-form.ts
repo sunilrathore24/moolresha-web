@@ -88,6 +88,9 @@ export const FIELD_NAMES = {
   otherText: 'otherText',
   /** The general "Any other thoughts?" field (redesign, 2026-11) — distinct from otherText. */
   comment: 'comment',
+  /** Optional "can we follow up?" email, added 2026-11 — never required, see EMAIL_LABEL. */
+  email: 'email',
+  emailConsent: 'emailConsent',
 } as const;
 
 /** Requirement 9.6, exact wording. */
@@ -106,6 +109,14 @@ export const OTHER_TEXT_MAX_LENGTH = 200;
  * conditional reveal — always available, not tied to any chip selection. */
 export const COMMENT_LABEL = 'Any other thoughts?';
 export const COMMENT_MAX_LENGTH = 250;
+
+/** Added 2026-11: an optional email so MoolResha can follow up about this specific answer —
+ * deliberately NOT required (anonymous feedback gets more, and more honest, responses) and
+ * separate from the Interest form's standing "email me about launch" signup. */
+export const EMAIL_LABEL = 'Want us to follow up about this?';
+export const EMAIL_PLACEHOLDER = 'you@example.com (optional)';
+export const EMAIL_CONSENT_LABEL = "I'm 18 or older and OK with MoolResha emailing me about this answer";
+export const EMAIL_MAX_LENGTH = 254;
 
 /** Redesign (2026-11): button + header copy for the icon-driven form. */
 export const SUBMIT_LABEL = 'Submit Your Opinion';

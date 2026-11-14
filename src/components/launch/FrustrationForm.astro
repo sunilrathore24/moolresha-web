@@ -8,14 +8,26 @@
  *   [data-frustration-form]  the form
  *   [data-other-field]       wrapper of the "other" text input. Starts `hidden`; the island shows
  *                            it while the "other" chip is ticked.
+ *   [data-contact-field]     wrapper around the optional "want us to follow up?" email + its
+ *                            consent checkbox, added 2026-11. name="email", maxlength 254.
+ *   [data-contact-consent]   the consent `<label>` wrapping the checkbox (name="emailConsent"),
+ *                            starts `hidden`; the island reveals it once the email field has a
+ *                            value.
+ *   [data-contact-hint]      starts `hidden`; the island shows it (and blocks submission, no
+ *                            server round trip) if email is filled in but not ticked.
  *   [data-submit]            the submit button. Starts `hidden`; the island reveals it.
  *   [data-live-region]       role="status" region for success and error text
  *   [data-turnstile]         empty mount point for the Turnstile widget
- * Field names: `chips` (checkbox, one per chip, value = chip id) and `otherText` (max 200).
+ * Field names: `chips` (checkbox, one per chip, value = chip id), `otherText` (max 200),
+ * `email` (optional, max 254) and `emailConsent` (checkbox, required whenever email is given).
  */
 import { Picture } from 'astro:assets';
 import stitching from '../../assets/journey/stitching.png';
 import {
+  EMAIL_CONSENT_LABEL,
+  EMAIL_LABEL,
+  EMAIL_MAX_LENGTH,
+  EMAIL_PLACEHOLDER,
   FRUSTRATION_FIELDS,
   FRUSTRATION_IDS,
   NOSCRIPT_NOTE,
@@ -45,7 +57,8 @@ const options = frustrationOptions();
   <p class="eyebrow">07 — Your voice</p>
   <h2 id="frustration-h">What frustrates you about the clothes you buy?</h2>
   <p class="frustration-intro">
-    Tick as many as apply. You do not need to give a name, an email or a number to answer.
+    Tick as many as apply. You do not need to give a name, an email or a number to answer —
+    leaving an email at the end is optional, only if you would like us to follow up.
   </p>
 
   <form
@@ -89,6 +102,23 @@ const options = frustrationOptions();
         aria-describedby="frustration-other-hint"
       />
       <p class="hint" id="frustration-other-hint">Up to {OTHER_TEXT_MAX_LENGTH} characters. Please leave out names and contact details.</p>
+    </div>
+
+    <div class="contact-field" data-contact-field>
+      <label for={FRUSTRATION_IDS.email}>{EMAIL_LABEL} <span class="optional">Optional</span></label>
+      <input
+        type="email"
+        id={FRUSTRATION_IDS.email}
+        name={FRUSTRATION_FIELDS.email}
+        maxlength={EMAIL_MAX_LENGTH}
+        autocomplete="email"
+        placeholder={EMAIL_PLACEHOLDER}
+      />
+      <label class="contact-consent" for={FRUSTRATION_IDS.emailConsent} data-contact-consent hidden>
+        <input type="checkbox" id={FRUSTRATION_IDS.emailConsent} name={FRUSTRATION_FIELDS.emailConsent} value="true" />
+        <span>{EMAIL_CONSENT_LABEL}</span>
+      </label>
+      <p class="contact-hint" data-contact-hint hidden>Tick the box above so we can store your email.</p>
     </div>
 
     <div data-turnstile></div>
@@ -311,6 +341,79 @@ const options = frustrationOptions();
     margin: var(--space-1) 0 0;
     font-size: var(--fs-small);
     color: var(--color-text-muted);
+  }
+
+  /* ---- Optional "want us to follow up?" email, added 2026-11 — same pattern and reasoning as
+     ConceptFeedbackForm.astro's .cff-contact. ---- */
+  .contact-field {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .contact-field label:not(.contact-consent) {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-size: var(--fs-small);
+    font-weight: 600;
+  }
+
+  .contact-field input[type='email'] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 24rem;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--c-raw-umber);
+    border-radius: var(--radius-lg);
+  }
+
+  .contact-field input[type='email']:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .contact-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    max-width: 24rem;
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .contact-consent[hidden] {
+    display: none;
+  }
+
+  .contact-consent input {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0.125rem 0 0;
+    cursor: pointer;
+  }
+
+  .contact-consent input:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .contact-hint {
+    margin: var(--space-2) 0 0;
+    max-width: 24rem;
+    font-size: var(--fs-label);
+    color: var(--color-accent-text, #8f5233);
+  }
+
+  .contact-hint[hidden] {
+    display: none;
   }
 
   .submit {
