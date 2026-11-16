@@ -4,7 +4,7 @@ Living reference for the production deployment of **moolresha-web**. Point a new
 session at this file to pick up where the last one left off. Update it whenever deployment
 state changes; don't let it go stale.
 
-Last updated: **2026-11-14**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
+Last updated: **2026-11-16**. Site is **live** at https://moolresha.com and https://www.moolresha.com.
 
 ## ✅ `0002_feedback_comment.sql` through `0004_feedback_email.sql` applied to production
 
@@ -196,13 +196,28 @@ then `sendWhatsappConfirmation` returns `not_configured` and no network call is 
 **Separately, email sender branding (not part of the WhatsApp work, but done the same session):**
 - MailerLite sending-domain authentication for `moolresha.com` was in progress (DKIM/SPF/verification
   records being added in Cloudflare DNS) — check it completed.
-- Cloudflare Email Routing was set up: `support@moolresha.com` → forwards to the user's personal inbox.
-- **Still open, deliberately deferred:** replying *as* `support@moolresha.com` from the personal
-  inbox doesn't work via Email Routing alone (it only forwards inbound mail, there's no outbound
-  SMTP relay behind it) — Gmail's "Send mail as" needs either real SMTP credentials from an actual
-  mailbox (e.g. Zoho Mail's free tier) or accepting a "via gmail.com" tag from using Gmail's own
-  servers unauthenticated for that domain. User chose to park this for later; for now, replies to
-  `support@` go out from the personal address as-is, which still works, just isn't branded.
+- Cloudflare Email Routing: a single **catch-all rule** (not a per-address rule) covers every
+  `@moolresha.com` address, including `support@`. As of **2026-11-16** it forwards to the
+  dedicated **`moolresha@gmail.com`** account (created for this purpose), not the founder's
+  personal inbox — switched via the Routing rules tab's catch-all "Edit" action. The new address
+  is added and verified under Destination addresses first (Cloudflare emails a one-time
+  confirmation link to it that only the inbox owner can click — not scriptable).
+- **Real bug found and fixed the same day (2026-11-16):** `moolresha.com` had two conflicting SPF
+  TXT records — the MailerLite one (`v=spf1 a mx include:_spf.mlsend.com ~all`) and Cloudflare
+  Email Routing's own required one, which the dashboard showed as "Missing" because a domain can
+  only have one SPF record. Symptom: mail sent to `support@` never arrived at the forwarding
+  destination. Fixed by merging into one record: `v=spf1 include:_spf.mx.cloudflare.net
+  include:_spf.mlsend.com ~all`. Confirmed via the Activity log tab afterwards — SPF/DKIM/DMARC/ARC
+  all show `pass` and the message status shows `Forwarded`. **If inbound mail to any
+  `@moolresha.com` address ever silently stops arriving again, check this TXT record first** —
+  something (a new integration's setup wizard, most likely) may have added a second `v=spf1` record.
+- **Still open, deliberately deferred:** replying *as* `support@moolresha.com` doesn't work via
+  Email Routing alone (it only forwards inbound mail, there's no outbound SMTP relay behind it) —
+  Gmail's "Send mail as" (now from `moolresha@gmail.com`, not the personal inbox) needs either real
+  SMTP credentials from an actual mailbox (e.g. Zoho Mail's free tier) or accepting a "via gmail.com"
+  tag from using Gmail's own servers unauthenticated for that domain. User chose to park this for
+  later; for now, replies to `support@` go out from whichever inbox is actually checking it, as-is
+  — works, just isn't branded.
 - **Still open:** the "congratulations, you're subscribed" welcome email (the email equivalent of
   the WhatsApp confirmation) is not configured yet — needs a MailerLite **Automation**
   (trigger: subscriber joins/confirms the group → action: send the welcome email). Only the
