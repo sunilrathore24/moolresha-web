@@ -50,7 +50,7 @@ async function handle(req,env){
  if(method==='GET'&&path==='/auth/start'){
   if(!env.INSTAGRAM_APP_ID||!env.INSTAGRAM_APP_SECRET||!env.STUDIO_ENCRYPTION_SECRET||!env.STUDIO_ORIGIN)throw Error('OAuth configuration missing');
   const nonce=Date.now()+'_'+id();const state=nonce+'.'+await sign(nonce,env.STUDIO_ADMIN_SECRET);
-  return new Response(null,{status:302,headers:{location:authorizationUrl(env,state),'set-cookie':'studio_oauth='+state+'; Path=/auth/callback; Max-Age=600; HttpOnly; Secure; SameSite=Lax',...noStore}});
+  return new Response(JSON.stringify({authorizationUrl:authorizationUrl(env,state)}),{status:200,headers:{'content-type':'application/json; charset=utf-8','set-cookie':'studio_oauth='+state+'; Path=/auth/callback; Max-Age=600; HttpOnly; Secure; SameSite=Lax',...noStore}});
  }
  if(method==='GET'&&path==='/account'){const row=await env.STUDIO_DB.prepare('SELECT id,username,expires_at,updated_at FROM studio_accounts LIMIT 1').first();return json({connected:!!row,account:row||null});}
  if(method==='GET'&&path==='/drafts'){const rows=await env.STUDIO_DB.prepare('SELECT id,kind,title,status,scheduled_at,created_at,updated_at,published_at,instagram_media_id,last_error FROM studio_drafts ORDER BY created_at DESC LIMIT 100').all();return json({drafts:rows.results});}
