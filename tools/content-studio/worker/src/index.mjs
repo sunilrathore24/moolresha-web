@@ -1,5 +1,5 @@
 import {json,isAuthorized,validateOrigin,validateManifest,parseDraft,encryptToken,decryptToken,safeEqual} from './security.mjs';
-import {authorizationUrl,exchangeCode,identity,createMediaContainer,containerStatus,metaPost} from './meta.mjs';
+import {authorizationUrl,exchangeCode,identity,createMediaContainer,containerStatus,metaPost,refreshToken} from './meta.mjs';
 const now=()=>new Date().toISOString();
 const id=()=>crypto.randomUUID();
 const noStore={'cache-control':'no-store'};
@@ -55,6 +55,7 @@ async function handle(req,env){
   return new Response(JSON.stringify({authorizationUrl:authorizationUrl(env,state)}),{status:200,headers:{'content-type':'application/json; charset=utf-8','set-cookie':'studio_oauth='+state+'; Path=/auth/callback; Max-Age=600; HttpOnly; Secure; SameSite=Lax',...noStore}});
  }
  if(method==='POST'&&path==='/media'){const contentType=req.headers.get('content-type')||'';const ext=contentType==='image/jpeg'?'jpg':contentType==='image/png'?'png':contentType==='video/mp4'?'mp4':null;if(!ext)return json({error:'Unsupported media type'},415);const len=Number(req.headers.get('content-length')||0);if(len>30*1024*1024)return json({error:'File too large'},413);const bytes=await req.arrayBuffer();if(bytes.byteLength>30*1024*1024||bytes.byteLength===0)return json({error:'Invalid media size'},413);const key=id()+'.'+ext;await env.STUDIO_MEDIA.put(key,bytes,{httpMetadata:{contentType}});return json({url:env.STUDIO_ORIGIN+'/media/'+key},201);}
+ if(method==='POST'&&path==='/account/refresh'){const row=await env.STUDIO_DB.prepare('SELECT * FROM studio_accounts LIMIT 1').first();if(!row)return json({error:'Not connected'},404);const oldToken=await decryptToken(row.token_ciphertext,row.token_iv,env.STUDIO_ENCRYPTION_SECRET);const fresh=await refreshToken(oldToken);const enc=await encryptToken(fresh.access_token,env.STUDIO_ENCRYPTION_SECRET);const expires=fresh.expires_in?new Date(Date.now()+fresh.expires_in*1000).toISOString():null;await env.STUDIO_DB.prepare('UPDATE studio_accounts SET token_ciphertext=?,token_iv=?,expires_at=?,updated_at=? WHERE id=?').bind(enc.ciphertext,enc.iv,expires,now(),row.id).run();return json({ok:true,expiresAt:expires});}
  if(method==='GET'&&path==='/account'){const row=await env.STUDIO_DB.prepare('SELECT id,username,expires_at,updated_at FROM studio_accounts LIMIT 1').first();return json({connected:!!row,account:row||null});}
  if(method==='GET'&&path==='/drafts'){const rows=await env.STUDIO_DB.prepare('SELECT id,kind,title,status,scheduled_at,created_at,updated_at,published_at,instagram_media_id,last_error FROM studio_drafts ORDER BY created_at DESC LIMIT 100').all();return json({drafts:rows.results});}
  if(method==='POST'&&path==='/drafts'){
