@@ -25,6 +25,7 @@ Use Meta for Developers > create a Business app > add **Instagram API with Insta
 - `POST /drafts/:id/approve`: human approval required
 - `POST /drafts/:id/schedule`: `{scheduledAt:"2026-11-20T02:30:00Z"}`
 - `GET /drafts/:id/events`: publishing audit trail
+- `POST /account/refresh`: manually refresh the connected long-lived Instagram token before expiration
 
 Do not expose the admin bearer secret to public website scripts or logs. For multi-user production use, replace bearer-based admin UI with Cloudflare Access and role-based authorization.
 
