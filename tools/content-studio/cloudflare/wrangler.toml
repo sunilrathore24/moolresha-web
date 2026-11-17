@@ -1,0 +1,19 @@
+name = "moolresha-content-studio"
+main = "src/worker.mjs"
+compatibility_date = "2026-11-17"
+workers_dev = true
+
+# Separate Content Studio database. Never bind moolresha_feedback.
+# Set database_id after provisioning through Cloudflare dashboard.
+[[d1_databases]]
+binding = "CONTENT_DB"
+database_name = "moolresha_content_studio"
+database_id = "REPLACE_WITH_CONTENT_STUDIO_D1_ID"
+
+[vars]
+ENABLE_INSTAGRAM_PUBLISH = "false"
+IG_ACTIVATION_APPROVED = "false"
+
+# UTC: 02:30, 07:30, 13:30 correspond to 08:00, 13:00, 19:00 IST.
+[triggers]
+crons = ["30 2 * * *", "30 7 * * *", "30 13 * * *"]
