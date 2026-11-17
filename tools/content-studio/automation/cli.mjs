@@ -25,7 +25,7 @@ if(command==='generate'){
  const out=join(root,'data','renders',draft.id);
  if(draft.kind==='reel'){console.log(await renderReel(draft,out));}else{console.log((await renderSvgFiles(draft,out)).join('\n'));}
 }else if(command==='publish'){
- if(process.env.ENABLE_INSTAGRAM_PUBLISH!=='true')throw Error('Publishing disabled. Set ENABLE_INSTAGRAM_PUBLISH=true after review.');
+ if(process.env.ENABLE_INSTAGRAM_PUBLISH!=='true'||process.env.IG_ACTIVATION_APPROVED!=='true')throw Error('Publishing disabled. Both ENABLE_INSTAGRAM_PUBLISH and IG_ACTIVATION_APPROVED must be true after explicit owner approval.');
  const rows=await read(store,[]),draft=rows.find(d=>d.id===arg);
  if(!draft||draft.status!=='approved')throw Error('Only approved drafts may be published');
  const check=auditDraft(draft);if(!check.passed)throw Error(check.issues.join('; '));
