@@ -46,7 +46,7 @@ async function handle(req,env){
   await env.STUDIO_DB.prepare('INSERT INTO studio_accounts(id,username,token_ciphertext,token_iv,expires_at,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET username=excluded.username,token_ciphertext=excluded.token_ciphertext,token_iv=excluded.token_iv,expires_at=excluded.expires_at,updated_at=excluded.updated_at').bind(userId,String(profile.username||''),encrypted.ciphertext,encrypted.iv,expires,now()).run();
   return new Response('Instagram connected. You may close this tab.',{headers:{'content-type':'text/plain; charset=utf-8','set-cookie':'studio_oauth=; Path=/auth/callback; Max-Age=0; HttpOnly; Secure; SameSite=Lax',...noStore}});
  }
- if(method==='GET'&&/^\\/media\\/[a-f0-9-]{36}\\.(jpg|jpeg|png|mp4)$/.test(path)){const key=path.slice(7);const object=await env.STUDIO_MEDIA.get(key);if(!object)return json({error:'Not found'},404);return new Response(object.body,{headers:{'content-type':object.httpMetadata?.contentType||'application/octet-stream','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'}});}
+ if(method==='GET'&&/^\/media\/[a-f0-9-]{36}\.(jpg|jpeg|png|mp4)$/.test(path)){const key=path.slice(7);const object=await env.STUDIO_MEDIA.get(key);if(!object)return json({error:'Not found'},404);return new Response(object.body,{headers:{'content-type':object.httpMetadata?.contentType||'application/octet-stream','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'}});}
  if(!isAuthorized(req,env))return json({error:'Unauthorized'},401);
  if(!validateOrigin(req,env))return json({error:'Invalid origin'},403);
  if(method==='GET'&&path==='/auth/start'){
