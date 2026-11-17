@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {auditDraft} from './quality.mjs';import {publishCarousel,publishReel} from './instagram.mjs';import {createDraft} from '../lib.mjs';
+test('dry run never sends network calls',async()=>{const fetchImpl=()=>{throw Error('unexpected network')};assert.equal((await publishCarousel({igUserId:'123',images:Array(6).fill('https://example.com/a.jpg'),caption:'Hello',fetchImpl})).dryRun,true);assert.equal((await publishReel({igUserId:'123',videoUrl:'https://example.com/a.mp4',caption:'Hello',fetchImpl})).dryRun,true)});
+test('quality blocks exaggerated claims',()=>{const d=createDraft({title:'Fabric',hook:'100% eco-friendly',caption:'Look closer'});assert.equal(auditDraft(d).passed,false)});
