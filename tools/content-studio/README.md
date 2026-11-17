@@ -29,3 +29,7 @@ Delete `tools/content-studio/`. The existing website and database remain unchang
 
 ## Next integration
 Introduce an authenticated Cloudflare Pages Functions adapter and separate D1/R2 resources after the local workflow is accepted. Build a video renderer as a separately deployable worker, then add Instagram OAuth and publishing with explicit enablement. Do not reuse the public storefront's D1 database for this module.
+
+## Optional automation (in development)
+
+See [automation/README.md](automation/README.md) for AI draft generation, quality checks, scheduled slot creation, experimental Reel rendering, and a Meta Graph API adapter. These are **not** automatically invoked by the local dashboard. Nothing is scheduled in the cloud, published or deployed. Production use still requires secured hosting, media conversion and hosting, OAuth permissions, job locking, monitoring and integration tests.
