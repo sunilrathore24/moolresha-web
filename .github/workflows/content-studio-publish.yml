@@ -1,0 +1,58 @@
+name: Content Studio daily publish
+
+# GitHub only evaluates `schedule:` triggers on the default branch, so this
+# cron does nothing until this file is merged to main — see
+# tools/content-studio/cloudflare/README.md for the full pre-merge checklist.
+# Entirely free tier: GitHub Actions free minutes + the Cloudflare Worker's
+# Workers AI / D1 / R2 free allocations. No OpenAI or other paid API is called.
+#
+# This job never holds a Meta or Instagram credential. It only carries
+# CONTENT_STUDIO_EXECUTOR_KEY, which the Worker uses to gate job claiming,
+# generation, media upload and publish. The Worker decides dry-run vs. live
+# publish from its own ENABLE_INSTAGRAM_PUBLISH / IG_ACTIVATION_APPROVED vars.
+on:
+  schedule:
+    # A few minutes after the Worker's own cron (02:30/07:30/13:30 UTC) inserts
+    # the pending job row, so it is reliably there before this job polls it.
+    - cron: '35 2 * * *'  # 08:05 IST, carousel
+    - cron: '35 7 * * *'  # 13:05 IST, reel
+    - cron: '35 13 * * *' # 19:05 IST, carousel
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: content-studio-publish
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Generate, render and publish (or dry-run) the due slot
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tools/content-studio
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # ffmpeg and ImageMagick are what the Cloudflare Worker cannot run; this
+      # runner is the reason the pipeline lives here instead of in the Worker.
+      - name: Install render dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg imagemagick
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Run due job
+        env:
+          CONTENT_STUDIO_BASE_URL: https://moolresha-content-studio.sunilrathore24.workers.dev
+          CONTENT_STUDIO_EXECUTOR_KEY: ${{ secrets.CONTENT_STUDIO_EXECUTOR_KEY }}
+        run: npm run run:scheduled

@@ -1,0 +1,33 @@
+name = "moolresha-content-studio"
+main = "src/worker.mjs"
+compatibility_date = "2026-11-17"
+workers_dev = true
+
+# Dedicated Content Studio D1. Never bind the storefront feedback database.
+[[d1_databases]]
+binding = "CONTENT_DB"
+database_name = "moolresha_content_studio"
+database_id = "bddd1a03-5acd-4439-8287-bd89cc2f9a6f"
+
+# Free-tier Workers KV namespace for rendered carousel/Reel media. Unlike R2,
+# KV needs no payment method on file; only reachable through this Worker's
+# GET /media/:key route. Items auto-expire after 30 days (see media.mjs) so
+# storage stays inside the 1GB free tier without manual cleanup.
+# Namespace already created: moolresha-content-media (18 Nov 2026, dashboard).
+[[kv_namespaces]]
+binding = "CONTENT_MEDIA"
+id = "a4eae5103ad84ef6a9bce871481d43fc"
+
+# Workers AI free daily allocation (10,000 neurons/day on the Workers Free plan)
+# replaces any paid text-generation API for the daily captions/slides.
+[ai]
+binding = "AI"
+
+[vars]
+ENABLE_INSTAGRAM_PUBLISH = "false"
+IG_ACTIVATION_APPROVED = "false"
+META_APP_ID = "962195580000279"
+
+# UTC times correspond to 08:00, 13:00, and 19:00 IST.
+[triggers]
+crons = ["30 2 * * *", "30 7 * * *", "30 13 * * *"]

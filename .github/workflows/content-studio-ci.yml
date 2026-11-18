@@ -1,0 +1,40 @@
+name: Content Studio CI
+
+# Isolated from the Astro storefront's CI (ci.yml): only runs when
+# tools/content-studio/** changes, and only tests that directory.
+on:
+  pull_request:
+    paths:
+      - 'tools/content-studio/**'
+      - '.github/workflows/content-studio-ci.yml'
+      - '.github/workflows/content-studio-publish.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: content-studio-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests (pure logic, no live Meta/Cloudflare calls)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tools/content-studio
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install
+
+      - name: Run tests
+        run: npm test

@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createDraft,approve,svgSlide,svgTextPanel} from '../lib.mjs';
+test('draft is isolated and starts unpublished',()=>{const d=createDraft({title:'Fabric',hook:'Know your fibres'});assert.equal(d.status,'draft');assert.equal(d.slides.length,6);});
+test('approval requires caption',()=>{const d=createDraft({title:'Fabric',hook:'Know your fibres'});assert.throws(()=>approve(d),/Caption/);assert.equal(approve({...d,caption:'Useful tip'}).status,'approved');});
+test('SVG escapes untrusted copy',()=>{const d=createDraft({title:'Fabric',hook:'A < B & C'});const svg=svgSlide(d,0);assert.match(svg,/&lt;/);assert.match(svg,/&amp;/);assert.doesNotMatch(svg,/A < B/);});
+test('caption panel escapes untrusted copy and renders at the requested size',()=>{const d=createDraft({title:'Fabric',hook:'A < B & C'});const svg=svgTextPanel(d,0,{width:1080,height:567});assert.match(svg,/&lt;/);assert.doesNotMatch(svg,/A < B/);assert.match(svg,/width="1080" height="567"/);});
+test('caption panel rejects an out-of-range slide index',()=>{const d=createDraft({title:'Fabric',hook:'Know your fibres'});assert.throws(()=>svgTextPanel(d,6),/Invalid slide/);});

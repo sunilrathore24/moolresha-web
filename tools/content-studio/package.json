@@ -1,0 +1,16 @@
+{
+  "name": "@moolresha/content-studio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "test": "node --test test/*.test.mjs automation/test/*.test.mjs",
+    "generate:carousel": "node automation/cli.mjs generate carousel",
+    "generate:reel": "node automation/cli.mjs generate reel",
+    "schedule:check": "node automation/cli.mjs schedule",
+    "run:scheduled": "node automation/run-scheduled-job.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
