@@ -109,7 +109,7 @@ async function uploadMedia(request,env) {
   if(!env.CONTENT_MEDIA) return error('Media storage not configured',503);
   const contentType=request.headers.get('content-type')||'';
   const len=Number(request.headers.get('content-length')||0);
-  if(len<=0||len>60*1024*1024) return error('Invalid media size',413);
+  if(len<=0||len>24*1024*1024) return error('Invalid media size',413); // KV's hard per-value limit is 25 MiB.
   const bytes=await request.arrayBuffer();
   try {
     const key=await putMedia(env.CONTENT_MEDIA,bytes,contentType);
@@ -121,7 +121,7 @@ async function serveMedia(request,env) {
   const key=new URL(request.url).pathname.slice('/media/'.length);
   const object=await getMedia(env.CONTENT_MEDIA,key);
   if(!object) return error('Not found',404);
-  return new Response(object.body,{headers:{...HEADERS,'Content-Type':object.httpMetadata?.contentType||'application/octet-stream','Cache-Control':'public, max-age=3600'}});
+  return new Response(object.body,{headers:{...HEADERS,'Content-Type':object.contentType,'Cache-Control':'public, max-age=3600'}});
 }
 async function publishRoute(request,env) {
   if(!authorizedExecutor(request,env)) return error('Unauthorized',401);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../../cloudflare/src/worker.mjs';
 import {encryptToken} from '../../cloudflare/src/instagram-auth.mjs';
-import {createFakeD1, createFakeR2, createFakeAI} from './fakes.mjs';
+import {createFakeD1, createFakeKV, createFakeAI} from './fakes.mjs';
 
 const base = 'https://moolresha-content-studio.sunilrathore24.workers.dev';
 const EXECUTOR_KEY = 'test-executor-key';
@@ -65,8 +65,8 @@ test('POST /generate fails the job when every attempt is malformed', async () =>
 });
 
 test('POST /media stores an upload and GET /media/:key serves it back with the same bytes and content type', async () => {
-  const r2 = createFakeR2();
-  const env = {EXECUTOR_KEY, CONTENT_MEDIA: r2};
+  const kv = createFakeKV();
+  const env = {EXECUTOR_KEY, CONTENT_MEDIA: kv};
   const bytes = new Uint8Array([1, 2, 3, 4]);
   const upload = await worker.fetch(new Request(base + '/media', {method: 'POST', headers: {...auth, 'content-type': 'image/png', 'content-length': '4'}, body: bytes}), env);
   assert.equal(upload.status, 201);
@@ -80,7 +80,7 @@ test('POST /media stores an upload and GET /media/:key serves it back with the s
 });
 
 test('POST /media rejects unsupported content types and unauthenticated callers', async () => {
-  const env = {EXECUTOR_KEY, CONTENT_MEDIA: createFakeR2()};
+  const env = {EXECUTOR_KEY, CONTENT_MEDIA: createFakeKV()};
   const badType = await worker.fetch(new Request(base + '/media', {method: 'POST', headers: {...auth, 'content-type': 'text/plain', 'content-length': '3'}, body: 'abc'}), env);
   assert.equal(badType.status, 400);
   const unauthed = await worker.fetch(new Request(base + '/media', {method: 'POST', headers: {'content-type': 'image/png', 'content-length': '4'}, body: new Uint8Array(4)}), env);
@@ -88,7 +88,7 @@ test('POST /media rejects unsupported content types and unauthenticated callers'
 });
 
 test('GET /media/:key never leaks a 500 for a malformed or unknown key', async () => {
-  const env = {CONTENT_MEDIA: createFakeR2()};
+  const env = {CONTENT_MEDIA: createFakeKV()};
   const traversal = await worker.fetch(new Request(base + '/media/..%2f..%2fetc%2fpasswd'), env);
   assert.equal(traversal.status, 404);
   const unknown = await worker.fetch(new Request(base + '/media/' + '0'.repeat(36) + '.png'.replace('0000', 'aaaa')), env);

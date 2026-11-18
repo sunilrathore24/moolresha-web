@@ -37,9 +37,10 @@ no scheduler or credentials. Separately, `cloudflare/` + `automation/` +
 `.github/workflows/content-studio-publish.yml` implement the actual
 unattended pipeline: a Cloudflare Worker cron enqueues a job, Workers AI
 generates the draft, a GitHub Actions runner renders it with FFmpeg/
-ImageMagick, and the Worker uploads the media to a private R2 bucket and
-calls the Meta Graph API with the encrypted-in-D1 token — all on free tiers,
-no OpenAI key required. It dry-runs (no real Instagram post) until the owner
+ImageMagick, and the Worker uploads the media to a private Workers KV
+namespace (no payment method required, unlike R2) and calls the Meta Graph
+API with the encrypted-in-D1 token — all on free tiers, no OpenAI key
+required. It dry-runs (no real Instagram post) until the owner
 explicitly enables both Worker publishing flags after a verified dry run.
 See [cloudflare/README.md](cloudflare/README.md) for the deploy and go-live
 checklist, and [automation/README.md](automation/README.md) for what each

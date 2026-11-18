@@ -11,7 +11,7 @@ only `CONTENT_STUDIO_EXECUTOR_KEY` — and talks only to the deployed Worker:
 1. `GET /jobs/pending` — claims the due job the Worker's own cron enqueued.
 2. `POST /generate` — the Worker asks **Workers AI** (free, no OpenAI key) for the draft.
 3. Locally, `renderCarouselImages`/`renderReel` (below) turn that draft into PNGs or an MP4 using `ffmpeg`/`ImageMagick` installed on the GitHub Actions runner — the one step a Cloudflare Worker cannot do itself.
-4. `POST /media` uploads each rendered file; the Worker stores it in a private R2 bucket and serves it back at `GET /media/:key`, which is the public HTTPS URL Meta's servers fetch from.
+4. `POST /media` uploads each rendered file; the Worker stores it in a private Workers KV namespace (no payment method required, unlike R2) and serves it back at `GET /media/:key`, which is the public HTTPS URL Meta's servers fetch from.
 5. `POST /publish` — the Worker decrypts the stored Meta token and calls the Graph API itself. It dry-runs unless `ENABLE_INSTAGRAM_PUBLISH` and `IG_ACTIVATION_APPROVED` are both `"true"`; this script cannot force a live post either way.
 
 See `cloudflare/README.md` for the full deploy/verify/enable-publishing checklist.

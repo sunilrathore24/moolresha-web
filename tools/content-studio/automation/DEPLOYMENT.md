@@ -12,7 +12,7 @@ calling `automation/run-scheduled-job.mjs` on a cron matching the Worker's own
 4. `npx wrangler deploy`
 5. Merge the workflow file to `main` (GitHub only runs `schedule:` triggers from the default branch), or test first with its `workflow_dispatch` button.
 
-Everything above is free tier: Cloudflare Workers/D1/R2/Workers AI free
+Everything above is free tier: Cloudflare Workers/D1/Workers KV/Workers AI free
 allocations, plus GitHub Actions free minutes. No OpenAI key or other paid API
 is required for the automated path.
 

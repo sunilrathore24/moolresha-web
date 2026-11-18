@@ -55,14 +55,14 @@ export function createFakeD1({jobs = [], connections = []} = {}) {
   };
 }
 
-export function createFakeR2() {
+export function createFakeKV() {
   const store = new Map();
   return {
     store,
-    async put(key, bytes, opts) { store.set(key, {bytes, httpMetadata: opts?.httpMetadata}); },
-    async get(key) {
+    async put(key, bytes, opts) { store.set(key, {bytes, metadata: opts?.metadata}); },
+    async getWithMetadata(key) {
       const entry = store.get(key);
-      return entry ? {body: entry.bytes, httpMetadata: entry.httpMetadata} : null;
+      return entry ? {value: entry.bytes, metadata: entry.metadata} : {value: null, metadata: null};
     },
   };
 }

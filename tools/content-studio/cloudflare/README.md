@@ -23,7 +23,7 @@ cannot all happen inside it. The pipeline is split instead:
 | Cron fires, enqueues a pending job | Cloudflare Worker (`scheduled()`) | Workers free plan cron triggers |
 | Claim job, generate the draft (title/slides/caption) | Worker, via `POST /generate` | **Workers AI** — 10,000 neurons/day free, no OpenAI key needed |
 | Render SVG → PNG (carousel) / → MP4 (Reel) | **GitHub Actions** runner, via `automation/run-scheduled-job.mjs` | GitHub Actions free minutes; `ffmpeg`/`ImageMagick` installed on the runner — this is the one thing a Worker cannot do |
-| Store rendered media, serve it over public HTTPS for Meta to fetch | Worker, via `POST /media` + `GET /media/:key` | **R2** free tier (10GB storage, 1M writes/mo, 10M reads/mo), bucket kept **private** — every read goes through this Worker, there is no public R2 bucket URL |
+| Store rendered media, serve it over public HTTPS for Meta to fetch | Worker, via `POST /media` + `GET /media/:key` | **Workers KV** free tier (100k reads/day, 1k writes/day, 1GB storage, items auto-expire after 30 days) — chosen over R2 specifically because R2 requires a payment method on file even at $0 usage; KV needs none. Private namespace, every read goes through this Worker |
 | Call the Meta Graph API | Worker, via `POST /publish` | Meta's API itself is free; the Worker decrypts the stored token and calls it server-side so the token and the publish decision never leave Cloudflare |
 
 GitHub Actions never holds a Meta or Instagram credential — only
@@ -36,9 +36,9 @@ it tried.
 ## Production prerequisites (do these before relying on the automated pipeline)
 
 1. `npx wrangler d1 migrations apply moolresha_content_studio --remote` to pick up `migrations/0003_executor.sql` (adds `claimed`/`generated`/`dry-run`/`published` job statuses and draft/media/publish columns).
-2. `npx wrangler r2 bucket create moolresha-content-media` (free tier; nothing here needs R2's paid tiers at this volume — 3 small files/day).
+2. ~~Create an R2 bucket~~ — not used. The KV namespace `moolresha-content-media` (id `a4eae5103ad84ef6a9bce871481d43fc`) was created via the dashboard on 18 Nov 2026 and is already in `wrangler.toml`'s `[[kv_namespaces]]` block. R2 was deliberately avoided: it requires a payment method on file even for $0 free-tier usage, which this project doesn't want. (If you ever need to recreate it: `npx wrangler kv namespace create CONTENT_MEDIA`.)
 3. Generate a random executor secret and store it twice: `npx wrangler secret put EXECUTOR_KEY` (Worker) and as the GitHub Actions secret `CONTENT_STUDIO_EXECUTOR_KEY` (Settings → Secrets and variables → Actions, scoped to this repo). Never put it in a commit, PR, or chat.
-4. `npx wrangler deploy` to ship `worker.mjs`'s new routes, the `[ai]` binding and the `[[r2_buckets]]` binding in `wrangler.toml`.
+4. `npx wrangler deploy` to ship `worker.mjs`'s new routes, the `[ai]` binding and the `[[kv_namespaces]]` binding in `wrangler.toml`.
 5. Merge `.github/workflows/content-studio-publish.yml` to `main` — **GitHub only evaluates `schedule:` triggers on the default branch**, so the cron silently does nothing until then. Use `workflow_dispatch` (the "Run workflow" button) to test it on a branch first.
 
 ## Verify the OAuth connection
@@ -64,4 +64,4 @@ The owner explicitly approved future Instagram publishing on 18 Nov 2026, condit
 
 Only after all of that, set both vars to `"true"` in `wrangler.toml` and redeploy — this doubles as the audit trail of when and that live publishing was turned on.
 
-Everything above stays within Cloudflare's free tier (Workers, D1, R2, Workers AI) plus GitHub Actions free minutes. Never commit Meta tokens, Cloudflare credentials, or other secrets.
+Everything above stays within Cloudflare's free tier (Workers, D1, Workers KV, Workers AI) plus GitHub Actions free minutes, and none of it required adding a payment method to the account. Never commit Meta tokens, Cloudflare credentials, or other secrets.
