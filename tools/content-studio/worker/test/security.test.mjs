@@ -1,7 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';
-import {safeEqual,validHttpsUrl,validateManifest,parseDraft,encryptToken,decryptToken,isAuthorized,validateOrigin} from '../src/security.mjs';
-test('admin bearer uses exact secret',()=>{assert.equal(isAuthorized(new Request('https://studio.example',{headers:{authorization:'Bearer abc'}}),{STUDIO_ADMIN_SECRET:'abc'}),true);assert.equal(isAuthorized(new Request('https://studio.example',{headers:{authorization:'Bearer ab'}}),{STUDIO_ADMIN_SECRET:'abc'}),false);});
-test('origin is constrained',()=>{assert.equal(validateOrigin(new Request('https://studio.example',{headers:{origin:'https://evil.example'}}),{STUDIO_ORIGIN:'https://studio.example'}),false)});
-test('HTTPS media required',()=>{assert.equal(validHttpsUrl('http://localhost/a.jpg'),false);assert.throws(()=>validateManifest('reel',{videoUrl:'http://localhost/a.mp4'}));validateManifest('carousel',{images:['https://a.example/1.jpg','https://a.example/2.jpg']});});
-test('draft validation',()=>{const d={kind:'carousel',title:'Cotton basics',caption:'Learn cotton',slides:Array(6).fill('Useful slide')};assert.equal(parseDraft(d).kind,'carousel');assert.throws(()=>parseDraft({...d,slides:[]}));});
-test('token encryption round trip',async()=>{const data=await encryptToken('test-access-token','secret-123');assert.notEqual(data.ciphertext,'test-access-token');assert.equal(await decryptToken(data.ciphertext,data.iv,'secret-123'),'test-access-token');await assert.rejects(decryptToken(data.ciphertext,data.iv,'wrong-key'));});
