@@ -9,6 +9,18 @@ binding = "CONTENT_DB"
 database_name = "moolresha_content_studio"
 database_id = "bddd1a03-5acd-4439-8287-bd89cc2f9a6f"
 
+# Free-tier R2 bucket for rendered carousel/Reel media, kept private and served
+# only through this Worker's GET /media/:key route (never a public R2 bucket URL).
+# Create it once with: npx wrangler r2 bucket create moolresha-content-media
+[[r2_buckets]]
+binding = "CONTENT_MEDIA"
+bucket_name = "moolresha-content-media"
+
+# Workers AI free daily allocation (10,000 neurons/day on the Workers Free plan)
+# replaces any paid text-generation API for the daily captions/slides.
+[ai]
+binding = "AI"
+
 [vars]
 ENABLE_INSTAGRAM_PUBLISH = "false"
 IG_ACTIVATION_APPROVED = "false"

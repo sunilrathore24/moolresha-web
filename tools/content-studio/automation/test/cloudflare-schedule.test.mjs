@@ -22,5 +22,7 @@ test('health endpoint is read-only and publishing disabled', async () => {
   const res = await worker.fetch(new Request('https://example.com/health'), {});
   assert.equal(res.status, 200);
   assert.equal((await res.json()).instagramPublishing, false);
-  assert.equal((await worker.fetch(new Request('https://example.com/publish', {method:'POST'}), {})).status, 404);
+  // /publish is implemented but fails closed without EXECUTOR_KEY configured;
+  // see cloudflare-executor.test.mjs for the gated, dry-run-by-default behavior.
+  assert.equal((await worker.fetch(new Request('https://example.com/publish', {method:'POST'}), {})).status, 401);
 });

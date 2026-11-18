@@ -21,8 +21,13 @@ test('OAuth callback does not echo authorization codes or tokens',async()=>{
  assert.equal(html.includes('state=secret'),false);
  assert.match(html,/history\.replaceState/);
 });
-test('publishing route remains unavailable',async()=>{
- assert.equal((await worker.fetch(new Request(base+'/publish',{method:'POST'}),{})).status,404);
+test('publishing route rejects unauthenticated requests (no EXECUTOR_KEY configured)',async()=>{
+ // /publish is now implemented (see cloudflare-executor.test.mjs for the gated,
+ // dry-run-by-default behavior) but every executor route fails closed without
+ // the EXECUTOR_KEY secret, exactly like /auth/start fails closed without
+ // INSTAGRAM_SETUP_KEY above.
+ assert.equal((await worker.fetch(new Request(base+'/publish',{method:'POST'}),{})).status,401);
+ assert.equal((await worker.fetch(new Request(base+'/jobs/pending'),{})).status,401);
 });
 test('AES-GCM token encryption round trip',async()=>{
  const key=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64');

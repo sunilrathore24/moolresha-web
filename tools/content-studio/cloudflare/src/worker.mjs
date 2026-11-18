@@ -1,7 +1,11 @@
-import {sha256, encryptToken, discoverInstagramAccount} from './instagram-auth.mjs';
+import {sha256, encryptToken, decryptToken, discoverInstagramAccount} from './instagram-auth.mjs';
+import {generateDraft} from './generate.mjs';
+import {putMedia, getMedia, isValidMediaKey} from './media.mjs';
+import {publishCarousel, publishReel} from '../../automation/instagram.mjs';
 const IST_OFFSET_MS = 330 * 60 * 1000;
 const SLOTS = new Map([[2, 'carousel-morning'], [7, 'reel-midday'], [13, 'carousel-evening']]);
-const CALLBACK = 'https://moolresha-content-studio.sunilrathore24.workers.dev/auth/callback';
+const ORIGIN = 'https://moolresha-content-studio.sunilrathore24.workers.dev';
+const CALLBACK = ORIGIN + '/auth/callback';
 const HEADERS = {'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'"};
 function slotFor(now) {
   const hour = now.getUTCHours();
@@ -18,6 +22,11 @@ function secureCompare(a,b) {
   for(let i=0;i<Math.max(a.length,b.length);i++) mismatch |= (a.charCodeAt(i)||0) ^ (b.charCodeAt(i)||0);
   return mismatch===0;
 }
+// Separate from INSTAGRAM_SETUP_KEY: the setup key authenticates the human owner
+// starting OAuth once; EXECUTOR_KEY authenticates the unattended GitHub Actions
+// job that generates, renders and publishes daily content. Neither can impersonate
+// the other, and neither ever carries the Meta token itself.
+const authorizedExecutor = (request,env) => !!env.EXECUTOR_KEY && secureCompare(request.headers.get('Authorization')||'', 'Bearer '+env.EXECUTOR_KEY);
 const randomState = () => Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 async function startAuth(request,env) {
   if(!env.CONTENT_DB || !env.META_APP_ID || !env.INSTAGRAM_SETUP_KEY || !env.INSTAGRAM_TOKEN_ENCRYPTION_KEY || !env.META_APP_SECRET) return error('OAuth service not configured',503);
@@ -62,6 +71,99 @@ async function completeAuth(request,env) {
     return json({connected:true,pageName:account.pageName,instagramAccountId:account.instagramAccountId,publishingEnabled:false});
   } catch {return error('Instagram authorization could not be verified. Start a new connection attempt.',422);}
 }
+// --- Executor routes: unattended GitHub Actions job (generate -> render -> upload -> publish). ---
+// All require EXECUTOR_KEY. None of them accept or return the Meta token; publishing happens
+// entirely server-side using the token already stored encrypted in D1 from the OAuth flow above.
+async function claimNextJob(env) {
+  const candidates=await env.CONTENT_DB.prepare("SELECT job_key,content_kind FROM content_jobs WHERE status='pending' ORDER BY created_at ASC LIMIT 5").all();
+  for(const row of candidates.results||[]) {
+    const claim=await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='claimed',updated_at=? WHERE job_key=? AND status='pending'").bind(new Date().toISOString(),row.job_key).run();
+    if(claim.meta?.changes===1) return row;
+  }
+  return null;
+}
+async function jobsPending(request,env) {
+  if(!authorizedExecutor(request,env)) return error('Unauthorized',401);
+  if(!env.CONTENT_DB) return error('Content Studio not configured',503);
+  const job=await claimNextJob(env);
+  if(!job) return new Response(null,{status:204,headers:HEADERS});
+  return json({jobKey:job.job_key,contentKind:job.content_kind});
+}
+async function generateRoute(request,env) {
+  if(!authorizedExecutor(request,env)) return error('Unauthorized',401);
+  let input; try {input=await request.json();} catch {return error('Invalid request');}
+  const kind=input?.kind==='reel'?'reel':'carousel';
+  try {
+    const draft=await generateDraft(env,{kind});
+    if(typeof input?.jobKey==='string' && env.CONTENT_DB) {
+      await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='generated',draft_payload=?,caption=?,updated_at=? WHERE job_key=? AND status IN ('claimed','generated')").bind(JSON.stringify(draft),draft.caption,new Date().toISOString(),input.jobKey).run();
+    }
+    return json({draft});
+  } catch(e) {
+    if(typeof input?.jobKey==='string' && env.CONTENT_DB) await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='failed',error=?,updated_at=? WHERE job_key=?").bind(String(e.message).slice(0,300),new Date().toISOString(),input.jobKey).run();
+    return error('Generation failed: '+String(e.message).slice(0,200),502);
+  }
+}
+async function uploadMedia(request,env) {
+  if(!authorizedExecutor(request,env)) return error('Unauthorized',401);
+  if(!env.CONTENT_MEDIA) return error('Media storage not configured',503);
+  const contentType=request.headers.get('content-type')||'';
+  const len=Number(request.headers.get('content-length')||0);
+  if(len<=0||len>60*1024*1024) return error('Invalid media size',413);
+  const bytes=await request.arrayBuffer();
+  try {
+    const key=await putMedia(env.CONTENT_MEDIA,bytes,contentType);
+    return json({key,url:ORIGIN+'/media/'+key},201);
+  } catch(e) {return error(String(e.message),400);}
+}
+async function serveMedia(request,env) {
+  if(!env.CONTENT_MEDIA) return error('Media storage not configured',503);
+  const key=new URL(request.url).pathname.slice('/media/'.length);
+  const object=await getMedia(env.CONTENT_MEDIA,key);
+  if(!object) return error('Not found',404);
+  return new Response(object.body,{headers:{...HEADERS,'Content-Type':object.httpMetadata?.contentType||'application/octet-stream','Cache-Control':'public, max-age=3600'}});
+}
+async function publishRoute(request,env) {
+  if(!authorizedExecutor(request,env)) return error('Unauthorized',401);
+  if(!env.CONTENT_DB||!env.INSTAGRAM_TOKEN_ENCRYPTION_KEY) return error('Content Studio not configured',503);
+  let input; try {input=await request.json();} catch {return error('Invalid request');}
+  const {jobKey,kind,mediaKeys,caption}=input||{};
+  if(typeof jobKey!=='string'||!jobKey) return error('jobKey required');
+  if(kind!=='carousel'&&kind!=='reel') return error('kind must be carousel or reel');
+  if(!Array.isArray(mediaKeys)||!mediaKeys.length||mediaKeys.some(k=>!isValidMediaKey(k))) return error('mediaKeys must reference media uploaded via POST /media');
+  if(typeof caption!=='string'||!caption.trim()) return error('caption required');
+  const job=await env.CONTENT_DB.prepare('SELECT status FROM content_jobs WHERE job_key=?').bind(jobKey).first();
+  if(!job) return error('Unknown job',404);
+  if(job.status==='published'||job.status==='dry-run') return error('Job already finalized: '+job.status,409);
+  const connection=await env.CONTENT_DB.prepare("SELECT instagram_account_id,encrypted_user_token,token_iv FROM instagram_connections WHERE status='connected' ORDER BY updated_at DESC LIMIT 1").first();
+  if(!connection) {
+    await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='failed',error='Instagram not connected',updated_at=? WHERE job_key=?").bind(new Date().toISOString(),jobKey).run();
+    return error('Instagram not connected',409);
+  }
+  // The only place either publishing flag is read. Both must be 'true', set only by the
+  // owner after a verified dry run, or every publish attempt stays a no-op dry run.
+  const liveEnabled=env.ENABLE_INSTAGRAM_PUBLISH==='true'&&env.IG_ACTIVATION_APPROVED==='true';
+  const urls=mediaKeys.map(key=>ORIGIN+'/media/'+key);
+  try {
+    const token=await decryptToken(connection.encrypted_user_token,connection.token_iv,env.INSTAGRAM_TOKEN_ENCRYPTION_KEY);
+    const params={igUserId:connection.instagram_account_id,token,caption,dryRun:!liveEnabled};
+    const result=kind==='reel'?await publishReel({...params,videoUrl:urls[0]}):await publishCarousel({...params,images:urls});
+    const now=new Date().toISOString();
+    await env.CONTENT_DB.prepare("UPDATE content_jobs SET status=?,media_keys=?,caption=?,instagram_media_id=?,published_at=?,updated_at=? WHERE job_key=?")
+      .bind(liveEnabled?'published':'dry-run',JSON.stringify(mediaKeys),caption,result.id||null,liveEnabled?now:null,now,jobKey).run();
+    return json({status:liveEnabled?'published':'dry-run',jobKey,kind,mediaCount:mediaKeys.length,instagramMediaId:result.id||null});
+  } catch(e) {
+    await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='failed',error=?,updated_at=? WHERE job_key=?").bind(String(e.message).slice(0,300),new Date().toISOString(),jobKey).run();
+    return error('Publish failed: '+String(e.message).slice(0,200),502);
+  }
+}
+async function failJob(request,env,jobKey) {
+  if(!authorizedExecutor(request,env)) return error('Unauthorized',401);
+  if(!env.CONTENT_DB) return error('Content Studio not configured',503);
+  let input={}; try {input=await request.json();} catch {}
+  await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='failed',error=?,updated_at=? WHERE job_key=?").bind(String(input?.error||'executor failure').slice(0,300),new Date().toISOString(),jobKey).run();
+  return json({ok:true});
+}
 const CALLBACK_HTML = `<h1>MoolResha Instagram connection</h1><p id="status">Checking Meta authorization…</p><script>
 (function(){
   var status=document.getElementById('status');
@@ -78,10 +180,17 @@ const CALLBACK_HTML = `<h1>MoolResha Instagram connection</h1><p id="status">Che
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
-    if(request.method==='GET' && url.pathname==='/health') return json({service:'moolresha-content-studio',status:'ok',instagramPublishing:false});
+    if(request.method==='GET' && url.pathname==='/health') return json({service:'moolresha-content-studio',status:'ok',instagramPublishing:env.ENABLE_INSTAGRAM_PUBLISH==='true'&&env.IG_ACTIVATION_APPROVED==='true'});
     if(request.method==='POST' && url.pathname==='/auth/start') return startAuth(request,env);
     if(request.method==='GET' && url.pathname==='/auth/callback') return html(CALLBACK_HTML);
     if(request.method==='POST' && url.pathname==='/auth/complete') return completeAuth(request,env);
+    if(request.method==='GET' && url.pathname==='/jobs/pending') return jobsPending(request,env);
+    if(request.method==='POST' && url.pathname==='/generate') return generateRoute(request,env);
+    if(request.method==='POST' && url.pathname==='/media') return uploadMedia(request,env);
+    if(request.method==='GET' && url.pathname.startsWith('/media/')) return serveMedia(request,env);
+    if(request.method==='POST' && url.pathname==='/publish') return publishRoute(request,env);
+    const failMatch=url.pathname.match(/^\/jobs\/([A-Za-z0-9:_-]+)\/fail$/);
+    if(request.method==='POST' && failMatch) return failJob(request,env,failMatch[1]);
     return new Response('Not found',{status:404,headers:HEADERS});
   },
   async scheduled(event,env,ctx) {

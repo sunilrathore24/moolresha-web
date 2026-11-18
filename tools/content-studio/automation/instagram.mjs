@@ -1,13 +1,17 @@
 // Meta Graph API adapter. No credentials or publishing are enabled by default.
 // Images/videos MUST be publicly reachable HTTPS URLs. Meta fetches them from your media host.
+// `typeof process` guards this module so it loads under both Node (automation/cli.mjs,
+// GitHub Actions) and the Cloudflare Workers runtime (cloudflare/src/worker.mjs), which
+// has no `process` global and would otherwise throw a ReferenceError on import.
+const defaultVersion=(typeof process!=='undefined'&&process.env&&process.env.META_GRAPH_VERSION)||'v22.0';
 const base='https://graph.facebook.com';
-export async function graphRequest(path,params,{token,version=process.env.META_GRAPH_VERSION||'v22.0',fetchImpl=fetch}={}){
+export async function graphRequest(path,params,{token,version=defaultVersion,fetchImpl=fetch}={}){
  if(!token)throw Error('Instagram access token missing');
  const body=new URLSearchParams({...params,access_token:token});
  const r=await fetchImpl(base+'/'+version+'/'+path,{method:'POST',body});
  const data=await r.json();if(!r.ok||data.error)throw Error('Meta API error: '+(data.error?.message||r.status));return data;
 }
-export async function waitForContainer(containerId,{token,igUserId,fetchImpl=fetch,version=process.env.META_GRAPH_VERSION||'v22.0',attempts=15,delayMs=4000}={}){
+export async function waitForContainer(containerId,{token,igUserId,fetchImpl=fetch,version=defaultVersion,attempts=15,delayMs=4000}={}){
  for(let i=0;i<attempts;i++){const u=new URL(base+'/'+version+'/'+containerId);u.search=new URLSearchParams({fields:'status_code,status',access_token:token}).toString();const r=await fetchImpl(u);const data=await r.json();if(!r.ok)throw Error('Meta container status HTTP '+r.status);if(data.status_code==='FINISHED')return;if(data.status_code==='ERROR'||data.status_code==='EXPIRED')throw Error('Meta media processing '+data.status_code);await new Promise(resolve=>setTimeout(resolve,delayMs));}
  throw Error('Media processing timeout');
 }
