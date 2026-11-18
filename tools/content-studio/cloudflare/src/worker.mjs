@@ -66,7 +66,7 @@ const CALLBACK_HTML = `<h1>MoolResha Instagram connection</h1><p id="status">Che
 (function(){
   var status=document.getElementById('status');
   var fragment=new URLSearchParams(location.hash.slice(1));
-  var state=fragment.get('state'), token=fragment.get('long_lived_token')||fragment.get('access_token');
+  var state=fragment.get('state')||new URLSearchParams(location.search).get('state'), token=fragment.get('long_lived_token')||fragment.get('access_token');
   history.replaceState(null,'',location.pathname);
   if(!state||!token){status.textContent='Authorization was cancelled or no valid credentials were returned. No account was connected.';return;}
   fetch('/auth/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:state,token:token}),credentials:'omit'})
