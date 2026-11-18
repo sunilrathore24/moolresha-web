@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import worker from '../../cloudflare/src/worker.mjs';
 import {encryptToken} from '../../cloudflare/src/instagram-auth.mjs';
 import {createFakeD1, createFakeKV, createFakeAI} from './fakes.mjs';
+import {IMAGE_MODEL} from '../../cloudflare/src/generate.mjs';
 
 const base = 'https://moolresha-content-studio.sunilrathore24.workers.dev';
 const EXECUTOR_KEY = 'test-executor-key';
@@ -46,6 +47,33 @@ test('POST /generate returns a validated draft and records it on the job', async
   const job = db.jobs.find(j => j.job_key === 'job-1');
   assert.equal(job.status, 'generated');
   assert.equal(JSON.parse(job.draft_payload).title, 'Linen basics');
+});
+
+const imageAwareAI = (imageBehavior) => createFakeAI((model) => {
+  if (model === IMAGE_MODEL) return typeof imageBehavior === 'function' ? imageBehavior() : imageBehavior;
+  return {response: VALID_DRAFT_TEXT};
+});
+
+test('POST /generate also stores a free Workers AI background image and attaches its key, retrievable via GET /media/:key', async () => {
+  const kv = createFakeKV();
+  const base64 = Buffer.from([10, 20, 30]).toString('base64');
+  const env = {EXECUTOR_KEY, CONTENT_MEDIA: kv, AI: imageAwareAI({image: base64})};
+  const res = await worker.fetch(new Request(base + '/generate', {method: 'POST', headers: {...auth, 'content-type': 'application/json'}, body: JSON.stringify({kind: 'carousel'})}), env);
+  assert.equal(res.status, 200);
+  const {draft} = await res.json();
+  assert.match(draft.backgroundImageKey, /^[a-f0-9-]{36}\.jpg$/);
+  const served = await worker.fetch(new Request(base + '/media/' + draft.backgroundImageKey), env);
+  assert.equal(served.status, 200);
+  assert.deepEqual(new Uint8Array(await served.arrayBuffer()), new Uint8Array([10, 20, 30]));
+});
+
+test('POST /generate still succeeds without a backgroundImageKey when the free image model fails', async () => {
+  const env = {EXECUTOR_KEY, CONTENT_MEDIA: createFakeKV(), AI: imageAwareAI(() => { throw Error('image model unavailable'); })};
+  const res = await worker.fetch(new Request(base + '/generate', {method: 'POST', headers: {...auth, 'content-type': 'application/json'}, body: JSON.stringify({kind: 'carousel'})}), env);
+  assert.equal(res.status, 200);
+  const {draft} = await res.json();
+  assert.equal(draft.backgroundImageKey, undefined);
+  assert.equal(draft.slides.length, 6);
 });
 
 test('POST /generate retries once on malformed model output, then succeeds', async () => {

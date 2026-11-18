@@ -26,3 +26,8 @@ export async function getMedia(namespace,key) {
  if(!value) return null;
  return {body:value,contentType:metadata?.contentType||'application/octet-stream'};
 }
+
+// Workers AI image models return base64. Not a security boundary, just decoding.
+export function base64ToBytes(base64) {
+ return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+}

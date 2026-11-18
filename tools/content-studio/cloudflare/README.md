@@ -21,8 +21,9 @@ cannot all happen inside it. The pipeline is split instead:
 | Step | Runs where | Free-tier mechanism |
 |---|---|---|
 | Cron fires, enqueues a pending job | Cloudflare Worker (`scheduled()`) | Workers free plan cron triggers |
-| Claim job, generate the draft (title/slides/caption) | Worker, via `POST /generate` | **Workers AI** — 10,000 neurons/day free, no OpenAI key needed |
-| Render SVG → PNG (carousel) / → MP4 (Reel) | **GitHub Actions** runner, via `automation/run-scheduled-job.mjs` | GitHub Actions free minutes; `ffmpeg`/`ImageMagick` installed on the runner — this is the one thing a Worker cannot do |
+| Claim job, generate the draft (title/slides/caption) | Worker, via `POST /generate` | **Workers AI** text model (`@cf/meta/llama-3.1-8b-instruct`) — 10,000 neurons/day free, no OpenAI key needed |
+| Generate one background photo for the post (best-effort) | Worker, same `POST /generate` call | **Workers AI** image model (`@cf/black-forest-labs/flux-1-schnell`) — also free and "Cloudflare-hosted" (confirmed in the dashboard's Models catalog, distinct from the "Third-party" paid models the same catalog lists, e.g. OpenAI's `gpt-image-2.6`). Real generated imagery, but not that quality tier. One image per post, reused across all 6 slides/frames, to stay well inside the free daily allocation. If this fails, generation still succeeds — see fallback below |
+| Render the photo + caption-panel layout (or the flat template cards, if no photo was generated) | **GitHub Actions** runner, via `automation/run-scheduled-job.mjs` | GitHub Actions free minutes; `ffmpeg`/`ImageMagick` installed on the runner — this is the one thing a Worker cannot do |
 | Store rendered media, serve it over public HTTPS for Meta to fetch | Worker, via `POST /media` + `GET /media/:key` | **Workers KV** free tier (100k reads/day, 1k writes/day, 1GB storage, items auto-expire after 30 days) — chosen over R2 specifically because R2 requires a payment method on file even at $0 usage; KV needs none. Private namespace, every read goes through this Worker |
 | Call the Meta Graph API | Worker, via `POST /publish` | Meta's API itself is free; the Worker decrypts the stored token and calls it server-side so the token and the publish decision never leave Cloudflare |
 
@@ -32,6 +33,28 @@ GitHub Actions never holds a Meta or Instagram credential — only
 executor — is the only place that reads `ENABLE_INSTAGRAM_PUBLISH` /
 `IG_ACTIVATION_APPROVED`, so GitHub Actions cannot force a live post even if
 it tried.
+
+### Visual quality: what to expect, and the paid alternative
+
+`flux-1-schnell` is a real step up from the flat colour-card template (the
+original design in this repo), but it is Black Forest Labs' fast/light tier,
+not their best, and not OpenAI's `gpt-image-2.6` ("ChatGPT-quality"). The
+caption text is never drawn on top of the generated photo — it always sits
+in a solid-colour panel below it (`lib.mjs`'s `svgTextPanel`, composited by
+`automation/render.mjs`'s `renderPhotoCarouselImages`/`renderPhotoReel`) — so
+legibility never depends on what the photo contains, at the cost of the photo
+only covering part of each slide. The compositing itself (ImageMagick crop +
+vertical stack) has not been visually verified in a sandbox without
+`ffmpeg`/`ImageMagick` installed — check the first real dry run's output
+carefully (`GET /media/:key`) before trusting it unattended.
+
+If this quality tier isn't enough, the paid alternative discussed with the
+owner is calling `gpt-image-2.6` (OpenAI's current flagship image model)
+through Cloudflare's Models catalog from inside the Worker the same way —
+one Cloudflare bill instead of a separate OpenAI Platform account, but it
+requires adding a payment method to the Cloudflare account (same gate R2
+had) and has a real per-image cost. Not implemented; a deliberate choice to
+ship and evaluate the free tier first.
 
 ## Production prerequisites (do these before relying on the automated pipeline)
 
@@ -58,7 +81,7 @@ The owner explicitly approved future Instagram publishing on 18 Nov 2026, condit
 
 1. `instagram_connections` has a `status='connected'` row for the intended account (checked above), not a stale or wrong one.
 2. The intended Instagram Business account was verified against the token (the OAuth flow already does this via `IG_EXPECTED_ACCOUNT_ID`; confirm it was set before the connection was made).
-3. At least one full dry run has succeeded for **both** a carousel and a Reel: trigger `content-studio-publish.yml` manually (`workflow_dispatch`), confirm the Worker logs show `status: "dry-run"` with a real `mediaCount`, and the rendered media is inspected for quality/brand compliance by opening the `GET /media/:key` URL it produced — this pipeline has never been run end to end, so the first few runs should be watched, not trusted blind.
+3. At least one full dry run has succeeded for **both** a carousel and a Reel: trigger `content-studio-publish.yml` manually (`workflow_dispatch`), confirm the Worker logs show `status: "dry-run"` with a real `mediaCount`, and the rendered media is inspected for quality/brand compliance by opening the `GET /media/:key` URL it produced — this pipeline has never been run end to end, so the first few runs should be watched, not trusted blind. Specifically check the photo + caption-panel compositing (crop, text legibility, aspect ratio) since it has never been visually verified before this checklist.
 4. Rate limits, retry/error behavior, and what happens on a stuck `claimed` job (use `POST /jobs/:key/fail` to unstick one manually) are understood.
 5. Meta app permissions (`instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`) are approved for the intended account — Unified Login has previously presented bundled ads/messaging/comment permissions; do not grant those just to get publishing working.
 

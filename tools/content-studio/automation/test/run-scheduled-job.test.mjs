@@ -64,6 +64,50 @@ test('reports a render failure to /jobs/:key/fail and rethrows, without ever cal
   assert.ok(!calls.some(c => c.path === '/publish'));
 });
 
+test('fetches the generated background image and renders the photo variant when the draft has a backgroundImageKey', async () => {
+  const draftWithImage = {...DRAFT, backgroundImageKey: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jpg'};
+  const writes = [];
+  const {fetchImpl, calls} = routedFetch({
+    '/jobs/pending': () => Response.json({jobKey: 'job-3', contentKind: 'carousel'}, {status: 200}),
+    '/generate': () => Response.json({draft: draftWithImage}),
+    '/media/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jpg': () => new Response(new Uint8Array([7, 7, 7]).buffer, {status: 200}),
+    '/media': () => Response.json({key: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.png', url: BASE + '/media/bbbbbbbb.png'}, {status: 201}),
+    '/publish': () => Response.json({status: 'dry-run', jobKey: 'job-3', kind: 'carousel', mediaCount: 1, instagramMediaId: null}),
+  });
+  const result = await runScheduledJob({
+    baseUrl: BASE, executorKey: 'k', fetchImpl,
+    renderCarousel: async () => { throw Error('should use the photo renderer, not the flat one'); },
+    renderPhotoCarousel: async (draft, backgroundPath) => { assert.match(backgroundPath, /background\.jpg$/); return ['/tmp/slide-1.png']; },
+    readFileImpl: async () => new Uint8Array([1]),
+    writeFileImpl: async (path, bytes) => { writes.push({path, bytes}); },
+    log: () => {},
+  });
+  assert.equal(result.status, 'dry-run');
+  assert.equal(writes.length, 1);
+  assert.deepEqual(writes[0].bytes, Buffer.from([7, 7, 7]));
+  assert.ok(calls.some(c => c.path === '/media/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jpg'));
+});
+
+test('falls back to the flat template render, without failing the job, when the background image fetch fails', async () => {
+  const draftWithImage = {...DRAFT, backgroundImageKey: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jpg'};
+  const {fetchImpl, calls} = routedFetch({
+    '/jobs/pending': () => Response.json({jobKey: 'job-4', contentKind: 'carousel'}, {status: 200}),
+    '/generate': () => Response.json({draft: draftWithImage}),
+    '/media/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jpg': () => new Response(null, {status: 404}),
+    '/media': () => Response.json({key: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.png', url: BASE + '/media/bbbbbbbb.png'}, {status: 201}),
+    '/publish': () => Response.json({status: 'dry-run', jobKey: 'job-4', kind: 'carousel', mediaCount: 1, instagramMediaId: null}),
+  });
+  const result = await runScheduledJob({
+    baseUrl: BASE, executorKey: 'k', fetchImpl,
+    renderCarousel: async () => ['/tmp/fallback-slide-1.png'],
+    renderPhotoCarousel: async () => { throw Error('should not use the photo renderer when the fetch failed'); },
+    readFileImpl: async () => new Uint8Array([1]),
+    log: () => {},
+  });
+  assert.equal(result.status, 'dry-run');
+  assert.ok(!calls.some(c => c.path.includes('/jobs/job-4/fail')));
+});
+
 test('refuses to run without CONTENT_STUDIO_BASE_URL and CONTENT_STUDIO_EXECUTOR_KEY', async () => {
   await assert.rejects(() => runScheduledJob({baseUrl: '', executorKey: '', fetchImpl: async () => { throw Error('should not fetch'); }}), /CONTENT_STUDIO_BASE_URL/);
 });

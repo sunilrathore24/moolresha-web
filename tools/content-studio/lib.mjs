@@ -33,3 +33,26 @@ export function svgSlide(draft, index){
  </svg>`;
 }
 function wrap(text,max){const words=text.split(/\s+/);const lines=[];let current='';for(const word of words){if((current+' '+word).trim().length>max&&current){lines.push(current);current=word;}else current=(current+' '+word).trim();}if(current)lines.push(current);return lines;}
+
+// A shorter caption panel, meant to sit below an AI-generated photo (see
+// automation/render.mjs's renderPhoto* functions) rather than fill the whole
+// 1080x1350 canvas the way svgSlide does. Text never sits on top of the photo
+// itself, so legibility never depends on the photo's content.
+export function svgTextPanel(draft, index, {width=1080, height=567}={}) {
+ if(!Number.isInteger(index)||index<0||index>=6) throw new Error('Invalid slide');
+ const headline=escapeXml(draft.slides[index]);
+ const maxChars=Math.max(14,Math.round(width/42));
+ const fontSize=Math.round(height*0.08);
+ const lineHeight=Math.round(fontSize*1.25);
+ const lines=wrap(headline,maxChars).slice(0,4);
+ const bg=index===0?palette.olive:palette.cream, fg=index===0?palette.paper:palette.ink;
+ const padX=Math.round(width*0.065);
+ const startY=Math.round(height*0.34);
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="MoolResha caption panel">
+ <rect width="${width}" height="${height}" fill="${bg}"/>
+ <text x="${padX}" y="${Math.round(height*0.19)}" font-family="Inter,Arial,sans-serif" font-size="${Math.round(height*0.034)}" letter-spacing="4" fill="${index===0?palette.sage:palette.clay}">THE FIBRE JOURNAL  /  ${String(index+1).padStart(2,'0')}</text>
+ ${lines.map((line,i)=>`<text x="${padX}" y="${startY+i*lineHeight}" font-family="Newsreader,Georgia,serif" font-size="${fontSize}" font-weight="600" fill="${fg}">${line}</text>`).join('')}
+ <text x="${padX}" y="${height-Math.round(height*0.07)}" font-family="Inter,Arial,sans-serif" font-size="${Math.round(height*0.034)}" fill="${fg}">Closer to the Root</text>
+ <text x="${width-padX}" y="${height-Math.round(height*0.07)}" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="${Math.round(height*0.032)}" fill="${fg}">${index+1} / 6</text>
+ </svg>`;
+}

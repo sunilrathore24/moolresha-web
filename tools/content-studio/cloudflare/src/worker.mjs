@@ -1,5 +1,5 @@
 import {sha256, encryptToken, decryptToken, discoverInstagramAccount} from './instagram-auth.mjs';
-import {generateDraft} from './generate.mjs';
+import {generateDraft, generateBackgroundImage} from './generate.mjs';
 import {putMedia, getMedia, isValidMediaKey} from './media.mjs';
 import {publishCarousel, publishReel} from '../../automation/instagram.mjs';
 const IST_OFFSET_MS = 330 * 60 * 1000;
@@ -95,6 +95,15 @@ async function generateRoute(request,env) {
   const kind=input?.kind==='reel'?'reel':'carousel';
   try {
     const draft=await generateDraft(env,{kind});
+    // Best-effort: a failed or unconfigured image model should not fail the
+    // whole draft. run-scheduled-job.mjs falls back to the flat template
+    // card look when backgroundImageKey is absent.
+    if(env.CONTENT_MEDIA) {
+      try {
+        const image=await generateBackgroundImage(env,draft);
+        draft.backgroundImageKey=await putMedia(env.CONTENT_MEDIA,image.bytes,image.contentType);
+      } catch { /* leave backgroundImageKey unset; caller falls back */ }
+    }
     if(typeof input?.jobKey==='string' && env.CONTENT_DB) {
       await env.CONTENT_DB.prepare("UPDATE content_jobs SET status='generated',draft_payload=?,caption=?,updated_at=? WHERE job_key=? AND status IN ('claimed','generated')").bind(JSON.stringify(draft),draft.caption,new Date().toISOString(),input.jobKey).run();
     }

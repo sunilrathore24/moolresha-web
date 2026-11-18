@@ -68,5 +68,8 @@ export function createFakeKV() {
 }
 
 export function createFakeAI(response) {
-  return {run: async () => (typeof response === 'function' ? response() : response)};
+  // `response` may be a fixed value, or a function of (model, options) so a
+  // single fake can serve both the text model and the image model with
+  // different behavior per model id.
+  return {run: async (model, options) => (typeof response === 'function' ? response(model, options) : response)};
 }

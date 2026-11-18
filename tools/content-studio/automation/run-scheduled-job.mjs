@@ -5,11 +5,11 @@
 // which the Worker uses to gate /jobs/pending, /generate, /media and /publish.
 // The Worker decides dry-run vs. real publish from ENABLE_INSTAGRAM_PUBLISH and
 // IG_ACTIVATION_APPROVED; this script cannot force a live post either way.
-import {mkdtemp, readFile} from 'node:fs/promises';
+import {mkdtemp, readFile, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {auditDraft} from './quality.mjs';
-import {renderCarouselImages, renderReel} from './render.mjs';
+import {renderCarouselImages, renderReel, renderPhotoCarouselImages, renderPhotoReel} from './render.mjs';
 
 export async function runScheduledJob({
   baseUrl = process.env.CONTENT_STUDIO_BASE_URL,
@@ -17,7 +17,10 @@ export async function runScheduledJob({
   fetchImpl = fetch,
   renderCarousel = renderCarouselImages,
   renderVideo = renderReel,
+  renderPhotoCarousel = renderPhotoCarouselImages,
+  renderPhotoVideo = renderPhotoReel,
   readFileImpl = readFile,
+  writeFileImpl = writeFile,
   tempDir,
   log = console.log,
 } = {}) {
@@ -41,7 +44,22 @@ export async function runScheduledJob({
     if (!check.passed) throw Error('Draft failed quality audit: ' + check.issues.join('; '));
 
     const dir = tempDir || await mkdtemp(join(tmpdir(), 'content-studio-'));
-    const files = job.contentKind === 'reel' ? [await renderVideo(draft, dir)] : await renderCarousel(draft, dir);
+    let files;
+    if (draft.backgroundImageKey) {
+      try {
+        const imageRes = await fetchImpl(baseUrl + '/media/' + draft.backgroundImageKey);
+        if (!imageRes.ok) throw Error('background image fetch failed: HTTP ' + imageRes.status);
+        const backgroundPath = join(dir, 'background.jpg');
+        await writeFileImpl(backgroundPath, Buffer.from(await imageRes.arrayBuffer()));
+        files = job.contentKind === 'reel' ? [await renderPhotoVideo(draft, backgroundPath, dir)] : await renderPhotoCarousel(draft, backgroundPath, dir);
+        log('Rendered with the generated background image ' + draft.backgroundImageKey);
+      } catch (error) {
+        log('Background image unavailable (' + error.message + '); falling back to the flat template card look.');
+        files = job.contentKind === 'reel' ? [await renderVideo(draft, dir)] : await renderCarousel(draft, dir);
+      }
+    } else {
+      files = job.contentKind === 'reel' ? [await renderVideo(draft, dir)] : await renderCarousel(draft, dir);
+    }
 
     const mediaKeys = [];
     for (const filePath of files) {
