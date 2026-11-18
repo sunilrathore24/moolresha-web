@@ -5,36 +5,63 @@ This service is independent of the Astro storefront. Do not modify the existing 
 ## Verified resources (18 Nov 2026)
 
 - Worker: `moolresha-content-studio` at `https://moolresha-content-studio.sunilrathore24.workers.dev`
-- Deployed Worker version: `02d4b9fd`
+- Deployed Worker version: `02d4b9fd` — **predates the executor routes below; redeploy before relying on them.**
 - Dedicated D1 database: `moolresha_content_studio` (`bddd1a03-5acd-4439-8287-bd89cc2f9a6f`)
 - D1 binding: `CONTENT_DB`; migration `migrations/0001_jobs.sql` applied
 - Cron triggers (UTC): `30 2 * * *`, `30 7 * * *`, `30 13 * * *` (08:00, 13:00, 19:00 IST)
 - `/health` verified with `status: ok` and `instagramPublishing: false`
+- Whether the OAuth callback actually completed and left a row in `instagram_connections` is **still unverified** — check with a read-only D1 query before relying on it (see "Verify the OAuth connection" below).
 
-## Current behavior
+## Architecture: who does what, and why it's all free tier
 
-The deployed Worker exposes `GET /health` and inserts idempotent pending jobs into D1. It does **not** yet generate, render, host, or publish media. The cron triggers are not evidence of a complete daily publishing pipeline.
+The Worker alone cannot run the daily pipeline: it has no filesystem and cannot
+shell out to `ffmpeg`/`ImageMagick`, so generation, rendering and publishing
+cannot all happen inside it. The pipeline is split instead:
 
-## Instagram activation
+| Step | Runs where | Free-tier mechanism |
+|---|---|---|
+| Cron fires, enqueues a pending job | Cloudflare Worker (`scheduled()`) | Workers free plan cron triggers |
+| Claim job, generate the draft (title/slides/caption) | Worker, via `POST /generate` | **Workers AI** — 10,000 neurons/day free, no OpenAI key needed |
+| Render SVG → PNG (carousel) / → MP4 (Reel) | **GitHub Actions** runner, via `automation/run-scheduled-job.mjs` | GitHub Actions free minutes; `ffmpeg`/`ImageMagick` installed on the runner — this is the one thing a Worker cannot do |
+| Store rendered media, serve it over public HTTPS for Meta to fetch | Worker, via `POST /media` + `GET /media/:key` | **R2** free tier (10GB storage, 1M writes/mo, 10M reads/mo), bucket kept **private** — every read goes through this Worker, there is no public R2 bucket URL |
+| Call the Meta Graph API | Worker, via `POST /publish` | Meta's API itself is free; the Worker decrypts the stored token and calls it server-side so the token and the publish decision never leave Cloudflare |
 
-The owner explicitly approved future Instagram publishing on 18 Nov 2026. That approval does not mean the integration has passed readiness checks. Do not enable publishing flags until all of these have been verified:
+GitHub Actions never holds a Meta or Instagram credential — only
+`CONTENT_STUDIO_EXECUTOR_KEY`, a bearer secret the Worker checks on
+`/jobs/pending`, `/generate`, `/media` and `/publish`. The Worker — not the
+executor — is the only place that reads `ENABLE_INSTAGRAM_PUBLISH` /
+`IG_ACTIVATION_APPROVED`, so GitHub Actions cannot force a live post even if
+it tried.
 
-1. A real, secure HTTPS OAuth callback exists and its exact URL is registered in Meta app `moolresha` (`962195580000279`).
-2. A minimally scoped publishing authorization is granted by the account owner, with secrets securely stored and never committed.
-3. The intended Instagram Business account is verified against the token.
-4. Media are rendered and served from stable public HTTPS URLs with appropriate retention, without enabling an unapproved paid service.
-5. Dry-run tests pass for both carousels and Reels; the first live post is explicitly identified and verified before enabling unattended scheduling.
-6. Duplicate-post prevention, retry handling, token expiry handling, and alerting are validated.
+## Production prerequisites (do these before relying on the automated pipeline)
 
-The Meta Instagram use case has been added to the existing app, but Unified Login presented bundled ads, messaging, and comment permissions. Do not silently grant unrelated permissions merely to enable publishing.
+1. `npx wrangler d1 migrations apply moolresha_content_studio --remote` to pick up `migrations/0003_executor.sql` (adds `claimed`/`generated`/`dry-run`/`published` job statuses and draft/media/publish columns).
+2. `npx wrangler r2 bucket create moolresha-content-media` (free tier; nothing here needs R2's paid tiers at this volume — 3 small files/day).
+3. Generate a random executor secret and store it twice: `npx wrangler secret put EXECUTOR_KEY` (Worker) and as the GitHub Actions secret `CONTENT_STUDIO_EXECUTOR_KEY` (Settings → Secrets and variables → Actions, scoped to this repo). Never put it in a commit, PR, or chat.
+4. `npx wrangler deploy` to ship `worker.mjs`'s new routes, the `[ai]` binding and the `[[r2_buckets]]` binding in `wrangler.toml`.
+5. Merge `.github/workflows/content-studio-publish.yml` to `main` — **GitHub only evaluates `schedule:` triggers on the default branch**, so the cron silently does nothing until then. Use `workflow_dispatch` (the "Run workflow" button) to test it on a branch first.
 
-## Deployment commands
+## Verify the OAuth connection
 
-From `tools/content-studio/cloudflare/` with authorized Cloudflare credentials:
+Read-only, does not touch or print the token:
 
 ```sh
-npx wrangler d1 migrations apply moolresha_content_studio --remote
-npx wrangler deploy
+npx wrangler d1 execute moolresha_content_studio --remote --command \
+  "SELECT instagram_account_id, facebook_page_name, status, connected_at, updated_at FROM instagram_connections;"
 ```
 
-R2 is not enabled. GitHub Actions artifacts are not public Instagram media URLs. Do not enable billing or usage-based services without approval. Never commit Meta tokens, Cloudflare credentials, or other secrets.
+If this returns no rows, the callback never completed — the owner needs to redo the `POST /auth/start` → browser authorization flow (see `README-auth.md`); the OAuth session expires after 10 minutes.
+
+## Before enabling live Instagram publishing
+
+The owner explicitly approved future Instagram publishing on 18 Nov 2026, conditioned on this checklist — approval in principle is not the same as these being done. Both `ENABLE_INSTAGRAM_PUBLISH` and `IG_ACTIVATION_APPROVED` stay `"false"` in `wrangler.toml` until every item below is true, and flipping them is a separate, explicit, confirmed step — not something to do as part of a code deploy:
+
+1. `instagram_connections` has a `status='connected'` row for the intended account (checked above), not a stale or wrong one.
+2. The intended Instagram Business account was verified against the token (the OAuth flow already does this via `IG_EXPECTED_ACCOUNT_ID`; confirm it was set before the connection was made).
+3. At least one full dry run has succeeded for **both** a carousel and a Reel: trigger `content-studio-publish.yml` manually (`workflow_dispatch`), confirm the Worker logs show `status: "dry-run"` with a real `mediaCount`, and the rendered media is inspected for quality/brand compliance by opening the `GET /media/:key` URL it produced — this pipeline has never been run end to end, so the first few runs should be watched, not trusted blind.
+4. Rate limits, retry/error behavior, and what happens on a stuck `claimed` job (use `POST /jobs/:key/fail` to unstick one manually) are understood.
+5. Meta app permissions (`instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`) are approved for the intended account — Unified Login has previously presented bundled ads/messaging/comment permissions; do not grant those just to get publishing working.
+
+Only after all of that, set both vars to `"true"` in `wrangler.toml` and redeploy — this doubles as the audit trail of when and that live publishing was turned on.
+
+Everything above stays within Cloudflare's free tier (Workers, D1, R2, Workers AI) plus GitHub Actions free minutes. Never commit Meta tokens, Cloudflare credentials, or other secrets.

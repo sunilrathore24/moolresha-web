@@ -30,6 +30,17 @@ Delete `tools/content-studio/`. The existing website and database remain unchang
 ## Next integration
 Introduce an authenticated Cloudflare Pages Functions adapter and separate D1/R2 resources after the local workflow is accepted. Build a video renderer as a separately deployable worker, then add Instagram OAuth and publishing with explicit enablement. Do not reuse the public storefront's D1 database for this module.
 
-## Optional automation (in development)
+## Automated daily pipeline
 
-See [automation/README.md](automation/README.md) for AI draft generation, quality checks, scheduled slot creation, experimental Reel rendering, and a Meta Graph API adapter. These are **not** automatically invoked by the local dashboard. Nothing is scheduled in the cloud, published or deployed. Production use still requires secured hosting, media conversion and hosting, OAuth permissions, job locking, monitoring and integration tests.
+The local dashboard above (`server.mjs`/`index.html`) is manual-only and has
+no scheduler or credentials. Separately, `cloudflare/` + `automation/` +
+`.github/workflows/content-studio-publish.yml` implement the actual
+unattended pipeline: a Cloudflare Worker cron enqueues a job, Workers AI
+generates the draft, a GitHub Actions runner renders it with FFmpeg/
+ImageMagick, and the Worker uploads the media to a private R2 bucket and
+calls the Meta Graph API with the encrypted-in-D1 token — all on free tiers,
+no OpenAI key required. It dry-runs (no real Instagram post) until the owner
+explicitly enables both Worker publishing flags after a verified dry run.
+See [cloudflare/README.md](cloudflare/README.md) for the deploy and go-live
+checklist, and [automation/README.md](automation/README.md) for what each
+module does.

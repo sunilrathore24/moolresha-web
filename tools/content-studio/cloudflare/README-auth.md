@@ -31,5 +31,5 @@ Do not expose the setup key, token, or the login URL to untrusted parties. Brows
 
 - The implementation has **not yet been deployed or tested end to end**.
 - OAuth account selection is intentionally fail-closed when multiple Pages are eligible; provide `IG_EXPECTED_ACCOUNT_ID` before retrying.
-- No automatic token refresh, revocation management, job execution, public media hosting, carousel publishing, or Reel publishing is implemented in the Worker.
-- Publishing remains disabled until end-to-end tests and verified intended account identity. Owner has approved activation, but no successful publication has been verified.
+- Job execution (`/jobs/pending`, `/generate`, `/media`, `/publish`) and carousel/Reel publishing are now implemented — see `cloudflare/README.md`'s "Architecture" and "Before enabling live Instagram publishing" sections. **No automatic token refresh or revocation management** exists yet; a revoked or expired token will surface as failed jobs (`content_jobs.error`), not silently.
+- Publishing remains disabled (both flags stay `"false"`) until end-to-end dry-run tests pass and the intended account identity is verified. Owner has approved activation in principle, but no successful publication, live or dry-run, has been verified yet.

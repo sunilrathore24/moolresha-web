@@ -1,12 +1,30 @@
 # Content Studio deployment
 
-Development-only integration. Node 22+. Set OPENAI_API_KEY in a secrets manager.
+The automated daily pipeline is the Cloudflare Worker (`cloudflare/`) plus the
+GitHub Actions workflow `.github/workflows/content-studio-publish.yml`
+calling `automation/run-scheduled-job.mjs` on a cron matching the Worker's own
+08:00/13:00/19:00 IST job slots. Full deploy and go-live checklist:
+**`cloudflare/README.md`** — read that first. Short version:
 
-Commands:
-- `node automation/cli.mjs generate carousel`
-- `node automation/cli.mjs generate reel`
-- `node automation/cli.mjs schedule` drafts due 08:00, 13:00, 19:00 IST slots
-- `node automation/cli.mjs render <draft-id>` exports SVGs and experimental MP4 (ffmpeg and ImageMagick required for video)
-- `node automation/cli.mjs publish <draft-id>` requires approved draft, explicit ENABLE_INSTAGRAM_PUBLISH=true, Instagram credentials and hosted HTTPS media manifest under data/exports/<draft-id>/media.json.
+1. `npx wrangler d1 migrations apply moolresha_content_studio --remote`
+2. `npx wrangler r2 bucket create moolresha-content-media`
+3. `npx wrangler secret put EXECUTOR_KEY` (and the same value as the GitHub Actions secret `CONTENT_STUDIO_EXECUTOR_KEY`)
+4. `npx wrangler deploy`
+5. Merge the workflow file to `main` (GitHub only runs `schedule:` triggers from the default branch), or test first with its `workflow_dispatch` button.
 
-Publishing is disabled by default. Meta OAuth and professional account authorization must be configured externally. The current tool has no automatic R2 upload, live trend verification, hosted authentication, transactional database, metrics analytics, monitoring, reliable publish reconciliation, or production-grade unattended scheduling. Review content and media before any live publication. Remove tools/content-studio to uninstall.
+Everything above is free tier: Cloudflare Workers/D1/R2/Workers AI free
+allocations, plus GitHub Actions free minutes. No OpenAI key or other paid API
+is required for the automated path.
+
+Publishing itself stays a no-op dry run (`status: "dry-run"` in the Worker's
+response and job record) until the owner sets both `ENABLE_INSTAGRAM_PUBLISH`
+and `IG_ACTIVATION_APPROVED` to `"true"` and redeploys — see the "Before
+enabling live Instagram publishing" checklist in `cloudflare/README.md`.
+That is a deliberate, separate step, never a side effect of a code deploy.
+
+## Manual/local-only (not the automated path, not required)
+- `node automation/cli.mjs generate carousel` — uses `ai.mjs`'s OpenAI path. Requires `OPENAI_API_KEY` and **costs money per call**; the automated pipeline uses the Worker's free Workers AI route instead.
+- `node automation/cli.mjs render <draft-id>` — exports SVGs/MP4 locally for manual inspection (ffmpeg and ImageMagick required).
+- `node automation/cli.mjs publish <draft-id>` — a separate manual path using a raw `IG_USER_ID`/`IG_ACCESS_TOKEN` from `.env`, distinct from the encrypted-in-D1 token the automated pipeline uses. Requires an approved draft and a hand-written media manifest.
+
+Remove `tools/content-studio/` to uninstall; nothing outside this directory is touched.
